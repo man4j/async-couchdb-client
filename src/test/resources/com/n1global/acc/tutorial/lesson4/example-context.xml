@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+                           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd">
+                                                      
+  <context:component-scan base-package="com.n1global.acc.tutorial.lesson4" />
+  
+  <bean id="httpConfigBuilder" class="com.ning.http.client.AsyncHttpClientConfig.Builder">
+    <property name="requestTimeoutInMs" value="-1" />
+    <property name="compressionEnabled" value="true" />
+  </bean>
+  
+  <bean id="httpClient" class="com.ning.http.client.AsyncHttpClient" destroy-method="close">
+    <constructor-arg value="#{@httpConfigBuilder.build()}" />        
+  </bean>
+  
+  <bean id="couchDbConfigBuilder" class="com.n1global.acc.CouchDbConfig.Builder" >
+    <property name="serverUrl" value="http://127.0.0.1:5984" />
+    <property name="user" value="root" />
+    <property name="password" value="root" />
+    <property name="buildViewsOnStart" value="true" />
+    <property name="httpClient" ref="httpClient" />    
+  </bean>
+  
+  <bean id="couchDbConfig" factory-bean="couchDbConfigBuilder" factory-method="build" />
+                           
+</beans>
