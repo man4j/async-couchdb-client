@@ -154,7 +154,7 @@ public class CouchDbCrudTest {
 
         Assert.assertNotNull(db.get(testDoc.getDocId()));
 
-        testDoc.setDeleted(true);
+        testDoc.setDeleted();
 
         db.bulk(testDoc);
 

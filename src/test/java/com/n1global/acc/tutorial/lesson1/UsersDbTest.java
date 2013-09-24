@@ -56,7 +56,7 @@ public class UsersDbTest {
         List<User> otherUsers = FluentIterable.from(db.getBuiltInView().createDocsQuery().asDocs()).filter(User.class).toList();//filter design docs if exists
 
         for (CouchDbDocument doc : otherUsers) {
-            doc.setDeleted(true);
+            doc.setDeleted();
         }
 
         db.bulk(otherUsers);//bulk delete

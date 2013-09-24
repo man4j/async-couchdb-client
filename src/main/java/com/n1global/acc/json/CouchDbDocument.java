@@ -34,16 +34,15 @@ public class CouchDbDocument implements HasId<String> {
     private String rev;
 
     @JsonProperty("_attachments")
-    @JsonInclude(Include.NON_DEFAULT)
+    @JsonInclude(Include.NON_EMPTY)
     private Map<String, CouchDbDocumentAttachment> attachments = new HashMap<>();
 
     @JsonProperty("_revs_info")
-    @JsonInclude(Include.NON_DEFAULT)
+    @JsonInclude(Include.NON_EMPTY)
     private List<CouchDbRevisions> revisions = new ArrayList<>();
 
     @JsonProperty("_deleted")
-    @JsonInclude(Include.NON_DEFAULT)
-    private boolean deleted;
+    private Boolean deleted;
 
     @JsonIgnore
     boolean inConflict;
@@ -123,11 +122,11 @@ public class CouchDbDocument implements HasId<String> {
      * Indicates that this document has been deleted and previous revisions will be removed on next compaction run.
      */
     public boolean isDeleted() {
-        return deleted;
+        return deleted == null ? false : deleted;
     }
 
-    public void setDeleted(boolean deleted) {
-        this.deleted = deleted;
+    public void setDeleted() {
+        this.deleted = true;
     }
 
     public boolean isInConflict() {
