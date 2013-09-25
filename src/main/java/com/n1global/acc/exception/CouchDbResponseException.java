@@ -6,13 +6,13 @@ public class CouchDbResponseException extends RuntimeException {
     private CouchDbHttpResponse response;
 
     public CouchDbResponseException(CouchDbHttpResponse response) {
-        super(response.toString());
+        super(response.toString() + "\n" + response.getResponseBody());
 
         this.response = response;
     }
 
     public CouchDbResponseException(CouchDbHttpResponse response, Throwable cause) {
-        super(response.toString(), cause);
+        super(response.toString() + "\n" + response.getResponseBody(), cause);
 
         this.response = response;
     }
