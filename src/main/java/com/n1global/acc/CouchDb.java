@@ -478,7 +478,7 @@ public class CouchDb extends CouchDbBase {
             compact();
             cleanupViews();
 
-            for (CouchDbDesignDocument d : getDesignDocs()) compactViews(d.getDocId());
+            for (CouchDbDesignDocument d : getDesignDocs()) compactViews(d.getDocId().substring(d.getDocId().indexOf("/") + 1));
         }
     }
 
