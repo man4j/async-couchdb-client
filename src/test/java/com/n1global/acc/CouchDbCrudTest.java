@@ -227,7 +227,7 @@ public class CouchDbCrudTest {
 
         db.bulk(new TestDoc(), new TestDocDescendant());
 
-        for (CouchDbDocument d : db.getBuiltInView().createDocsQuery().asDocsIterator()) {
+        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator()) {
             if (d.getClass() == CouchDbDesignDocument.class) {
                 findDesignDoc = true;
             }

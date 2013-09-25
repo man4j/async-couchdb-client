@@ -19,14 +19,14 @@ import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 import com.ning.http.util.Base64;
 
-public class UsersDbTest {
-    private UsersDb db;
+public class UserDbTest {
+    private UserDb db;
 
     private AsyncHttpClient httpClient = new AsyncHttpClient();
 
     @Before
     public void before() {
-        db = new UsersDb(new CouchDbConfig.Builder().setUser("root")
+        db = new UserDb(new CouchDbConfig.Builder().setUser("root")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());
@@ -53,7 +53,7 @@ public class UsersDbTest {
 
         Assert.assertEquals(2, db.getInfo().getDocCount());
 
-        List<User> otherUsers = FluentIterable.from(db.getBuiltInView().createDocsQuery().asDocs()).filter(User.class).toList();//filter design docs if exists
+        List<User> otherUsers = FluentIterable.from(db.getBuiltInView().createDocQuery().asDocs()).filter(User.class).toList();//filter design docs if exists
 
         for (CouchDbDocument doc : otherUsers) {
             doc.setDeleted();

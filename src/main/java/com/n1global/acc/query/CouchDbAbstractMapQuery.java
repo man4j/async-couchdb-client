@@ -102,7 +102,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     @Override
     public abstract CouchDbAbstractMapQueryAsyncOperations async();
 
-    public CouchDbIterable<ROW> asRowsIterator(int batchSize) {
+    public CouchDbIterable<ROW> asRowIterator(int batchSize) {
         return new CouchDbIterator<>(new Function<T, List<ROW>>() {
             @Override
             public List<ROW> apply(T query) {
@@ -111,11 +111,11 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
         }, batchSize, derived.cast(this));
     }
 
-    public CouchDbIterable<ROW> asRowsIterator() {
-        return asRowsIterator(BATCH_SIZE);
+    public CouchDbIterable<ROW> asRowIterator() {
+        return asRowIterator(BATCH_SIZE);
     }
 
-    public CouchDbIterable<String> asIdsIterator(int batchSize) {
+    public CouchDbIterable<String> asIdIterator(int batchSize) {
         return new CouchDbIterator<>(new Function<T, List<String>>() {
             @Override
             public List<String> apply(T query) {
@@ -124,11 +124,11 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
         }, batchSize, derived.cast(this));
     }
 
-    public CouchDbIterable<String> asIdsIterator() {
-        return asIdsIterator(BATCH_SIZE);
+    public CouchDbIterable<String> asIdIterator() {
+        return asIdIterator(BATCH_SIZE);
     }
 
-    public CouchDbIterable<K> asKeysIterator(int batchSize) {
+    public CouchDbIterable<K> asKeyIterator(int batchSize) {
         return new CouchDbIterator<>(new Function<T, List<K>>() {
             @Override
             public List<K> apply(T query) {
@@ -137,11 +137,11 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
         }, batchSize, derived.cast(this));
     }
 
-    public CouchDbIterable<K> asKeysIterator() {
-        return asKeysIterator(BATCH_SIZE);
+    public CouchDbIterable<K> asKeyIterator() {
+        return asKeyIterator(BATCH_SIZE);
     }
 
-    public CouchDbIterable<V> asValuesIterator(int batchSize) {
+    public CouchDbIterable<V> asValueIterator(int batchSize) {
         return new CouchDbIterator<>(new Function<T, List<V>>() {
             @Override
             public List<V> apply(T query) {
@@ -150,8 +150,8 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
         }, batchSize, derived.cast(this));
     }
 
-    public CouchDbIterable<V> asValuesIterator() {
-        return asValuesIterator(BATCH_SIZE);
+    public CouchDbIterable<V> asValueIterator() {
+        return asValueIterator(BATCH_SIZE);
     }
 
     public List<String> asIds() {

@@ -76,7 +76,7 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
         return ExceptionHandler.handleFutureResult(async().asDoc());
     }
 
-    public CouchDbIterable<D> asDocsIterator(int batchSize) {
+    public CouchDbIterable<D> asDocIterator(int batchSize) {
         return new CouchDbIterator<>(new Function<CouchDbMapQueryWithDocs<K, V, D>, List<D>>() {
             @Override
             public List<D> apply(CouchDbMapQueryWithDocs<K, V, D> view) {
@@ -85,7 +85,7 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
         }, batchSize, this);
     }
 
-    public CouchDbIterable<D> asDocsIterator() {
-        return asDocsIterator(BATCH_SIZE);
+    public CouchDbIterable<D> asDocIterator() {
+        return asDocIterator(BATCH_SIZE);
     }
 }

@@ -9,14 +9,14 @@ import com.google.common.collect.FluentIterable;
 import com.n1global.acc.CouchDbConfig;
 import com.ning.http.client.AsyncHttpClient;
 
-public class UsersDbTest {
-    private UsersDb db;
+public class UserDbTest {
+    private UserDb db;
 
     private AsyncHttpClient httpClient = new AsyncHttpClient();
 
     @Before
     public void before() {
-        db = new UsersDb(new CouchDbConfig.Builder().setUser("root")
+        db = new UserDb(new CouchDbConfig.Builder().setUser("root")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());
@@ -37,7 +37,7 @@ public class UsersDbTest {
 
         db.bulk(user1, user2, user3);
 
-        for (User user : FluentIterable.from(db.getBuiltInView().createDocsQuery().asDocsIterator()).filter(User.class)) {
+        for (User user : FluentIterable.from(db.getBuiltInView().createDocQuery().asDocIterator()).filter(User.class)) {
             db.getTestUpdater().update(user.getDocId());
         }
 

@@ -6,13 +6,13 @@ import com.n1global.acc.CouchDb;
 import com.n1global.acc.CouchDbConfig;
 import com.n1global.acc.CouchDbConstants;
 
-public class SimpleCitiesDb extends CouchDb {
-    public SimpleCitiesDb(CouchDbConfig config) {
+public class SimpleCityDb extends CouchDb {
+    public SimpleCityDb(CouchDbConfig config) {
         super(config);
     }
 
     public List<City> suggest(String q) {
-        return getBuiltInView().<City>createDocsQuery().startKey(q)
+        return getBuiltInView().<City>createDocQuery().startKey(q)
                                                        .endKey(q + CouchDbConstants.LAST_CHAR)
                                                        .asDocs();
     }

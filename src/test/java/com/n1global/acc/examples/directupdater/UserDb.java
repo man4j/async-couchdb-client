@@ -5,7 +5,7 @@ import com.n1global.acc.CouchDbConfig;
 import com.n1global.acc.CouchDbDirectUpdater;
 import com.n1global.acc.annotation.UpdateHandler;
 
-public class UsersDb extends CouchDb {
+public class UserDb extends CouchDb {
     /**
      * @see http://wiki.apache.org/couchdb/Document_Update_Handlers
      */
@@ -16,7 +16,7 @@ public class UsersDb extends CouchDb {
     		              "return [doc, '']")
     private CouchDbDirectUpdater testUpdater;
 
-    public UsersDb(CouchDbConfig config) {
+    public UserDb(CouchDbConfig config) {
         super(config);
     }
 

@@ -27,7 +27,7 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
      * If you are concerned about this, you can emit the full doc in each row; this will increase view index time and space requirements,
      * but will make view reads optimally fast.
     */
-    public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<K, V, T> createDocsQuery() {
+    public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<K, V, T> createDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
         JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructType(CouchDbDocument.class));
@@ -46,7 +46,7 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
      * If you are concerned about this, you can emit the full doc in each row; this will increase view index time and space requirements,
      * but will make view reads optimally fast.
     */
-    public CouchDbMapQueryWithDocs<K, V, Map<String, Object>> createRawDocsQuery() {
+    public CouchDbMapQueryWithDocs<K, V, Map<String, Object>> createRawDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
         JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructParametricType(Map.class, String.class, Object.class));

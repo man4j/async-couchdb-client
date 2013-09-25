@@ -9,13 +9,13 @@ import com.n1global.acc.CouchDbConfig;
 import com.ning.http.client.AsyncHttpClient;
 
 public class AutoSuggestTest {
-    private SimpleCitiesDb db;
+    private SimpleCityDb db;
 
     private AsyncHttpClient httpClient = new AsyncHttpClient();
 
     @Before
     public void before() {
-        db = new SimpleCitiesDb(new CouchDbConfig.Builder().setUser("root")
+        db = new SimpleCityDb(new CouchDbConfig.Builder().setUser("root")
                                                            .setPassword("root")
                                                            .setHttpClient(httpClient)
                                                            .build());

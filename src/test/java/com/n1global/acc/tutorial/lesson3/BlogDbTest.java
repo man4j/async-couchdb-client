@@ -62,7 +62,7 @@ public class BlogDbTest {
         db.bulk(author1, author2);
 
         // Fetch
-        List<BlogDocument> blogRelatedDocs = db.getJoinedView().<BlogDocument>createDocsQuery().byKey(blogPost1.getDocId()).asDocs();
+        List<BlogDocument> blogRelatedDocs = db.getJoinedView().<BlogDocument>createDocQuery().byKey(blogPost1.getDocId()).asDocs();
 
         Collections.sort(blogRelatedDocs);//sort by timestamps
 

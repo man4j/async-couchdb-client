@@ -42,7 +42,7 @@ public class CouchDbMapViewTest {
             db.saveOrUpdate(new TestDoc("name" +  i));
         }
 
-        for (TestDoc doc : db.getTestView().<TestDoc>createDocsQuery().asDocsIterator(3)) {
+        for (TestDoc doc : db.getTestView().<TestDoc>createDocQuery().asDocIterator(3)) {
             db.delete(doc);
         }
 

@@ -44,7 +44,7 @@ public class CouchDbRawApiTest {
 
         db.saveOrUpdate(testDoc);
 
-        Map<String, Object> m = db.getBuiltInView().createRawDocsQuery().byKey(testDoc.getDocId()).asDoc();
+        Map<String, Object> m = db.getBuiltInView().createRawDocQuery().byKey(testDoc.getDocId()).asDoc();
 
         Assert.assertTrue(m.get("name").equals("Name"));
     }
@@ -89,6 +89,6 @@ public class CouchDbRawApiTest {
 
         List<String> ids = Arrays.asList((String)doc1.get("_id"), (String)doc2.get("_id"));
 
-        Assert.assertEquals(2, db.getBuiltInView().createRawDocsQuery().byKeys(ids).asDocs().size());
+        Assert.assertEquals(2, db.getBuiltInView().createRawDocQuery().byKeys(ids).asDocs().size());
     }
 }

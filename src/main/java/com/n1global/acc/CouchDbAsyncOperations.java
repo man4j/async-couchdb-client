@@ -488,7 +488,7 @@ public class CouchDbAsyncOperations {
     //------------------ Admin API -------------------------
 
     public ListenableFuture<List<CouchDbDesignDocument>> getDesignDocs() {
-        return couchDb.getBuiltInView().<CouchDbDesignDocument>createDocsQuery().startKey("_design/").endKey("_design0").async().asDocs();
+        return couchDb.getBuiltInView().<CouchDbDesignDocument>createDocQuery().startKey("_design/").endKey("_design0").async().asDocs();
     }
 
     /**

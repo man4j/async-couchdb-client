@@ -28,11 +28,11 @@ public class CouchDbMapReduceView<MapK, MapV, ReduceK, ReduceV> {
         return reducedView.createQuery();
     }
 
-    public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<MapK, MapV, T> createDocsQuery() {
-        return mapView.createDocsQuery();
+    public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<MapK, MapV, T> createDocQuery() {
+        return mapView.createDocQuery();
     }
 
-    public CouchDbMapQueryWithDocs<MapK, MapV, Map<String, Object>> createRawDocsQuery() {
-        return mapView.createRawDocsQuery();
+    public CouchDbMapQueryWithDocs<MapK, MapV, Map<String, Object>> createRawDocQuery() {
+        return mapView.createRawDocQuery();
     }
 }

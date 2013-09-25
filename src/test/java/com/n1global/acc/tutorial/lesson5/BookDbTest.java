@@ -8,14 +8,14 @@ import org.junit.Test;
 import com.n1global.acc.CouchDbConfig;
 import com.ning.http.client.AsyncHttpClient;
 
-public class BooksDbTest {
-    private BooksDb db;
+public class BookDbTest {
+    private BookDb db;
 
     private AsyncHttpClient httpClient = new AsyncHttpClient();
 
     @Before
     public void before() {
-        db = new BooksDb(new CouchDbConfig.Builder().setUser("root")
+        db = new BookDb(new CouchDbConfig.Builder().setUser("root")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());
@@ -36,8 +36,8 @@ public class BooksDbTest {
                 new Book("Spring in Action", "manning"),
                 new Book("JBoss in Action", "manning"));
 
-        Assert.assertEquals(2, db.getPublishersBooksView().createDocsQuery().byKey("manning").asDocs().size());
-        Assert.assertEquals(3, db.getPublishersBooksView().createDocsQuery().byKey("oreilly").asDocs().size());
+        Assert.assertEquals(2, db.getPublishersBooksView().createDocQuery().byKey("manning").asDocs().size());
+        Assert.assertEquals(3, db.getPublishersBooksView().createDocQuery().byKey("oreilly").asDocs().size());
     }
 
     @Test

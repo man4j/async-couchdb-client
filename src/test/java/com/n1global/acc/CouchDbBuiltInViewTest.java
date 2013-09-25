@@ -43,7 +43,7 @@ public class CouchDbBuiltInViewTest {
 
         long docsCount = db.getInfo().getDocCount();
 
-        for (CouchDbDocument d : db.getBuiltInView().createDocsQuery().startKey("1").asDocsIterator(5)) {
+        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().startKey("1").asDocIterator(5)) {
             Assert.assertFalse(d.getDocId().isEmpty());
 
             docsIterated++;

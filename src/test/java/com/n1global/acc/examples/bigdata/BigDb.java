@@ -128,7 +128,7 @@ public class BigDb extends CouchDb {
 
         long t = System.currentTimeMillis();
 
-        for (CouchDbDocument d : db.getBuiltInView().createDocsQuery().asDocsIterator(10000)) {
+        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator(10000)) {
             count++;
         }
 
