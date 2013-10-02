@@ -27,9 +27,9 @@ public class UserDbTest {
     @Before
     public void before() {
         db = new UserDb(new CouchDbConfig.Builder().setUser("root")
-                                                    .setPassword("root")
-                                                    .setHttpClient(httpClient)
-                                                    .build());
+                                                   .setPassword("root")
+                                                   .setHttpClient(httpClient)
+                                                   .build());
     }
 
     @After

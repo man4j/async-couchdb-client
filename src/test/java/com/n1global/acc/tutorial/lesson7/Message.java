@@ -1,5 +1,8 @@
 package com.n1global.acc.tutorial.lesson7;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Message extends ForumContent implements Comparable<Message> {
     private String text;
 
@@ -7,11 +10,8 @@ public class Message extends ForumContent implements Comparable<Message> {
 
     private long createdAt = System.currentTimeMillis();
 
-    public Message() {
-        /* empty */
-    }
-
-    public Message(String text, String topicId) {
+    @JsonCreator
+    public Message(@JsonProperty("text") String text, @JsonProperty("topicId") String topicId) {
         this.text = text;
         this.topicId = topicId;
     }

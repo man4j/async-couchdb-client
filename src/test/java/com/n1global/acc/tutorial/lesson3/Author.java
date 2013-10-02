@@ -3,16 +3,16 @@ package com.n1global.acc.tutorial.lesson3;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class Author extends BlogDocument {
     private String name;
 
     private List<String> blogPostsIds = new ArrayList<>();
 
-    public Author() {
-        /* empty */
-    }
-
-    public Author(String name) {
+    @JsonCreator
+    public Author(@JsonProperty("name") String name) {
         this.name = name;
     }
 

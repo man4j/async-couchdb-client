@@ -13,7 +13,7 @@ public class SimpleCityDb extends CouchDb {
 
     public List<City> suggest(String q) {
         return getBuiltInView().<City>createDocQuery().startKey(q)
-                                                       .endKey(q + CouchDbConstants.LAST_CHAR)
-                                                       .asDocs();
+                                                      .endKey(q + CouchDbConstants.LAST_CHAR)
+                                                      .asDocs();
     }
 }

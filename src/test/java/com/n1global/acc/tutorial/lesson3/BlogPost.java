@@ -1,5 +1,8 @@
 package com.n1global.acc.tutorial.lesson3;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class BlogPost extends BlogDocument {
     private String title;
 
@@ -7,11 +10,8 @@ public class BlogPost extends BlogDocument {
 
     private String authorId;
 
-    public BlogPost() {
-        /* empty */
-    }
-
-    public BlogPost(String title, String body, String authorId) {
+    @JsonCreator
+    public BlogPost(@JsonProperty("title") String title, @JsonProperty("body") String body, @JsonProperty("authorId") String authorId) {
         this.title = title;
         this.body = body;
         this.authorId = authorId;
