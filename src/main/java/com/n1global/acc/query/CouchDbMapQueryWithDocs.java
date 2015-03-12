@@ -1,6 +1,7 @@
 package com.n1global.acc.query;
 
 import java.util.List;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.n1global.acc.CouchDb;
@@ -9,7 +10,6 @@ import com.n1global.acc.json.CouchDbDocumentAccessor;
 import com.n1global.acc.json.resultset.CouchDbMapResultSetWithDocs;
 import com.n1global.acc.json.resultset.CouchDbMapRowWithDoc;
 import com.n1global.acc.util.ExceptionHandler;
-import com.n1global.acc.util.Function;
 import com.ning.http.client.ListenableFuture;
 
 public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K, V, CouchDbMapRowWithDoc<K, V, D>, CouchDbMapResultSetWithDocs<K, V, D>, CouchDbMapQueryWithDocs<K, V, D>> {
@@ -23,40 +23,23 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
 
     public class CouchDbMapQueryWithDocsAsyncOperations extends CouchDbAbstractMapQueryAsyncOperations {
         public ListenableFuture<List<D>> asDocs() {
-            Function<CouchDbMapResultSetWithDocs<K, V, D>, List<D>> transformer = new Function<CouchDbMapResultSetWithDocs<K, V, D>, List<D>>() {
-                @Override
-                public List<D> apply(CouchDbMapResultSetWithDocs<K, V, D> input) {
-                    return input.docs();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.docs());
         }
 
         public ListenableFuture<D> asDoc() {
-            Function<CouchDbMapResultSetWithDocs<K, V, D>, D> transformer = new Function<CouchDbMapResultSetWithDocs<K, V, D>, D>() {
-                @Override
-                public D apply(CouchDbMapResultSetWithDocs<K, V, D> input) {
-                    return input.firstDoc();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.firstDoc());
         }
 
         @Override
         protected <T> ListenableFuture<T> executeRequest(final Function<CouchDbMapResultSetWithDocs<K, V, D>, T> transformer) {
-            Function<CouchDbMapResultSetWithDocs<K, V, D>, T> delegate = new Function<CouchDbMapResultSetWithDocs<K, V, D>, T>() {
-                @Override
-                public T apply(CouchDbMapResultSetWithDocs<K, V, D> input) {
-                    for (D d : input.docs()) {
-                        if (d instanceof CouchDbDocument) {//maybe Map
-                            new CouchDbDocumentAccessor((CouchDbDocument) d).setCurrentDb(couchDb);
-                        }
+            Function<CouchDbMapResultSetWithDocs<K, V, D>, T> delegate = rs -> {
+                for (D d : rs.docs()) {
+                    if (d instanceof CouchDbDocument) {//maybe Map
+                        new CouchDbDocumentAccessor((CouchDbDocument) d).setCurrentDb(couchDb);
                     }
-
-                    return transformer.apply(input);
                 }
+
+                return transformer.apply(rs);
             };
 
             return super.executeRequest(delegate);
@@ -77,12 +60,7 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
     }
 
     public CouchDbIterable<D> asDocIterator(int batchSize) {
-        return new CouchDbIterator<>(new Function<CouchDbMapQueryWithDocs<K, V, D>, List<D>>() {
-            @Override
-            public List<D> apply(CouchDbMapQueryWithDocs<K, V, D> view) {
-                return view.asDocs();
-            }
-        }, batchSize, this);
+        return new CouchDbIterator<>(view -> view.asDocs(), batchSize, this);
     }
 
     public CouchDbIterable<D> asDocIterator() {

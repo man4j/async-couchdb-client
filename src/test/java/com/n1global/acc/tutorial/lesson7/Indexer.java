@@ -23,16 +23,14 @@ import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.RAMDirectory;
-import org.apache.lucene.util.Version;
 
 import com.n1global.acc.notification.document.CouchDbDocumentUpdateHandler;
 
 public class Indexer implements CouchDbDocumentUpdateHandler<ForumContent>, Closeable {
     private IndexWriter indexWriter;
 
-    @SuppressWarnings("resource")
     public Indexer() throws Exception {
-        indexWriter = new IndexWriter(new RAMDirectory(), new IndexWriterConfig(Version.LUCENE_43, new StandardAnalyzer(Version.LUCENE_43)));
+        indexWriter = new IndexWriter(new RAMDirectory(), new IndexWriterConfig(new StandardAnalyzer()));
     }
 
     @Override
@@ -71,7 +69,7 @@ public class Indexer implements CouchDbDocumentUpdateHandler<ForumContent>, Clos
 
         BooleanQuery booleanQuery = new BooleanQuery();
 
-        try (StandardAnalyzer analyzer = new StandardAnalyzer(Version.LUCENE_43); TokenStream stream = analyzer.tokenStream("text", new StringReader(query))) {
+        try (StandardAnalyzer analyzer = new StandardAnalyzer(); TokenStream stream = analyzer.tokenStream("text", new StringReader(query))) {
             stream.reset();
 
             CharTermAttribute attribute = stream.addAttribute(CharTermAttribute.class);

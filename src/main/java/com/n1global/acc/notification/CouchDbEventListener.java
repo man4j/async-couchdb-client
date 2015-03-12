@@ -1,6 +1,5 @@
 package com.n1global.acc.notification;
 
-import java.io.IOException;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
@@ -95,31 +94,27 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
 
     synchronized public Future<Void> startListening(long seq, CouchDbFilter filter) {
         if (asyncHandler == null) {
-            try {
-                JavaType docType = TypeFactory.defaultInstance().findTypeParameters(getClass(), CouchDbEventListener.class)[0];
+            JavaType docType = TypeFactory.defaultInstance().findTypeParameters(getClass(), CouchDbEventListener.class)[0];
 
-                JavaType eventType = TypeFactory.defaultInstance().constructParametricType(CouchDbEvent.class, docType);
+            JavaType eventType = TypeFactory.defaultInstance().constructParametrizedType(CouchDbEvent.class, CouchDbEvent.class, docType);
 
-                asyncHandler = new CouchDbEventAsyncHandler<>(handlers, mapper, eventType);
-
-                UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
-                                                                     .addQueryParam("feed", "continuous")
-                                                                     .addQueryParam("since", seq + "")
-                                                                     .addQueryParam("heartbeat", config.getHeartbeatInMillis() + "")
-                                                                     .addQueryParam("include_docs", config.isIncludeDocs() + "");
-
-                if (filter != null) {
-                    urlBuilder.addQueryParam("filter", filter.getDesignName() + "/" + filter.getFilterName());
-                }
-
-                messagingFuture = httpClient.prepareRequest(prototype)
-                                            .setUrl(urlBuilder.build())
-                                            .execute(asyncHandler);
-
-                return messagingFuture;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
+                                                                 .addQueryParam("feed", "continuous")
+                                                                 .addQueryParam("since", seq + "")
+                                                                 .addQueryParam("heartbeat", config.getHeartbeatInMillis() + "")
+                                                                 .addQueryParam("include_docs", config.isIncludeDocs() + "");
+            
+            if (filter != null) {
+                urlBuilder.addQueryParam("filter", filter.getDesignName() + "/" + filter.getFilterName());
             }
+            
+            String url = urlBuilder.build();
+
+            messagingFuture = httpClient.prepareRequest(prototype)
+                                        .setUrl(url)
+                                        .execute(new CouchDbEventAsyncHandler<>(handlers, mapper, eventType, url));
+
+            return messagingFuture;
         }
 
         throw new IllegalStateException("Already connected!");

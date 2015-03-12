@@ -1,4 +1,4 @@
-package com.n1global.acc.examples.directupdater;
+package com.n1global.acc.tutorial.lesson8;
 
 import com.n1global.acc.json.CouchDbDocument;
 

@@ -3,8 +3,7 @@ package com.n1global.acc.query;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
-import com.n1global.acc.util.Function;
+import java.util.function.Function;
 
 public class CouchDbIterator<E, K, T extends CouchDbAbstractMapQuery<K, ?, ?, ?, ?>> implements CouchDbIterable<E> {
     private Function<T, List<E>> f;

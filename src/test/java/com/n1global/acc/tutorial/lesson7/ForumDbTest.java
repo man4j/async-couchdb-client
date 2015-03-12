@@ -16,7 +16,7 @@ public class ForumDbTest {
 
     private AsyncHttpClient httpClient = new AsyncHttpClient();
 
-    private AsyncHttpClient notificationHttpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeoutInMs(-1)
+    private AsyncHttpClient notificationHttpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1)
                                                                                                             .setIOThreadMultiplier(1)
                                                                                                             .build());
 

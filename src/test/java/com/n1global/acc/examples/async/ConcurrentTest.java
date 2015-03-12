@@ -85,7 +85,7 @@ public class ConcurrentTest {
     }
 
     public static void shouldWorkWithClient() throws Exception {
-        AsyncHttpClient httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeoutInMs(-1).build());
+        AsyncHttpClient httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
         CouchDb db = new CouchDb(new CouchDbConfig.Builder().setUser("root")
                                                             .setPassword("root")

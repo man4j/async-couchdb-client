@@ -2,163 +2,116 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.n1global</groupId>
   <artifactId>async-couchdb-client</artifactId>
-  <version>0.32</version>
+  <version>0.40</version>
   <name>async-couchdb-client</name>
+  
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.resources.sourceEncoding>UTF-8</project.resources.sourceEncoding>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+  </properties>
   
   <dependencies>
     <dependency>
       <groupId>com.ning</groupId>
       <artifactId>async-http-client</artifactId>
-      <version>1.7.19</version>
-    </dependency>
-    
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>14.0.1</version>
+      <version>1.9.11</version>
     </dependency>
     
     <dependency> 
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.2.3</version>
+      <version>2.5.1</version>
     </dependency>
     
     <dependency>
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
-      <version>1.0.13</version>
+      <version>1.1.2</version>
     </dependency>
     
     <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-web</artifactId> 
+      <version>4.1.5.RELEASE</version>    
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+        </exclusion>
+      </exclusions>  
+    </dependency>
+    
+    <!-- For testing -->
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>jcl-over-slf4j</artifactId>
-      <version>1.7.5</version>
+      <version>1.7.10</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
       <groupId>net.coobird</groupId>
       <artifactId>thumbnailator</artifactId>
-      <version>0.4.5</version>
+      <version>0.4.8</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <version>4.11</version>
+      <version>4.12</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
-      <groupId>org.easytesting</groupId>
-      <artifactId>fest-assert</artifactId>
-      <version>1.4</version>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <version>2.0.0</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId> 
-      <version>3.2.3.RELEASE</version>
-      <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-beans</artifactId> 
-      <version>3.2.3.RELEASE</version>
-      <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-core</artifactId> 
-      <version>3.2.3.RELEASE</version>
-      <scope>test</scope>
+      <version>4.1.5.RELEASE</version>
       <exclusions>
         <exclusion>
           <groupId>commons-logging</groupId>
           <artifactId>commons-logging</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-aop</artifactId> 
-      <version>3.2.3.RELEASE</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-test</artifactId> 
-      <version>3.2.3.RELEASE</version>
+      <version>4.1.5.RELEASE</version>
       <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId> 
-      <version>3.2.3.RELEASE</version>      
     </dependency>
     
     <dependency>
       <groupId>org.apache.lucene</groupId>
       <artifactId>lucene-core</artifactId>
-      <version>4.3.1</version>
+      <version>5.0.0</version>
       <scope>test</scope>
     </dependency>
     
     <dependency>
       <groupId>org.apache.lucene</groupId>      
       <artifactId>lucene-analyzers-common</artifactId>
-      <version>4.3.1</version>
+      <version>5.0.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>org.apache.maven.wagon</groupId>
-        <artifactId>wagon-ssh</artifactId>
-        <version>2.4</version>
-      </extension>
-    </extensions>
-    
     <plugins>
       <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.0</version>
-        <configuration>
-          <source>1.7</source>
-          <target>1.7</target>
-          <encoding>UTF-8</encoding>                             
-        </configuration>               
-      </plugin>
-      <plugin>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <version>2.4</version>        
-        <configuration>
-          <outputDirectory>target/lib</outputDirectory>
-          <includeScope>runtime</includeScope>
-        </configuration>
-        <executions>
-          <execution>
-            <id>copy-dependencies</id>
-            <phase>compile</phase>
-            <goals>
-              <goal>copy-dependencies</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>   
-      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
+        <version>2.4</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -196,26 +149,7 @@
             </lifecycleMappingMetadata>
           </configuration>
         </plugin>     
-   </plugins>      
+      </plugins>      
     </pluginManagement>
   </build>
-  
-  <repositories>
-    <repository>
-      <id>Sonatype</id>
-      <url>http://oss.sonatype.org/content/repositories/releases</url>
-    </repository>
-    
-    <repository>
-      <id>ibiblio</id>
-      <url>http://mirrors.ibiblio.org/pub/mirrors/maven2</url>
-    </repository>
-  </repositories>
-  
-  <distributionManagement>
-    <repository>
-      <id>do</id>
-      <url>scp://37.139.26.244/var/lib/tomcat7/webapps/m2</url>
-    </repository>
-  </distributionManagement>
 </project>

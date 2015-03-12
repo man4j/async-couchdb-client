@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -11,7 +12,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.util.FileCopyUtils;
 
-import com.google.common.collect.FluentIterable;
 import com.n1global.acc.CouchDbConfig;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbDocumentAttachment;
@@ -53,7 +53,7 @@ public class UserDbTest {
 
         Assert.assertEquals(2, db.getInfo().getDocCount());
 
-        List<User> otherUsers = FluentIterable.from(db.getBuiltInView().createDocQuery().asDocs()).filter(User.class).toList();//filter design docs if exists
+        List<CouchDbDocument> otherUsers = db.getBuiltInView().createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList());//filter design docs if exists
 
         for (CouchDbDocument doc : otherUsers) {
             doc.setDeleted();

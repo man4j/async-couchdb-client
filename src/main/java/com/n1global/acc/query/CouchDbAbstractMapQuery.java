@@ -1,13 +1,13 @@
 package com.n1global.acc.query;
 
 import java.util.List;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.n1global.acc.CouchDb;
 import com.n1global.acc.json.resultset.CouchDbAbstractMapResultSet;
 import com.n1global.acc.json.resultset.CouchDbMapRow;
 import com.n1global.acc.util.ExceptionHandler;
-import com.n1global.acc.util.Function;
 import com.ning.http.client.ListenableFuture;
 
 public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K, V>, RS extends CouchDbAbstractMapResultSet<K, V, ROW>, T extends CouchDbAbstractMapQuery<K, V, ROW, RS, T>> extends CouchDbAbstractQuery<K, V, ROW, RS, T> {
@@ -60,42 +60,25 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     public class CouchDbAbstractMapQueryAsyncOperations extends CouchDbAbstractQueryAsyncOperations {
         @Override
         protected <O> ListenableFuture<O> executeRequest(final Function<RS, O> transformer) {
-            Function<RS, O> delegate = new Function<RS, O>() {
-                @Override
-                public O apply(RS input) {
-                    if (!input.ids().isEmpty()) {
-                        lastKeyDocId = input.ids().get(input.ids().size() - 1);
-                        lastKey = input.keys().get(input.keys().size() - 1);
-                        totalRows = input.getTotalRows();
-                    }
-
-                    return transformer.apply(input);
+            Function<RS, O> delegate = rs -> {
+                if (!rs.ids().isEmpty()) {
+                    lastKeyDocId = rs.ids().get(rs.ids().size() - 1);
+                    lastKey = rs.keys().get(rs.keys().size() - 1);
+                    totalRows = rs.getTotalRows();
                 }
+
+                return transformer.apply(rs);
             };
 
             return super.executeRequest(delegate);
         }
 
         public ListenableFuture<List<String>> asIds() {
-            Function<RS, List<String>> transformer = new Function<RS, List<String>>() {
-                @Override
-                public List<String> apply(RS input) {
-                    return input.ids();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.ids());
         }
 
         public ListenableFuture<String> asId() {
-            Function<RS, String> transformer = new Function<RS, String>() {
-                @Override
-                public String apply(RS input) {
-                    return input.firstId();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.firstId());
         }
     }
 
@@ -103,12 +86,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     public abstract CouchDbAbstractMapQueryAsyncOperations async();
 
     public CouchDbIterable<ROW> asRowIterator(int batchSize) {
-        return new CouchDbIterator<>(new Function<T, List<ROW>>() {
-            @Override
-            public List<ROW> apply(T query) {
-                return query.asRows();
-            }
-        }, batchSize, derived.cast(this));
+        return new CouchDbIterator<>(q -> q.asRows(), batchSize, derived.cast(this));
     }
 
     public CouchDbIterable<ROW> asRowIterator() {
@@ -116,12 +94,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     }
 
     public CouchDbIterable<String> asIdIterator(int batchSize) {
-        return new CouchDbIterator<>(new Function<T, List<String>>() {
-            @Override
-            public List<String> apply(T query) {
-                return query.asIds();
-            }
-        }, batchSize, derived.cast(this));
+        return new CouchDbIterator<>(q -> q.asIds(), batchSize, derived.cast(this));
     }
 
     public CouchDbIterable<String> asIdIterator() {
@@ -129,12 +102,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     }
 
     public CouchDbIterable<K> asKeyIterator(int batchSize) {
-        return new CouchDbIterator<>(new Function<T, List<K>>() {
-            @Override
-            public List<K> apply(T query) {
-                return query.asKeys();
-            }
-        }, batchSize, derived.cast(this));
+        return new CouchDbIterator<>(q -> q.asKeys(), batchSize, derived.cast(this));
     }
 
     public CouchDbIterable<K> asKeyIterator() {
@@ -142,12 +110,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
     }
 
     public CouchDbIterable<V> asValueIterator(int batchSize) {
-        return new CouchDbIterator<>(new Function<T, List<V>>() {
-            @Override
-            public List<V> apply(T query) {
-                return query.asValues();
-            }
-        }, batchSize, derived.cast(this));
+        return new CouchDbIterator<>(q -> q.asValues(), batchSize, derived.cast(this));
     }
 
     public CouchDbIterable<V> asValueIterator() {

@@ -1,12 +1,14 @@
-package com.n1global.acc.examples.directupdater;
+package com.n1global.acc.tutorial.lesson8;
+
+import java.util.stream.Collectors;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.FluentIterable;
 import com.n1global.acc.CouchDbConfig;
+import com.n1global.acc.json.CouchDbDocument;
 import com.ning.http.client.AsyncHttpClient;
 
 public class UserDbTest {
@@ -37,7 +39,7 @@ public class UserDbTest {
 
         db.bulk(user1, user2, user3);
 
-        for (User user : FluentIterable.from(db.getBuiltInView().createDocQuery().asDocIterator()).filter(User.class)) {
+        for (CouchDbDocument user : db.getBuiltInView().createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList())) {
             db.getTestUpdater().update(user.getDocId());
         }
 

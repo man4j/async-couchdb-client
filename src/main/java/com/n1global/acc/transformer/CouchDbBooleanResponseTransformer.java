@@ -1,7 +1,8 @@
 package com.n1global.acc.transformer;
 
+import java.util.function.Function;
+
 import com.n1global.acc.json.CouchDbBooleanResponse;
-import com.n1global.acc.util.Function;
 
 public class CouchDbBooleanResponseTransformer implements Function<CouchDbBooleanResponse, Boolean> {
     @Override

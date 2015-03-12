@@ -139,14 +139,14 @@ public class CouchDb extends CouchDbBase {
     /**
      * Deletes an attachment from the document.
      */
-    public Boolean deleteAttachment(CouchDbDocIdAndRev docIdAndRev, String name) {
+    public boolean deleteAttachment(CouchDbDocIdAndRev docIdAndRev, String name) {
         return ExceptionHandler.handleFutureResult(asyncOps.deleteAttachment(docIdAndRev, name));
     }
 
     /**
      * Deletes an attachment from the document.
      */
-    public Boolean deleteAttachment(CouchDbDocument doc, String name) {
+    public boolean deleteAttachment(CouchDbDocument doc, String name) {
         return deleteAttachment(doc.getDocIdAndRev(), name);
     }
 
@@ -156,23 +156,21 @@ public class CouchDb extends CouchDbBase {
      * Returns the latest revision of the document if revision not specified.
      */
     public <T extends CouchDbDocument> T get(CouchDbDocIdAndRev docIdAndRev, boolean revsInfo) {
-        return (T) ExceptionHandler.handleFutureResult(asyncOps.get(docIdAndRev, revsInfo));
+        return ExceptionHandler.handleFutureResult(asyncOps.get(docIdAndRev, revsInfo));
     }
 
     /**
      * Returns the latest revision of the document.
      */
-    @SuppressWarnings("unchecked")
     public <T extends CouchDbDocument> T get(CouchDbDocIdAndRev docIdAndRev) {
-        return (T) get(docIdAndRev, false);
+        return get(docIdAndRev, false);
     }
 
     /**
      * Returns the latest revision of the document.
      */
-    @SuppressWarnings("unchecked")
     public <T extends CouchDbDocument> T get(String docId) {
-        return (T) get(new CouchDbDocIdAndRev(docId, null));
+        return get(new CouchDbDocIdAndRev(docId, null));
     }
 
     /**
@@ -221,7 +219,7 @@ public class CouchDb extends CouchDbBase {
     /**
      * Insert or delete multiple documents in to the database in a single request.
      */
-    public <T extends CouchDbDocument> T[] bulk(@SuppressWarnings("unchecked") T... docs) {
+    public <T extends CouchDbDocument> T[] bulk( @SuppressWarnings("unchecked") T... docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.bulk(docs));
     }
 

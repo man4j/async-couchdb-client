@@ -10,13 +10,18 @@ import com.n1global.acc.transformer.CouchDbBooleanResponseTransformer;
 import com.n1global.acc.util.ExceptionHandler;
 import com.n1global.acc.util.NoopFunction;
 import com.n1global.acc.util.UrlBuilder;
+import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.ListenableFuture;
 
 public class CouchDbAdmin extends CouchDbBase {
     private CouchDbAdminAsyncOperations asyncOps = new CouchDbAdminAsyncOperations();
+    
+    private AsyncHttpClient httpClient;
 
     public CouchDbAdmin(CouchDbBaseConfig config) {
         super(config);
+        
+        httpClient = config.getHttpClient();
     }
 
     public class CouchDbAdminAsyncOperations {
@@ -27,56 +32,40 @@ public class CouchDbAdmin extends CouchDbBase {
          * when used in URLs.
          */
         public ListenableFuture<List<String>> getListDbsAsync() {
-            try {
-                return config.getHttpClient().prepareRequest(prototype)
-                                             .setUrl(getConfig().getServerUrl() + "/_all_dbs")
-                                             .setMethod("GET")
-                                             .execute(new CouchDbAsyncHandler<>(new TypeReference<List<String>>() {/* empty */}, new NoopFunction<List<String>>(), mapper));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return httpClient.prepareRequest(prototype)
+                             .setUrl(getConfig().getServerUrl() + "/_all_dbs")
+                             .setMethod("GET")
+                             .execute(new CouchDbAsyncHandler<>(new TypeReference<List<String>>() {/* empty */}, new NoopFunction<List<String>>(), mapper));
         }
 
         /**
          * Returns server statistics.
          */
         public ListenableFuture<Map<String, Object>> getStats() {
-            try {
-                return config.getHttpClient().prepareRequest(prototype)
-                                             .setUrl(getConfig().getServerUrl() +  "/_stats")
-                                             .setMethod("GET")
-                                             .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, new NoopFunction<Map<String, Object>>(), mapper));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return httpClient.prepareRequest(prototype)
+                             .setUrl(getConfig().getServerUrl() +  "/_stats")
+                             .setMethod("GET")
+                             .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, new NoopFunction<Map<String, Object>>(), mapper));
         }
 
         /**
          * Returns a list of running tasks.
          */
         public ListenableFuture<List<CouchDbTaskInfo>> getActiveTasks() {
-            try {
-                return config.getHttpClient().prepareRequest(prototype)
-                                             .setUrl(getConfig().getServerUrl() +  "/_active_tasks")
-                                             .setMethod("GET")
-                                             .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbTaskInfo>>() {/* empty */}, new NoopFunction<List<CouchDbTaskInfo>>(), mapper));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return httpClient.prepareRequest(prototype)
+                             .setUrl(getConfig().getServerUrl() +  "/_active_tasks")
+                             .setMethod("GET")
+                             .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbTaskInfo>>() {/* empty */}, new NoopFunction<List<CouchDbTaskInfo>>(), mapper));
         }
 
         /**
          * Delete an existing database.
          */
         public ListenableFuture<Boolean> deleteDb(String dbName) {
-            try {
-                return config.getHttpClient().prepareRequest(prototype)
-                                             .setUrl(new UrlBuilder(getConfig().getServerUrl()).addPathSegment(dbName).build())
-                                             .setMethod("DELETE")
-                                             .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), mapper));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+            return httpClient.prepareRequest(prototype)
+                             .setUrl(new UrlBuilder(getConfig().getServerUrl()).addPathSegment(dbName).build())
+                             .setMethod("DELETE")
+                             .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), mapper));
         }
     }
 

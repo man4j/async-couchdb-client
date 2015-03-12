@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.n1global.acc.CouchDb;
@@ -12,7 +13,6 @@ import com.n1global.acc.CouchDbFieldAccessor;
 import com.n1global.acc.json.resultset.CouchDbAbstractResultSet;
 import com.n1global.acc.json.resultset.CouchDbAbstractRow;
 import com.n1global.acc.util.ExceptionHandler;
-import com.n1global.acc.util.Function;
 import com.n1global.acc.util.NoopFunction;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.ListenableFuture;
@@ -30,6 +30,7 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
 
     Class<T> derived;
 
+    @SuppressWarnings("unchecked")
     public CouchDbAbstractQuery(CouchDb couchDb, String viewUrl, JavaType resultSetType) {
         this.couchDb = couchDb;
         this.viewUrl = viewUrl;
@@ -63,6 +64,7 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
         return derived.cast(this);
     }
 
+    @SuppressWarnings("unchecked")
     public T byKeys(Collection<K> keys) {
         queryObject.setKeys((K[])keys.toArray());
 
@@ -160,47 +162,19 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
 
     public class CouchDbAbstractQueryAsyncOperations {
         public ListenableFuture<List<ROW>> asRows() {
-            Function<RS, List<ROW>> transformer = new Function<RS, List<ROW>>() {
-                @Override
-                public List<ROW> apply(RS input) {
-                    return input.getRows();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.getRows());
         }
 
         public ListenableFuture<List<K>> asKeys() {
-            Function<RS, List<K>> transformer = new Function<RS, List<K>>() {
-                @Override
-                public List<K> apply(RS input) {
-                    return input.keys();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.keys());
         }
 
         public ListenableFuture<List<V>> asValues() {
-            Function<RS, List<V>> transformer = new Function<RS, List<V>>() {
-                @Override
-                public List<V> apply(RS input) {
-                    return input.values();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs ->rs.values());
         }
 
         public ListenableFuture<ROW> asRow() {
-            Function<RS, ROW> transformer = new Function<RS, ROW>() {
-                @Override
-                public ROW apply(RS input) {
-                    return input.firstRow();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.firstRow());
         }
 
         public ListenableFuture<RS> asResultSet() {
@@ -208,47 +182,19 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
         }
 
         public ListenableFuture<K> asKey() {
-            Function<RS, K> transformer = new Function<RS, K>() {
-                @Override
-                public K apply(RS input) {
-                    return input.firstKey();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.firstKey());
         }
 
         public ListenableFuture<V> asValue() {
-            Function<RS, V> transformer = new Function<RS, V>() {
-                @Override
-                public V apply(RS input) {
-                    return input.firstValue();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.firstValue());
         }
 
         public ListenableFuture<Map<K, ROW>> asMap() {
-            Function<RS, Map<K, ROW>> transformer = new Function<RS, Map<K, ROW>>() {
-                @Override
-                public Map<K, ROW> apply(RS input) {
-                    return input.map();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.map());
         }
 
         public ListenableFuture<Map<K, List<ROW>>> asMultiMap() {
-            Function<RS, Map<K, List<ROW>>> transformer = new Function<RS, Map<K, List<ROW>>>() {
-                @Override
-                public Map<K, List<ROW>> apply(RS input) {
-                    return input.multiMap();
-                }
-            };
-
-            return executeRequest(transformer);
+            return executeRequest(rs -> rs.multiMap());
         }
 
         protected <O> ListenableFuture<O> executeRequest(final Function<RS, O> transformer) {

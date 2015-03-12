@@ -30,7 +30,7 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
     public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<K, V, T> createDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructType(CouchDbDocument.class));
+        JavaType resultSetType = tf.constructParametrizedType(CouchDbMapResultSetWithDocs.class, CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructType(CouchDbDocument.class));
 
         return new CouchDbMapQueryWithDocs<>(couchDb, viewUrl, resultSetType);
     }
@@ -49,7 +49,7 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
     public CouchDbMapQueryWithDocs<K, V, Map<String, Object>> createRawDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructParametricType(Map.class, String.class, Object.class));
+        JavaType resultSetType = tf.constructParametrizedType(CouchDbMapResultSetWithDocs.class, CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructMapType(Map.class, String.class, Object.class));
 
         return new CouchDbMapQueryWithDocs<>(couchDb, viewUrl, resultSetType);
     }
@@ -57,6 +57,6 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
     public CouchDbMapQuery<K, V> createQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        return new CouchDbMapQuery<>(couchDb, viewUrl, tf.constructParametricType(CouchDbMapResultSet.class, keyType, valueType));
+        return new CouchDbMapQuery<>(couchDb, viewUrl, tf.constructParametrizedType(CouchDbMapResultSet.class, CouchDbMapResultSet.class, keyType, valueType));
     }
 }

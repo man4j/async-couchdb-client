@@ -29,11 +29,14 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     private ObjectMapper mapper;
 
     private JavaType eventType;
+    
+    private String url;
 
-    public CouchDbEventAsyncHandler(CopyOnWriteArrayList<CouchDbEventHandler<D>> handlers, ObjectMapper mapper, JavaType eventType) {
+    public CouchDbEventAsyncHandler(CopyOnWriteArrayList<CouchDbEventHandler<D>> handlers, ObjectMapper mapper, JavaType eventType, String url) {
         this.handlers = handlers;
         this.mapper = mapper;
         this.eventType = eventType;
+        this.url = url;
     }
 
     @Override
@@ -43,7 +46,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                 try {
                     eventHandler.onError(t);
                 } catch (Exception e) {
-                    logger.error("", e);
+                    logger.error("Error in " + url, e);
                 }
             }
         }
@@ -61,7 +64,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
         for (int i = 0; i < eventBuf.length; i++) {
             if (eventBuf[i] == '\n') {
                 if (i == 0 || eventBuf[i - 1] == '\n') {
-                    logger.debug("Received heartbeat from " + bodyPart.getUrl());
+                    logger.debug("Received heartbeat from " + url);
                 } else {
                     int eventLength = i - lastPos;
 
@@ -83,7 +86,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                                 }
                             }
                         } catch (Exception e) {
-                            logger.error("", e);
+                            logger.error("Error in " + url, e);
                         }
                     }
                 }
@@ -100,7 +103,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     @Override
     public AsyncHandler.STATE onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
         if (responseStatus.getStatusCode() == 200) {
-            logger.debug("Start listening " + responseStatus.getUrl());
+            logger.debug("Start listening " + url);
 
             return AsyncHandler.STATE.CONTINUE;
         }
@@ -115,7 +118,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
 
     @Override
     public Void onCompleted() throws Exception {
-        logger.debug("Stop listening...");
+        logger.debug("Stop listening " + url);
 
         return null;
     }

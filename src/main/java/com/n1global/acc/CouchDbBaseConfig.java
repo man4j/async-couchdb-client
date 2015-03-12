@@ -39,6 +39,7 @@ public class CouchDbBaseConfig {
 
         AsyncHttpClient httpClient;
 
+        @SuppressWarnings("unchecked")
         public Builder() {
             this.derived = (Class<T>) this.getClass();
         }

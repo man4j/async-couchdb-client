@@ -14,6 +14,6 @@ public class CouchDbReduceView<K, V> extends CouchDbAbstractView {
     public CouchDbReduceQuery<K, V> createQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        return new CouchDbReduceQuery<>(couchDb, viewUrl, tf.constructParametricType(CouchDbReduceResultSet.class, keyType, valueType));
+        return new CouchDbReduceQuery<>(couchDb, viewUrl, tf.constructParametrizedType(CouchDbReduceResultSet.class, CouchDbReduceResultSet.class, keyType, valueType));
     }
 }

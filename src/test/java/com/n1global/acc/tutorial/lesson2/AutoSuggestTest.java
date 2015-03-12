@@ -1,6 +1,6 @@
 package com.n1global.acc.tutorial.lesson2;
 
-import org.fest.assertions.Assertions;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -33,7 +33,7 @@ public class AutoSuggestTest {
         db.bulk(new City("Moscow"), new City("London"), new City("Minsk"));
 
         Assertions.assertThat(db.suggest("M"))
-                  .onProperty("name")
+                  .extracting("name")
                   .containsSequence("Minsk", "Moscow");
     }
 }
