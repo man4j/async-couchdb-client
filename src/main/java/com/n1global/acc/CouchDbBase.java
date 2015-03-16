@@ -1,6 +1,7 @@
 package com.n1global.acc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import com.ning.http.client.Realm;
 import com.ning.http.client.Realm.AuthScheme;
 import com.ning.http.client.Request;
@@ -17,6 +18,8 @@ public class CouchDbBase {
     final Request prototype;
 
     public CouchDbBase(CouchDbBaseConfig config) {
+        mapper.registerModule(new JSR310Module());
+        
         this.config = config;
 
         RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
