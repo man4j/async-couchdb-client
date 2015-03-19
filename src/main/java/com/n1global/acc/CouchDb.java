@@ -14,11 +14,15 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.n1global.acc.annotation.DbName;
 import com.n1global.acc.annotation.Filter;
 import com.n1global.acc.annotation.JsView;
+import com.n1global.acc.annotation.Security;
+import com.n1global.acc.annotation.SecurityPattern;
 import com.n1global.acc.annotation.UpdateHandler;
 import com.n1global.acc.json.CouchDbDesignDocument;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbInfo;
 import com.n1global.acc.json.CouchDbPutResponse;
+import com.n1global.acc.json.security.CouchDbSecurityObject;
+import com.n1global.acc.json.security.CouchDbSecurityPattern;
 import com.n1global.acc.util.ExceptionHandler;
 import com.n1global.acc.util.NamedStrategy;
 import com.n1global.acc.util.ReflectionUtils;
@@ -325,6 +329,8 @@ public class CouchDb extends CouchDbBase {
         injectDirectUpdaters();
 
         injectFilters();
+        
+        addSecurity();
 
         compactAllOnStart();
     }
@@ -470,7 +476,29 @@ public class CouchDb extends CouchDbBase {
             }
         }
     }
-
+    
+    private void addSecurity() {
+        try {
+            if (getClass().isAnnotationPresent(Security.class)) {
+                SecurityPattern adminsPattern = getClass().getAnnotation(Security.class).admins();
+                SecurityPattern membersPattern = getClass().getAnnotation(Security.class).members();
+                
+                CouchDbSecurityObject securityObject = new CouchDbSecurityObject();
+                
+                securityObject.setAdmins(new CouchDbSecurityPattern(adminsPattern.names(), adminsPattern.roles()));
+                securityObject.setMembers(new CouchDbSecurityPattern(membersPattern.names(), membersPattern.roles()));
+                
+                Response r = getConfig().getHttpClient().prepareRequest(prototype).setMethod("PUT")
+                                                                                  .setUrl(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())
+                                                                                  .setBody(mapper.writeValueAsString(securityObject))
+                                                                                  .execute().get();
+                if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
     private void compactAllOnStart() {
         if (((CouchDbConfig)config).isCompactAllOnStart()) {
             compact();
