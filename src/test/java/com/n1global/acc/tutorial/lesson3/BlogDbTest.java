@@ -67,7 +67,7 @@ public class BlogDbTest {
 
         Collections.sort(blogRelatedDocs);//sort by timestamps
 
-        List<CouchDbDocument> comments = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogComment.class).collect(Collectors.toList());
+        List<BlogDocument> comments = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogComment.class).collect(Collectors.toList());
 
         CouchDbDocument post = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogPost.class).findFirst().get();
 

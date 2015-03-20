@@ -6,12 +6,15 @@ public class CouchDbConfig extends CouchDbBaseConfig {
     private boolean buildViewsOnStart;
 
     private boolean compactAllOnStart;
+    
+    private boolean selfDiscovering = true;
 
-    CouchDbConfig(String dbUrl, String dbName, String dbPrefix, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart, boolean compactAllOnStart) {
+    CouchDbConfig(String dbUrl, String dbName, String dbPrefix, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart, boolean compactAllOnStart, boolean selfDiscovering) {
         super (dbUrl, dbName, dbPrefix, user, password, httpClient);
 
         this.buildViewsOnStart = buildViewsOnStart;
         this.compactAllOnStart = compactAllOnStart;
+        this.selfDiscovering = selfDiscovering;
     }
 
     public static class Builder extends CouchDbBaseConfig.Builder<Builder> {
@@ -41,7 +44,7 @@ public class CouchDbConfig extends CouchDbBaseConfig {
 
         @Override
         public CouchDbConfig build() {
-            return new CouchDbConfig(serverUrl, dbName, dbPrefix, user, password, httpClient, buildViewsOnStart, compactAllOnStart);
+            return new CouchDbConfig(serverUrl, dbName, dbPrefix, user, password, httpClient, buildViewsOnStart, compactAllOnStart, selfDiscovering);
         }
     }
 
@@ -51,5 +54,9 @@ public class CouchDbConfig extends CouchDbBaseConfig {
 
     public boolean isCompactAllOnStart() {
         return compactAllOnStart;
+    }
+
+    public boolean isSelfDiscovering() {
+        return selfDiscovering;
     }
 }

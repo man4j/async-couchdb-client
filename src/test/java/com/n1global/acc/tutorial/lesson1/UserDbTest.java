@@ -13,7 +13,6 @@ import org.junit.Test;
 import org.springframework.util.FileCopyUtils;
 
 import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbDocumentAttachment;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
@@ -53,9 +52,9 @@ public class UserDbTest {
 
         Assert.assertEquals(2, db.getInfo().getDocCount());
 
-        List<CouchDbDocument> otherUsers = db.getBuiltInView().createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList());//filter design docs if exists
+        List<User> otherUsers = db.getBuiltInView().<User>createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList());//filter design docs if exists
 
-        for (CouchDbDocument doc : otherUsers) {
+        for (User doc : otherUsers) {
             doc.setDeleted();
         }
 

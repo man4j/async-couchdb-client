@@ -46,7 +46,9 @@ public class CouchDb extends CouchDbBase {
     public CouchDb(CouchDbConfig config) {
         super(config);
 
-        selfDiscovering();
+        if (config.isSelfDiscovering()) {
+            selfDiscovering();
+        }
     }
 
     public String getDbName() {
