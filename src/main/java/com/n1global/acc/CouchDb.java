@@ -45,7 +45,15 @@ public class CouchDb extends CouchDbBase {
 
     public CouchDb(CouchDbConfig config) {
         super(config);
+        
+        testConnection();
 
+        generateDbName();
+
+        createDbIfNotExist();
+        
+        injectBuiltInView();
+        
         if (config.isSelfDiscovering()) {
             selfDiscovering();
         }
@@ -316,14 +324,6 @@ public class CouchDb extends CouchDbBase {
     //------------------ Discovering methods -------------------------
 
     private void selfDiscovering() {
-        testConnection();
-
-        generateDbName();
-
-        createDbIfNotExist();
-
-        injectBuiltInView();
-
         synchronizeDesignDocs();
 
         injectViews();

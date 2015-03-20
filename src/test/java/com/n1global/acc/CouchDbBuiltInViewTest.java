@@ -36,14 +36,14 @@ public class CouchDbBuiltInViewTest {
     @Test
     public void shouldIterateDocs() {
         for (int i = 0; i < 11; i++) {
-            db.saveOrUpdate(new CouchDbDocument());
+            db.saveOrUpdate(new CouchDbDocument(i + ""));
         }
 
         int docsIterated = 0;
 
         long docsCount = db.getInfo().getDocCount();
 
-        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().startKey("1").asDocIterator(5)) {
+        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator(5)) {
             Assert.assertFalse(d.getDocId().isEmpty());
 
             docsIterated++;
