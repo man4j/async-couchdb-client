@@ -1,6 +1,7 @@
 package com.n1global.acc.query;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -8,7 +9,6 @@ import com.n1global.acc.CouchDb;
 import com.n1global.acc.json.resultset.CouchDbAbstractMapResultSet;
 import com.n1global.acc.json.resultset.CouchDbMapRow;
 import com.n1global.acc.util.ExceptionHandler;
-import com.ning.http.client.ListenableFuture;
 
 public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K, V>, RS extends CouchDbAbstractMapResultSet<K, V, ROW>, T extends CouchDbAbstractMapQuery<K, V, ROW, RS, T>> extends CouchDbAbstractQuery<K, V, ROW, RS, T> {
     private String lastKeyDocId;
@@ -59,7 +59,7 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
 
     public class CouchDbAbstractMapQueryAsyncOperations extends CouchDbAbstractQueryAsyncOperations {
         @Override
-        protected <O> ListenableFuture<O> executeRequest(final Function<RS, O> transformer) {
+        protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
             Function<RS, O> delegate = rs -> {
                 if (!rs.ids().isEmpty()) {
                     lastKeyDocId = rs.ids().get(rs.ids().size() - 1);
@@ -73,11 +73,11 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
             return super.executeRequest(delegate);
         }
 
-        public ListenableFuture<List<String>> asIds() {
+        public CompletableFuture<List<String>> asIds() {
             return executeRequest(rs -> rs.ids());
         }
 
-        public ListenableFuture<String> asId() {
+        public CompletableFuture<String> asId() {
             return executeRequest(rs -> rs.firstId());
         }
     }

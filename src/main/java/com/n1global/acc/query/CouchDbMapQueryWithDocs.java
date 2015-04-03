@@ -1,6 +1,7 @@
 package com.n1global.acc.query;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -10,7 +11,6 @@ import com.n1global.acc.json.CouchDbDocumentAccessor;
 import com.n1global.acc.json.resultset.CouchDbMapResultSetWithDocs;
 import com.n1global.acc.json.resultset.CouchDbMapRowWithDoc;
 import com.n1global.acc.util.ExceptionHandler;
-import com.ning.http.client.ListenableFuture;
 
 public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K, V, CouchDbMapRowWithDoc<K, V, D>, CouchDbMapResultSetWithDocs<K, V, D>, CouchDbMapQueryWithDocs<K, V, D>> {
     private CouchDbMapQueryWithDocsAsyncOperations asyncOps = new CouchDbMapQueryWithDocsAsyncOperations();
@@ -22,16 +22,16 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
     }
 
     public class CouchDbMapQueryWithDocsAsyncOperations extends CouchDbAbstractMapQueryAsyncOperations {
-        public ListenableFuture<List<D>> asDocs() {
+        public CompletableFuture<List<D>> asDocs() {
             return executeRequest(rs -> rs.docs());
         }
 
-        public ListenableFuture<D> asDoc() {
+        public CompletableFuture<D> asDoc() {
             return executeRequest(rs -> rs.firstDoc());
         }
 
         @Override
-        protected <T> ListenableFuture<T> executeRequest(final Function<CouchDbMapResultSetWithDocs<K, V, D>, T> transformer) {
+        protected <T> CompletableFuture<T> executeRequest(final Function<CouchDbMapResultSetWithDocs<K, V, D>, T> transformer) {
             Function<CouchDbMapResultSetWithDocs<K, V, D>, T> delegate = rs -> {
                 for (D d : rs.docs()) {
                     if (d instanceof CouchDbDocument) {//maybe Map

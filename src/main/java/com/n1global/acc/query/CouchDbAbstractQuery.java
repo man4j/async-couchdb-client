@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -13,9 +14,9 @@ import com.n1global.acc.CouchDbFieldAccessor;
 import com.n1global.acc.json.resultset.CouchDbAbstractResultSet;
 import com.n1global.acc.json.resultset.CouchDbAbstractRow;
 import com.n1global.acc.util.ExceptionHandler;
+import com.n1global.acc.util.FutureUtils;
 import com.n1global.acc.util.NoopFunction;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
-import com.ning.http.client.ListenableFuture;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
     private String viewUrl;
@@ -161,43 +162,43 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
     }
 
     public class CouchDbAbstractQueryAsyncOperations {
-        public ListenableFuture<List<ROW>> asRows() {
+        public CompletableFuture<List<ROW>> asRows() {
             return executeRequest(rs -> rs.getRows());
         }
 
-        public ListenableFuture<List<K>> asKeys() {
+        public CompletableFuture<List<K>> asKeys() {
             return executeRequest(rs -> rs.keys());
         }
 
-        public ListenableFuture<List<V>> asValues() {
+        public CompletableFuture<List<V>> asValues() {
             return executeRequest(rs ->rs.values());
         }
 
-        public ListenableFuture<ROW> asRow() {
+        public CompletableFuture<ROW> asRow() {
             return executeRequest(rs -> rs.firstRow());
         }
 
-        public ListenableFuture<RS> asResultSet() {
+        public CompletableFuture<RS> asResultSet() {
             return executeRequest(new NoopFunction<RS>());
         }
 
-        public ListenableFuture<K> asKey() {
+        public CompletableFuture<K> asKey() {
             return executeRequest(rs -> rs.firstKey());
         }
 
-        public ListenableFuture<V> asValue() {
+        public CompletableFuture<V> asValue() {
             return executeRequest(rs -> rs.firstValue());
         }
 
-        public ListenableFuture<Map<K, ROW>> asMap() {
+        public CompletableFuture<Map<K, ROW>> asMap() {
             return executeRequest(rs -> rs.map());
         }
 
-        public ListenableFuture<Map<K, List<ROW>>> asMultiMap() {
+        public CompletableFuture<Map<K, List<ROW>>> asMultiMap() {
             return executeRequest(rs -> rs.multiMap());
         }
 
-        protected <O> ListenableFuture<O> executeRequest(final Function<RS, O> transformer) {
+        protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
             try {
                 BoundRequestBuilder builder = couchDb.getConfig().getHttpClient()
                                                                  .prepareRequest(couchDbFieldAccessor.getPrototype())
@@ -209,7 +210,7 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
                            .setBody(queryObject.jsonKeys());
                 }
 
-                return builder.execute(new CouchDbAsyncHandler<>(resultSetType, transformer, couchDbFieldAccessor.getMapper()));
+                return FutureUtils.toCompletable(builder.execute(new CouchDbAsyncHandler<>(resultSetType, transformer, couchDbFieldAccessor.getMapper())));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

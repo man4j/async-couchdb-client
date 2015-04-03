@@ -4,11 +4,12 @@ import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 
 import com.n1global.acc.util.ExceptionHandler;
+import com.n1global.acc.util.FutureUtils;
 import com.n1global.acc.util.UrlBuilder;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
-import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Response;
 
 public class CouchDbDirectUpdater {
@@ -34,7 +35,7 @@ public class CouchDbDirectUpdater {
         /**
          * Invoke a server-side update handler.
          */
-        public ListenableFuture<Response> update(String docId, Map<String, String> params) {
+        public CompletableFuture<Response> update(String docId, Map<String, String> params) {
             try {
                 UrlBuilder urlBuilder = new UrlBuilder(couchDb.getDbUrl()).addPathSegment("_design")
                                                                           .addPathSegment(designName)
@@ -76,7 +77,7 @@ public class CouchDbDirectUpdater {
                     builder.setBody(stringBody);
                 }
 
-                return builder.execute();
+                return FutureUtils.toCompletable(builder.execute());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -85,21 +86,21 @@ public class CouchDbDirectUpdater {
         /**
          * Invoke a server-side update handler.
          */
-        public ListenableFuture<Response> update() {
+        public CompletableFuture<Response> update() {
             return update(null, new HashMap<String, String>());
         }
 
         /**
          * Invoke a server-side update handler.
          */
-        public ListenableFuture<Response> update(String docId) {
+        public CompletableFuture<Response> update(String docId) {
             return update(docId, new HashMap<String, String>());
         }
 
         /**
          * Invoke a server-side update handler.
          */
-        public ListenableFuture<Response> update(Map<String, String> params) {
+        public CompletableFuture<Response> update(Map<String, String> params) {
             return update(null, params);
         }
     }

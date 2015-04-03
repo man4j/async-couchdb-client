@@ -10,7 +10,7 @@ public class ExceptionHandler {
         try {
             return future.get();
         } catch (InterruptedException | ExecutionException e) {
-            Throwable originalException = e.getCause();
+            Throwable originalException = e.getCause().getCause();
 
             if (originalException instanceof CouchDbResponseException) {
                 originalException.fillInStackTrace();//for correct line number
