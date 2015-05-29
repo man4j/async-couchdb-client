@@ -26,7 +26,7 @@ public class ForumDbTest {
 
     @Before
     public void before() throws Exception {
-        db = new ForumDb(new CouchDbConfig.Builder().setUser("root")
+        db = new ForumDb(new CouchDbConfig.Builder().setUser("admin")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());

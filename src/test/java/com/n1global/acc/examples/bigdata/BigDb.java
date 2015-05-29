@@ -141,7 +141,7 @@ public class BigDb extends CouchDb {
 
         AsyncHttpClient httpClient = new AsyncHttpClient();
 
-        BigDb db = new BigDb(new CouchDbConfig.Builder().setUser("root")
+        BigDb db = new BigDb(new CouchDbConfig.Builder().setUser("admin")
                                                         .setPassword("root")
                                                         .setHttpClient(httpClient)
                                                         .build());

@@ -17,6 +17,7 @@ import com.n1global.acc.annotation.JsView;
 import com.n1global.acc.annotation.Security;
 import com.n1global.acc.annotation.SecurityPattern;
 import com.n1global.acc.annotation.UpdateHandler;
+import com.n1global.acc.annotation.ValidateDocUpdate;
 import com.n1global.acc.json.CouchDbDesignDocument;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbInfo;
@@ -332,6 +333,8 @@ public class CouchDb extends CouchDbBase {
 
         injectFilters();
         
+        injectUpdaters();
+        
         addSecurity();
 
         compactAllOnStart();
@@ -388,8 +391,6 @@ public class CouchDb extends CouchDbBase {
 
                 Class<?> viewClass = field.getType();
 
-                field.setAccessible(true);
-
                 TypeFactory tf = TypeFactory.defaultInstance();
 
                 JavaType[] jts = tf.findTypeParameters(tf.constructType(field.getGenericType()), viewClass);
@@ -427,11 +428,7 @@ public class CouchDb extends CouchDbBase {
                 }
 
                 if (injectedView != null) {
-                    try {
-                        field.set(this, injectedView);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
+                    setValue(field, injectedView);
                 } else {
                     throw new IllegalStateException("Invalid view class");
                 }
@@ -446,17 +443,11 @@ public class CouchDb extends CouchDbBase {
     private void injectDirectUpdaters() {
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             if (field.isAnnotationPresent(UpdateHandler.class)) {
-                field.setAccessible(true);
-
                 UpdateHandler handler = field.getAnnotation(UpdateHandler.class);
 
                 String handlerName = handler.handlerName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : handler.handlerName();
 
-                try {
-                    field.set(this, new CouchDbDirectUpdater(this, handlerName, handler.designName()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                setValue(field, new CouchDbDirectUpdater(this, handlerName, handler.designName()));
             }
         }
     }
@@ -464,17 +455,21 @@ public class CouchDb extends CouchDbBase {
     private void injectFilters() {
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             if (field.isAnnotationPresent(Filter.class)) {
-                field.setAccessible(true);
-
                 Filter filter = field.getAnnotation(Filter.class);
 
                 String filterName = filter.filterName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : filter.filterName();
 
-                try {
-                    field.set(this, new CouchDbFilter(filter.designName(), filterName));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                setValue(field, new CouchDbFilter(filter.designName(), filterName));
+            }
+        }
+    }
+    
+    private void injectUpdaters() {
+        for (Field field : ReflectionUtils.getAllFields(getClass())) {
+            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
+                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
+
+                setValue(field, new CouchDbValidator(vdu.predicate()));
             }
         }
     }
@@ -556,10 +551,7 @@ public class CouchDb extends CouchDbBase {
                     }
                 }
 
-                if (!designMap.containsKey(designName)) {
-                    designMap.put(designName, new CouchDbDesignDocument(designName));
-                }
-
+                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
                 designMap.get(designName).addView(viewName, map, reduce);
             }
 
@@ -571,11 +563,19 @@ public class CouchDb extends CouchDbBase {
                 String designName = "_design/" + filter.designName();
                 String filterName = filter.filterName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : filter.filterName();
 
-                if (!designMap.containsKey(designName)) {
-                    designMap.put(designName, new CouchDbDesignDocument(designName));
-                }
-
+                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
                 designMap.get(designName).addFilter(filterName, "function(doc, req) { " + filter.predicate() + ";}");
+            }
+            
+            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
+                field.setAccessible(true);
+
+                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
+
+                String designName = "_design/" + vdu.designName();
+
+                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
+                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.predicate() + ";}");
             }
 
             if (field.isAnnotationPresent(UpdateHandler.class)) {
@@ -586,14 +586,21 @@ public class CouchDb extends CouchDbBase {
                 String designName = "_design/" + handler.designName();
                 String handlerName = handler.handlerName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : handler.handlerName();
 
-                if (!designMap.containsKey(designName)) {
-                    designMap.put(designName, new CouchDbDesignDocument(designName));
-                }
-
+                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
                 designMap.get(designName).addUpdateHandler(handlerName, "function(doc, req) { " + handler.func() + ";}");
             }
         }
 
         return designMap;
+    }
+    
+    private void setValue(Field field, Object value) {
+        field.setAccessible(true);
+
+        try {
+            field.set(this, value);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

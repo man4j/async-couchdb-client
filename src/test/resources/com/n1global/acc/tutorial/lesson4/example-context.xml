@@ -19,7 +19,7 @@
   
   <bean id="couchDbConfigBuilder" class="com.n1global.acc.CouchDbConfig.Builder" >
     <property name="serverUrl" value="http://127.0.0.1:5984" />
-    <property name="user" value="root" />
+    <property name="user" value="admin" />
     <property name="password" value="root" />
     <property name="buildViewsOnStart" value="true" />
     <property name="httpClient" ref="httpClient" />    

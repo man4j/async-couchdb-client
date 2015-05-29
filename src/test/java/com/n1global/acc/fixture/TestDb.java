@@ -4,15 +4,17 @@ import com.n1global.acc.CouchDb;
 import com.n1global.acc.CouchDbConfig;
 import com.n1global.acc.CouchDbDirectUpdater;
 import com.n1global.acc.CouchDbFilter;
+import com.n1global.acc.CouchDbValidator;
 import com.n1global.acc.annotation.Filter;
 import com.n1global.acc.annotation.JsView;
 import com.n1global.acc.annotation.Security;
 import com.n1global.acc.annotation.SecurityPattern;
 import com.n1global.acc.annotation.UpdateHandler;
+import com.n1global.acc.annotation.ValidateDocUpdate;
 import com.n1global.acc.view.CouchDbMapView;
 import com.n1global.acc.view.CouchDbReduceView;
 
-@Security(admins = @SecurityPattern(names = "root"))
+@Security(admins = @SecurityPattern(names = "admin"))
 public class TestDb extends CouchDb {
     @JsView(map = "emit(doc._id, doc.name)")
     private CouchDbMapView<String, String> testView;
@@ -22,6 +24,9 @@ public class TestDb extends CouchDb {
 
     @Filter(predicate = "return (doc._id.indexOf(\"design\") == -1);")
     private CouchDbFilter testFilter;
+    
+    @ValidateDocUpdate(predicate = "if (newDoc.name === 'bomb') throw({forbidden: 'Only admins may plant bombs.'}); ")
+    private CouchDbValidator validator;
 
     @UpdateHandler(func = "return [{'_id' : req.id, '@class' : 'com.n1global.acc.json.CouchDbDocument'}, 'New doc inserted!']")
     private CouchDbDirectUpdater testUpdater;

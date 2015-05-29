@@ -22,7 +22,7 @@ public class BlogDbTest {
 
     @Before
     public void before() {
-        db = new BlogDb(new CouchDbConfig.Builder().setUser("root")
+        db = new BlogDb(new CouchDbConfig.Builder().setUser("admin")
                                                    .setPassword("root")
                                                    .setHttpClient(httpClient)
                                                    .build());

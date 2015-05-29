@@ -32,7 +32,7 @@ public class CouchDbCrudTest {
         httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
         db = new TestDb(new CouchDbConfig.Builder().setServerUrl("http://127.0.0.1:5984")
-                                                   .setUser("root")
+                                                   .setUser("admin")
                                                    .setPassword("root")
                                                    .setHttpClient(httpClient)
                                                    .build());

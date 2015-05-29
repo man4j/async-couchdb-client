@@ -13,6 +13,9 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
     private Map<String, CouchDbMapReduceFunction> views = new LinkedHashMap<>();
 
     private Map<String, String> filters = new LinkedHashMap<>();
+    
+    @JsonProperty("validate_doc_update")
+    private String validateDocUpdate;
 
     @JsonProperty("updates")
     private Map<String, String> updatesHandlers = new LinkedHashMap<>();
@@ -40,6 +43,10 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
 
     public Map<String, String> getFilters() {
         return filters;
+    }
+    
+    public void setValidateDocUpdate(String validateDocUpdate) {
+        this.validateDocUpdate = validateDocUpdate;
     }
 
     public Map<String, String> getUpdatesHandlers() {

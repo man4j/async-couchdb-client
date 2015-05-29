@@ -15,7 +15,7 @@ public class BookDbTest {
 
     @Before
     public void before() {
-        db = new BookDb(new CouchDbConfig.Builder().setUser("root")
+        db = new BookDb(new CouchDbConfig.Builder().setUser("admin")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());

@@ -15,7 +15,7 @@ public class AutoSuggestTest {
 
     @Before
     public void before() {
-        db = new SimpleCityDb(new CouchDbConfig.Builder().setUser("root")
+        db = new SimpleCityDb(new CouchDbConfig.Builder().setUser("admin")
                                                            .setPassword("root")
                                                            .setHttpClient(httpClient)
                                                            .build());

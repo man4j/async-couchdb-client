@@ -18,7 +18,7 @@ public class UserDbTest {
 
     @Before
     public void before() {
-        db = new UserDb(new CouchDbConfig.Builder().setUser("root")
+        db = new UserDb(new CouchDbConfig.Builder().setUser("admin")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());
