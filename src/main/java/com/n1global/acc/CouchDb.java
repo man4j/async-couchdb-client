@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.n1global.acc.annotation.DbName;
 import com.n1global.acc.annotation.Filter;
+import com.n1global.acc.annotation.IgnorePrefix;
 import com.n1global.acc.annotation.JsView;
 import com.n1global.acc.annotation.Security;
 import com.n1global.acc.annotation.SecurityPattern;
@@ -363,8 +364,10 @@ public class CouchDb extends CouchDbBase {
                 dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
             }
         }
-
-        dbName = getConfig().getDbPrefix() + dbName;
+        
+        if (!getClass().isAnnotationPresent(IgnorePrefix.class)) {
+            dbName = getConfig().getDbPrefix() + dbName;
+        }
     }
 
     private void createDbIfNotExist() {
