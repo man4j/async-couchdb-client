@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.n1global</groupId>
   <artifactId>async-couchdb-client</artifactId>
-  <version>0.62</version>
+  <version>0.62-1-SNAPSHOT</version>
   <name>async-couchdb-client</name>
   
   <properties>
