@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.n1global</groupId>
   <artifactId>async-couchdb-client</artifactId>
-  <version>0.62</version>
+  <version>0.62-1-SNAPSHOT</version>
   <name>async-couchdb-client</name>
   
   <properties>
@@ -36,18 +36,7 @@
       <artifactId>logback-classic</artifactId>
       <version>1.1.2</version>
     </dependency>
-    
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-web</artifactId> 
-      <version>4.2.0.RC1</version>    
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-        </exclusion>
-      </exclusions>  
-    </dependency>
-    
+
     <!-- For testing -->
     <dependency>
       <groupId>org.slf4j</groupId>
