@@ -6,6 +6,7 @@ import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +34,7 @@ import com.n1global.acc.view.CouchDbBuiltInView;
 import com.n1global.acc.view.CouchDbMapReduceView;
 import com.n1global.acc.view.CouchDbMapView;
 import com.n1global.acc.view.CouchDbReduceView;
+import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 
 public class CouchDb extends CouchDbBase {
@@ -485,14 +487,29 @@ public class CouchDb extends CouchDbBase {
                 
                 CouchDbSecurityObject securityObject = new CouchDbSecurityObject();
                 
-                securityObject.setAdmins(new CouchDbSecurityPattern(adminsPattern.names(), adminsPattern.roles()));
-                securityObject.setMembers(new CouchDbSecurityPattern(membersPattern.names(), membersPattern.roles()));
+                securityObject.setAdmins(new CouchDbSecurityPattern(new HashSet<>(Arrays.asList(adminsPattern.names())), new HashSet<>(Arrays.asList(adminsPattern.roles()))));
+                securityObject.setMembers(new CouchDbSecurityPattern(new HashSet<>(Arrays.asList(membersPattern.names())), new HashSet<>(Arrays.asList(membersPattern.roles()))));
                 
-                Response r = getConfig().getHttpClient().prepareRequest(prototype).setMethod("PUT")
-                                                                                  .setUrl(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())
-                                                                                  .setBody(mapper.writeValueAsString(securityObject))
-                                                                                  .execute().get();
-                if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+                AsyncHttpClient client = getConfig().getHttpClient();
+                
+                CouchDbSecurityObject oldSecurityObject = mapper.readValue(client.prepareRequest(prototype).setMethod("GET")
+                                                                                                           .setUrl(new UrlBuilder(getDbUrl())
+                                                                                                           .addPathSegment("_security")
+                                                                                                           .build())
+                                                                                                           .execute()
+                                                                                                           .get()
+                                                                                                           .getResponseBody("UTF-8"), CouchDbSecurityObject.class);
+
+                if (!oldSecurityObject.equals(securityObject)) {
+                    Response r = client.prepareRequest(prototype).setMethod("PUT")
+                                                                 .setUrl(new UrlBuilder(getDbUrl())
+                                                                 .addPathSegment("_security").build())
+                                                                 .setBody(mapper.writeValueAsString(securityObject))
+                                                                 .execute()
+                                                                 .get();
+                    
+                    if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+                }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);

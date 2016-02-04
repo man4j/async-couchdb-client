@@ -1,17 +1,21 @@
 package com.n1global.acc.json.security;
 
-import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class CouchDbSecurityPattern {
     private Set<String> names = new HashSet<>();
     
     private Set<String> roles = new HashSet<>();
     
-    public CouchDbSecurityPattern(String[] names, String[] roles) {
-        this.names = new HashSet<>(Arrays.asList(names));
-        this.roles = new HashSet<>(Arrays.asList(roles));
+    @JsonCreator
+    public CouchDbSecurityPattern(@JsonProperty("names") Set<String> names, @JsonProperty("roles") Set<String> roles) {
+        this.names = names;
+        this.roles = roles;
     }
 
     public Set<String> getNames() {
@@ -28,5 +32,24 @@ public class CouchDbSecurityPattern {
 
     public void setRoles(Set<String> roles) {
         this.roles = roles;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        
+        if (obj instanceof CouchDbSecurityPattern) {
+            CouchDbSecurityPattern other = (CouchDbSecurityPattern) obj;
+            
+            return names.equals(other.names) && roles.equals(other.roles);
+        }
+        
+        return false;
+    }
+    
+    @Override
+    public int hashCode() {
+        return Objects.hash(names, roles);
     }
 }
