@@ -1,5 +1,6 @@
 package com.n1global.acc;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.ConnectException;
@@ -9,8 +10,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.n1global.acc.annotation.DbName;
 import com.n1global.acc.annotation.Filter;
@@ -481,6 +486,10 @@ public class CouchDb extends CouchDbBase {
     
     private void addSecurity() {
         try {
+            AsyncHttpClient client = getConfig().getHttpClient();
+            
+            CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
+            
             if (getClass().isAnnotationPresent(Security.class)) {
                 SecurityPattern adminsPattern = getClass().getAnnotation(Security.class).admins();
                 SecurityPattern membersPattern = getClass().getAnnotation(Security.class).members();
@@ -490,30 +499,42 @@ public class CouchDb extends CouchDbBase {
                 securityObject.setAdmins(new CouchDbSecurityPattern(new HashSet<>(Arrays.asList(adminsPattern.names())), new HashSet<>(Arrays.asList(adminsPattern.roles()))));
                 securityObject.setMembers(new CouchDbSecurityPattern(new HashSet<>(Arrays.asList(membersPattern.names())), new HashSet<>(Arrays.asList(membersPattern.roles()))));
                 
-                AsyncHttpClient client = getConfig().getHttpClient();
-                
-                CouchDbSecurityObject oldSecurityObject = mapper.readValue(client.prepareRequest(prototype).setMethod("GET")
-                                                                                                           .setUrl(new UrlBuilder(getDbUrl())
-                                                                                                           .addPathSegment("_security")
-                                                                                                           .build())
-                                                                                                           .execute()
-                                                                                                           .get()
-                                                                                                           .getResponseBody("UTF-8"), CouchDbSecurityObject.class);
-
                 if (!oldSecurityObject.equals(securityObject)) {
-                    Response r = client.prepareRequest(prototype).setMethod("PUT")
-                                                                 .setUrl(new UrlBuilder(getDbUrl())
-                                                                 .addPathSegment("_security").build())
-                                                                 .setBody(mapper.writeValueAsString(securityObject))
-                                                                 .execute()
-                                                                 .get();
-                    
-                    if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+                    putSecurityObject(client, securityObject);
+                }
+            } else {
+                if (!oldSecurityObject.getAdmins().getNames().isEmpty()
+                 || !oldSecurityObject.getAdmins().getRoles().isEmpty()
+                 || !oldSecurityObject.getMembers().getNames().isEmpty()
+                 || !oldSecurityObject.getMembers().getRoles().isEmpty()) {
+                    putSecurityObject(client, new CouchDbSecurityObject());//clean security object
                 }
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject)
+            throws InterruptedException, ExecutionException, JsonProcessingException {
+        Response r = client.prepareRequest(prototype).setMethod("PUT")
+                                                     .setUrl(new UrlBuilder(getDbUrl())
+                                                     .addPathSegment("_security").build())
+                                                     .setBody(mapper.writeValueAsString(securityObject))
+                                                     .execute()
+                                                     .get();
+        
+        if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+    }
+
+    private CouchDbSecurityObject getSecurityObject(AsyncHttpClient client) throws IOException, JsonParseException, JsonMappingException, InterruptedException, ExecutionException {
+        return mapper.readValue(client.prepareRequest(prototype).setMethod("GET")
+                                                                .setUrl(new UrlBuilder(getDbUrl())
+                                                                .addPathSegment("_security")
+                                                                .build())
+                                                                .execute()
+                                                                .get()
+                                                                .getResponseBody("UTF-8"), CouchDbSecurityObject.class);
     }
     
     private void compactAllOnStart() {
