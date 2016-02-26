@@ -9,7 +9,7 @@ public class CouchDbNotificationConfig {
 
     private AsyncHttpClient httpClient;
 
-    private CouchDbNotificationConfig(int heartbeatInMillis, boolean includeDocs, AsyncHttpClient httpClient) {
+    CouchDbNotificationConfig(int heartbeatInMillis, boolean includeDocs, AsyncHttpClient httpClient) {
         this.heartbeatInMillis = heartbeatInMillis;
         this.includeDocs = includeDocs;
         this.httpClient = httpClient;

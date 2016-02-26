@@ -13,11 +13,11 @@ import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 import com.ning.http.client.Response;
 
 public class CouchDbDirectUpdater {
-    private CouchDb couchDb;
+    CouchDb couchDb;
 
-    private String handlerName;
+    String handlerName;
 
-    private String designName;
+    String designName;
 
     private CouchDbDirectUpdaterAsyncOperations asyncOps = new CouchDbDirectUpdaterAsyncOperations();
 

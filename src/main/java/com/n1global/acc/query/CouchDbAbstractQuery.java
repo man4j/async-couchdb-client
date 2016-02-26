@@ -19,15 +19,15 @@ import com.n1global.acc.util.NoopFunction;
 import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
-    private String viewUrl;
+    String viewUrl;
 
-    private JavaType resultSetType;
+    JavaType resultSetType;
 
     CouchDbQueryObject<K> queryObject;
 
     CouchDb couchDb;
 
-    private CouchDbFieldAccessor couchDbFieldAccessor;
+    CouchDbFieldAccessor couchDbFieldAccessor;
 
     Class<T> derived;
 

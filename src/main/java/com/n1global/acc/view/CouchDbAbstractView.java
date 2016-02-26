@@ -16,7 +16,7 @@ import com.n1global.acc.util.UrlBuilder;
 public abstract class CouchDbAbstractView {
     private CouchDbViewAsyncOperations asyncOps = new CouchDbViewAsyncOperations();
 
-    private String designUrl;
+    String designUrl;
 
     String viewUrl;
 

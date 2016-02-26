@@ -67,15 +67,15 @@ public class CouchDbAsyncOperations {
      * also CouchDB will silently reject update if document with same id already exists.
      * Use this option with caution.
      */
-    public CompletableFuture<Map<String, Object>> saveOrUpdateRaw(final Map<String, Object> doc, boolean batch) {
+    public CompletableFuture<Map<String, Object>> saveOrUpdate(final Map<String, Object> doc, boolean batch) {
         return _saveOrUpdate(doc, batch);
     }
 
     /**
      * Inserts a new document with an automatically generated id or inserts a new version of the document.
      */
-    public CompletableFuture<Map<String, Object>> saveOrUpdateRaw(final Map<String, Object> doc) {
-        return saveOrUpdateRaw(doc, false);
+    public CompletableFuture<Map<String, Object>> saveOrUpdate(final Map<String, Object> doc) {
+        return saveOrUpdate(doc, false);
     }
 
     private <T> CompletableFuture<T> _saveOrUpdate(final T doc, boolean batch) {
@@ -108,6 +108,136 @@ public class CouchDbAsyncOperations {
                                                        .setBody(couchDb.mapper.writeValueAsString(doc))
                                                        .setUrl(urlBuilder.build())
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbPutResponse>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    //------------------ Bulk API -------------------------
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> CompletableFuture<T[]> saveOrUpdate(final T... docs) {
+        try {
+            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
+
+            for (T doc : docs) {
+                arrayNode.addPOJO(doc);
+            }
+
+            ObjectNode objectNode = couchDb.mapper.createObjectNode();
+
+            objectNode.set("docs", arrayNode);
+
+            StringWriter writer = new StringWriter();
+
+            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
+
+            Function<List<CouchDbPutResponse>, T[]> transformer = responses -> {
+                for (int i = 0; i < docs.length; i++) {
+                    docs[i].setDocId(responses.get(i).getDocId());
+                    docs[i].setRev(responses.get(i).getRev());
+
+                    new CouchDbDocumentAccessor(docs[i]).setCurrentDb(couchDb)
+                                                        .setInConflict(responses.get(i).isInConflict())
+                                                        .setForbidden(responses.get(i).isForbidden())
+                                                        .setConflictReason(responses.get(i).getConflictReason());
+                }
+
+                return docs;
+            };
+
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
+                                                       .setBody(writer.toString())
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(final List<T> docs) {
+        try {
+            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
+
+            for (T doc : docs) {
+                arrayNode.addPOJO(doc);
+            }
+
+            ObjectNode objectNode = couchDb.mapper.createObjectNode();
+
+            objectNode.set("docs", arrayNode);
+
+            StringWriter writer = new StringWriter();
+
+            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
+
+            Function<List<CouchDbPutResponse>, List<T>> transformer = responses -> {
+                for (int i = 0; i < docs.size(); i++) {
+                    docs.get(i).setDocId(responses.get(i).getDocId());
+                    docs.get(i).setRev(responses.get(i).getRev());
+
+                    new CouchDbDocumentAccessor(docs.get(i)).setCurrentDb(couchDb)
+                                                            .setInConflict(responses.get(i).isInConflict())
+                                                            .setForbidden(responses.get(i).isForbidden())
+                                                            .setConflictReason(responses.get(i).getConflictReason());
+                }
+
+                return docs;
+            };
+
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
+                                                       .setBody(writer.toString())
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    @SafeVarargs
+    public final CompletableFuture<List<CouchDbPutResponse>> saveOrUpdate(final Map<String, Object>... docs) {
+        try {
+            Map<String, Object> map = new HashMap<>();
+
+            map.put("docs", docs);
+
+            Function<List<CouchDbPutResponse>, List<CouchDbPutResponse>> transformer = responses -> {
+                for (int i = 0; i < docs.length; i++) {
+                    docs[i].put("_id", responses.get(i).getDocId());
+                    docs[i].put("_rev", responses.get(i).getRev());
+                }
+
+                return responses;
+            };
+
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
+                                                       .setBody(couchDb.mapper.writeValueAsString(map))
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -200,7 +330,7 @@ public class CouchDbAsyncOperations {
     private <T> CompletableFuture<T> get(CouchDbDocIdAndRev docIdAndRev, JavaType docType, boolean revsInfo) {
         if (docIdAndRev.getDocId() == null || docIdAndRev.getDocId().trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
 
-        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docIdAndRev.getDocId()).addQueryParam("revs_info", revsInfo + "");
+        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docIdAndRev.getDocId()).addQueryParam("revs_info", Boolean.toString(revsInfo));
 
         if (docIdAndRev.getRev() != null && !docIdAndRev.getRev().isEmpty()) {
             urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
@@ -286,166 +416,6 @@ public class CouchDbAsyncOperations {
      */
     public CompletableFuture<Boolean> delete(CouchDbDocument doc) {
         return delete(doc.getDocIdAndRev());
-    }
-
-    //------------------ Bulk API -------------------------
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     *
-     * @param docs
-     * @param callback
-     * @return
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T[]> bulk(final T[] docs) {
-        try {
-            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
-
-            for (T doc : docs) {
-                arrayNode.addPOJO(doc);
-            }
-
-            ObjectNode objectNode = couchDb.mapper.createObjectNode();
-
-            objectNode.set("docs", arrayNode);
-
-            StringWriter writer = new StringWriter();
-
-            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
-
-            Function<List<CouchDbPutResponse>, T[]> transformer = responses -> {
-                for (int i = 0; i < docs.length; i++) {
-                    docs[i].setDocId(responses.get(i).getDocId());
-                    docs[i].setRev(responses.get(i).getRev());
-
-                    new CouchDbDocumentAccessor(docs[i]).setCurrentDb(couchDb)
-                                                        .setInConflict(responses.get(i).isInConflict())
-                                                        .setForbidden(responses.get(i).isForbidden())
-                                                        .setConflictReason(responses.get(i).getConflictReason());
-                }
-
-                return docs;
-            };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
-                                                       .setBody(writer.toString())
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
-        } catch(Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     *
-     * @param docs
-     * @param callback
-     * @return
-     */
-    public <T extends CouchDbDocument> CompletableFuture<List<T>> bulk(final List<T> docs) {
-        try {
-            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
-
-            for (T doc : docs) {
-                arrayNode.addPOJO(doc);
-            }
-
-            ObjectNode objectNode = couchDb.mapper.createObjectNode();
-
-            objectNode.set("docs", arrayNode);
-
-            StringWriter writer = new StringWriter();
-
-            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
-
-            Function<List<CouchDbPutResponse>, List<T>> transformer = responses -> {
-                for (int i = 0; i < docs.size(); i++) {
-                    docs.get(i).setDocId(responses.get(i).getDocId());
-                    docs.get(i).setRev(responses.get(i).getRev());
-
-                    new CouchDbDocumentAccessor(docs.get(i)).setCurrentDb(couchDb)
-                                                            .setInConflict(responses.get(i).isInConflict())
-                                                            .setForbidden(responses.get(i).isForbidden())
-                                                            .setConflictReason(responses.get(i).getConflictReason());
-                }
-
-                return docs;
-            };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
-                                                       .setBody(writer.toString())
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
-        } catch(Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     *
-     * @param docs
-     * @param callback
-     * @return
-     */
-    public CompletableFuture<List<CouchDbPutResponse>> bulkRaw(final Map<String, Object>[] docs) {
-        try {
-            Map<String, Object> map = new HashMap<>();
-
-            map.put("docs", docs);
-
-            Function<List<CouchDbPutResponse>, List<CouchDbPutResponse>> transformer = responses -> {
-                for (int i = 0; i < docs.length; i++) {
-                    docs[i].put("_id", responses.get(i).getDocId());
-                    docs[i].put("_rev", responses.get(i).getRev());
-                }
-
-                return responses;
-            };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(map))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
-        } catch(Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     *
-     * @param docs
-     * @param callback
-     * @return
-     */
-    public CompletableFuture<List<CouchDbPutResponse>> bulkRaw(final List<Map<String, Object>> docs) {
-        try {
-            Map<String, Object> map = new HashMap<>();
-
-            map.put("docs", docs);
-
-            Function<List<CouchDbPutResponse>, List<CouchDbPutResponse>> transformer = responses -> {
-                for (int i = 0; i < docs.size(); i++) {
-                    docs.get(i).put("_id", responses.get(i).getDocId());
-                    docs.get(i).put("_rev", responses.get(i).getRev());
-                }
-
-                return responses;
-            };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(map))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
-        } catch(Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
     //------------------ Admin API -------------------------

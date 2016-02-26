@@ -15,19 +15,19 @@ import com.n1global.acc.notification.CouchDbEventListener;
 import com.n1global.acc.notification.CouchDbNotificationConfig;
 
 public class CouchDbDocumentListener implements AutoCloseable {
-	private CouchDbEventListener<CouchDbDocument> eventListener;
+	CouchDbEventListener<CouchDbDocument> eventListener;
 
-	private Logger logger = LoggerFactory.getLogger(this.getClass().getName());
+	Logger logger = LoggerFactory.getLogger(this.getClass().getName());
 
-	private CopyOnWriteArrayList<CouchDbDocumentUpdateHandler<CouchDbDocument>> handlers = new CopyOnWriteArrayList<>();
+	CopyOnWriteArrayList<CouchDbDocumentUpdateHandler<CouchDbDocument>> handlers = new CopyOnWriteArrayList<>();
 
-	private long lastSuccessSeq;
+	long lastSuccessSeq;
 
 	private CouchDb db;
 
-	private Class<? extends CouchDbDocument> docClass;
+	Class<? extends CouchDbDocument> docClass;
 
-	private CouchDbDocumentListenerConfig config;
+	CouchDbDocumentListenerConfig config;
 
 	public CouchDbDocumentListener(CouchDb db, Class<? extends CouchDbDocument> docClass, CouchDbDocumentListenerConfig config) {
 	    this.db = db;
@@ -44,7 +44,7 @@ public class CouchDbDocumentListener implements AutoCloseable {
 	    handlers.remove(handler);
 	}
 
-	synchronized public void startListening() throws Exception {
+	public synchronized void startListening() throws Exception {
 	    if (eventListener == null) {
     		eventListener = new CouchDbEventListener<CouchDbDocument>(db, new CouchDbNotificationConfig.Builder().setIncludeDocs(true)
                                                                                                                  .setHeartbeatInMillis(config.getHeartbeatInMillis())
@@ -89,7 +89,7 @@ public class CouchDbDocumentListener implements AutoCloseable {
 
                     try {
                         Thread.sleep(config.getReConnectTimeout());
-                    } catch (InterruptedException e1) {
+                    } catch (@SuppressWarnings("unused") InterruptedException e1) {
                         //ignore
                     }
 
@@ -107,7 +107,7 @@ public class CouchDbDocumentListener implements AutoCloseable {
 	    }
 	}
 
-	synchronized public void stopListening() {
+	public synchronized void stopListening() {
 	    if (eventListener != null) {
     	    try {
     	        eventListener.stopListening();

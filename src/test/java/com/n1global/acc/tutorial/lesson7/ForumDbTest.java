@@ -57,8 +57,8 @@ public class ForumDbTest {
 
         Message catsMessage = db.saveOrUpdate(new Message("Message about cats", topic.getDocId()));
 
-        db.bulk(new Message("Message about cars", topic.getDocId()),
-                new Message("Message about dogs", topic.getDocId()));
+        db.saveOrUpdate(new Message("Message about cars", topic.getDocId()),
+                        new Message("Message about dogs", topic.getDocId()));
 
         Thread.sleep(1000);//sleep while indexing our docs.
 

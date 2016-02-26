@@ -30,11 +30,11 @@ public class BookDbTest {
 
     @Test
     public void shouldGetBookByPublisher() {
-        db.bulk(new Book("Perl", "oreilly"),
-                new Book("Python", "oreilly"),
-                new Book("JavaScript", "oreilly"),
-                new Book("Spring in Action", "manning"),
-                new Book("JBoss in Action", "manning"));
+        db.saveOrUpdate(new Book("Perl", "oreilly"),
+                        new Book("Python", "oreilly"),
+                        new Book("JavaScript", "oreilly"),
+                        new Book("Spring in Action", "manning"),
+                        new Book("JBoss in Action", "manning"));
 
         Assert.assertEquals(2, db.getPublishersBooksView().createDocQuery().byKey("manning").asDocs().size());
         Assert.assertEquals(3, db.getPublishersBooksView().createDocQuery().byKey("oreilly").asDocs().size());
@@ -42,11 +42,11 @@ public class BookDbTest {
 
     @Test
     public void shouldGetBookCountByPublisher() {
-        db.bulk(new Book("Perl", "oreilly"),
-                new Book("Python", "oreilly"),
-                new Book("JavaScript", "oreilly"),
-                new Book("Spring in Action", "manning"),
-                new Book("JBoss in Action", "manning"));
+        db.saveOrUpdate(new Book("Perl", "oreilly"),
+                        new Book("Python", "oreilly"),
+                        new Book("JavaScript", "oreilly"),
+                        new Book("Spring in Action", "manning"),
+                        new Book("JBoss in Action", "manning"));
 
         Assert.assertEquals(Integer.valueOf(2), db.getPublishersBooksView().createReduceQuery().group().byKey("manning").asValue());
         Assert.assertEquals(Integer.valueOf(3), db.getPublishersBooksView().createReduceQuery().group().byKey("oreilly").asValue());

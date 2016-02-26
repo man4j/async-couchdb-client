@@ -16,9 +16,9 @@ public class AutoSuggestTest {
     @Before
     public void before() {
         db = new SimpleCityDb(new CouchDbConfig.Builder().setUser("admin")
-                                                           .setPassword("root")
-                                                           .setHttpClient(httpClient)
-                                                           .build());
+                                                         .setPassword("root")
+                                                         .setHttpClient(httpClient)
+                                                         .build());
     }
 
     @After
@@ -30,7 +30,7 @@ public class AutoSuggestTest {
 
     @Test
     public void shouldWork() {
-        db.bulk(new City("Moscow"), new City("London"), new City("Minsk"));
+        db.saveOrUpdate(new City("Moscow"), new City("London"), new City("Minsk"));
 
         Assertions.assertThat(db.suggest("M"))
                   .extracting("name")

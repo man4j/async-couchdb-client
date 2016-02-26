@@ -92,17 +92,19 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         return startListening(0, filter);
     }
 
-    synchronized public Future<Void> startListening(long seq, CouchDbFilter filter) {
+    public synchronized Future<Void> startListening(long seq, CouchDbFilter filter) {
         if (asyncHandler == null) {
-            JavaType docType = TypeFactory.defaultInstance().findTypeParameters(getClass(), CouchDbEventListener.class)[0];
+            TypeFactory typeFactory = TypeFactory.defaultInstance();
+            
+            JavaType docType = typeFactory.findTypeParameters(typeFactory.constructType(getClass()), CouchDbEventListener.class)[0];
 
-            JavaType eventType = TypeFactory.defaultInstance().constructParametrizedType(CouchDbEvent.class, CouchDbEvent.class, docType);
+            JavaType eventType = typeFactory.constructParametrizedType(CouchDbEvent.class, CouchDbEvent.class, docType);
 
             UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
                                                                  .addQueryParam("feed", "continuous")
-                                                                 .addQueryParam("since", seq + "")
-                                                                 .addQueryParam("heartbeat", config.getHeartbeatInMillis() + "")
-                                                                 .addQueryParam("include_docs", config.isIncludeDocs() + "");
+                                                                 .addQueryParam("since", Long.toString(seq))
+                                                                 .addQueryParam("heartbeat", Integer.toString(config.getHeartbeatInMillis()))
+                                                                 .addQueryParam("include_docs", Boolean.toString(config.isIncludeDocs()));
             
             if (filter != null) {
                 urlBuilder.addQueryParam("filter", filter.getDesignName() + "/" + filter.getFilterName());
@@ -120,7 +122,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         throw new IllegalStateException("Already connected!");
     }
 
-    synchronized public void stopListening() {
+    public synchronized void stopListening() {
         if (asyncHandler != null) {
             try {
                 messagingFuture.cancel(true);

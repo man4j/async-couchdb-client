@@ -12,10 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.n1global.acc.annotation.DbName;
 import com.n1global.acc.annotation.Filter;
@@ -111,15 +109,40 @@ public class CouchDb extends CouchDbBase {
      * also CouchDB will silently reject update if document with same id already exists.
      * Use this option with caution.
      */
-    public Map<String, Object> saveOrUpdateRaw(Map<String, Object> doc, boolean batch) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdateRaw(doc, batch));
+    public Map<String, Object> saveOrUpdate(Map<String, Object> doc, boolean batch) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc, batch));
     }
 
     /**
      * Inserts a new document with an automatically generated id or inserts a new version of the document.
      */
-    public Map<String, Object> saveOrUpdateRaw(Map<String, Object> doc) {
-        return saveOrUpdateRaw(doc, false);
+    public Map<String, Object> saveOrUpdate(Map<String, Object> doc) {
+        return saveOrUpdate(doc, false);
+    }
+    
+    //------------------ Bulk API -------------------------
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> T[] saveOrUpdate(T... docs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+    }
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     */
+    public <T extends CouchDbDocument> List<T> saveOrUpdate(List<T> docs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+    }
+
+    /**
+     * Insert or delete multiple documents in to the database in a single request.
+     */
+    @SafeVarargs
+    public final List<CouchDbPutResponse> saveOrUpdate(Map<String, Object>... docs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
     }
 
     //------------------ Attach API -------------------------
@@ -235,37 +258,6 @@ public class CouchDb extends CouchDbBase {
      */
     public boolean delete(CouchDbDocIdAndRev docId) {
         return ExceptionHandler.handleFutureResult(asyncOps.delete(docId));
-    }
-
-    //------------------ Bulk API -------------------------
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     */
-    public <T extends CouchDbDocument> T[] bulk( @SuppressWarnings("unchecked") T... docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.bulk(docs));
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     */
-    public <T extends CouchDbDocument> List<T> bulk(List<T> docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.bulk(docs));
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     */
-    @SafeVarargs
-    final public List<CouchDbPutResponse> bulkRaw(Map<String, Object>... docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.bulkRaw(docs));
-    }
-
-    /**
-     * Insert or delete multiple documents in to the database in a single request.
-     */
-    public List<CouchDbPutResponse> bulkRaw(List<Map<String, Object>> docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.bulkRaw(docs));
     }
 
     //------------------ Admin API -------------------------
@@ -486,6 +478,7 @@ public class CouchDb extends CouchDbBase {
     
     private void addSecurity() {
         try {
+            @SuppressWarnings("resource")
             AsyncHttpClient client = getConfig().getHttpClient();
             
             CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
@@ -515,8 +508,7 @@ public class CouchDb extends CouchDbBase {
         }
     }
 
-    private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject)
-            throws InterruptedException, ExecutionException, JsonProcessingException {
+    private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, ExecutionException, JsonProcessingException {
         Response r = client.prepareRequest(prototype).setMethod("PUT")
                                                      .setUrl(new UrlBuilder(getDbUrl())
                                                      .addPathSegment("_security").build())
@@ -527,7 +519,7 @@ public class CouchDb extends CouchDbBase {
         if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
     }
 
-    private CouchDbSecurityObject getSecurityObject(AsyncHttpClient client) throws IOException, JsonParseException, JsonMappingException, InterruptedException, ExecutionException {
+    private CouchDbSecurityObject getSecurityObject(AsyncHttpClient client) throws IOException, InterruptedException, ExecutionException {
         return mapper.readValue(client.prepareRequest(prototype).setMethod("GET")
                                                                 .setUrl(new UrlBuilder(getDbUrl())
                                                                 .addPathSegment("_security")
@@ -566,7 +558,7 @@ public class CouchDb extends CouchDbBase {
         }
 
         if (!newDesignDocs.isEmpty()) {
-            bulk(new ArrayList<>(newDesignDocs.values()));
+            saveOrUpdate(new ArrayList<>(newDesignDocs.values()));
         }
     }
 

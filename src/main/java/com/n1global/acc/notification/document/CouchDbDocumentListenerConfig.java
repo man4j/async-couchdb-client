@@ -9,7 +9,7 @@ public class CouchDbDocumentListenerConfig {
 
     private AsyncHttpClient httpClient;
 
-    private CouchDbDocumentListenerConfig(int heartbeatInMillis, int reConnectTimeout, AsyncHttpClient httpClient) {
+    CouchDbDocumentListenerConfig(int heartbeatInMillis, int reConnectTimeout, AsyncHttpClient httpClient) {
         this.heartbeatInMillis = heartbeatInMillis;
         this.reConnectTimeout = reConnectTimeout;
         this.httpClient = httpClient;

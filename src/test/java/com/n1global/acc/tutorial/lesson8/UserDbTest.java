@@ -37,7 +37,7 @@ public class UserDbTest {
         User user2 = new User("Adam Fox");
         User user3 = new User("Amanda Black");
 
-        db.bulk(user1, user2, user3);
+        db.saveOrUpdate(user1, user2, user3);
 
         for (CouchDbDocument user : db.getBuiltInView().createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList())) {
             db.getTestUpdater().update(user.getDocId());

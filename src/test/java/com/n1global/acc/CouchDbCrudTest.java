@@ -156,7 +156,7 @@ public class CouchDbCrudTest {
 
         testDoc.setDeleted();
 
-        db.bulk(testDoc);
+        db.saveOrUpdate(testDoc);
 
         Assert.assertNull(db.get(testDoc.getDocId()));
     }
@@ -170,7 +170,7 @@ public class CouchDbCrudTest {
 
         long count = db.getInfo().getDocCount();
 
-        List<CouchDbDocument> savedDocs = db.bulk(docs);
+        List<CouchDbDocument> savedDocs = db.saveOrUpdate(docs);
 
         Assert.assertEquals(2, savedDocs.size());
         Assert.assertEquals(db.getInfo().getDocCount(), count + 2);
@@ -183,7 +183,7 @@ public class CouchDbCrudTest {
         docs.add(new CouchDbDocument());
         docs.add(new CouchDbDocument());
 
-        db.bulk(docs);
+        db.saveOrUpdate(docs);
 
         for (CouchDbDocument d : docs) {
             Assert.assertFalse(d.isInConflict());
@@ -191,7 +191,7 @@ public class CouchDbCrudTest {
             d.setRev(null);
         }
 
-        db.bulk(docs);
+        db.saveOrUpdate(docs);
 
         for (CouchDbDocument d : docs) {
             Assert.assertTrue(d.isInConflict());
@@ -208,7 +208,7 @@ public class CouchDbCrudTest {
         docs.add(d1);
         docs.add(d2);
 
-        db.bulk(docs);
+        db.saveOrUpdate(docs);
 
         Assert.assertFalse(d1.isInConflict());
         Assert.assertTrue(d2.isInConflict()); //not saved
@@ -225,7 +225,7 @@ public class CouchDbCrudTest {
         boolean findTestDocClass = false;
         boolean findTestDocDescendantClass = false;
 
-        db.bulk(new TestDoc(), new TestDocDescendant());
+        db.saveOrUpdate(new TestDoc(), new TestDocDescendant());
 
         for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator()) {
             if (d.getClass() == CouchDbDesignDocument.class) {

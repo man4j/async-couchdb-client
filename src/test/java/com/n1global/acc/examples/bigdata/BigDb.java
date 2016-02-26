@@ -60,11 +60,11 @@ public class BigDb extends CouchDb {
 
             if (users.size() == 5_000) {
                 Future<User[]>[] futures = new Future[] {
-                    db.async().bulk(users.subList(     0,    1_000)),
-                    db.async().bulk(users.subList( 1_000,    2_000)),
-                    db.async().bulk(users.subList( 2_000,    3_000)),
-                    db.async().bulk(users.subList( 3_000,    4_000)),
-                    db.async().bulk(users.subList( 4_000,    5_000))};
+                    db.async().saveOrUpdate(users.subList(     0,    1_000)),
+                    db.async().saveOrUpdate(users.subList( 1_000,    2_000)),
+                    db.async().saveOrUpdate(users.subList( 2_000,    3_000)),
+                    db.async().saveOrUpdate(users.subList( 3_000,    4_000)),
+                    db.async().saveOrUpdate(users.subList( 4_000,    5_000))};
 
                 for (Future<User[]> f : futures) {
                     f.get();
@@ -94,7 +94,7 @@ public class BigDb extends CouchDb {
 
                         if (users.size() == 10_000) {
                             Future<User[]>[] futures = new Future[] {
-                                db.async().bulk(users)};
+                                db.async().saveOrUpdate(users)};
 
                             for (Future<User[]> f : futures) {
                                 try {

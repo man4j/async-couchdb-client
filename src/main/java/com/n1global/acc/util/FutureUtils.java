@@ -6,7 +6,7 @@ import com.ning.http.client.ListenableFuture;
 
 public class FutureUtils {
     public static <T> CompletableFuture<T> toCompletable(ListenableFuture<T> listenableFuture) {
-        CompletableFuture<T> completableFuture = new CompletableFuture<T>();
+        CompletableFuture<T> completableFuture = new CompletableFuture<>();
         
         listenableFuture.addListener(() -> {
             try {

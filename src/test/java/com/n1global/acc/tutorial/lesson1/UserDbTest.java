@@ -44,7 +44,7 @@ public class UserDbTest {
 
         db.saveOrUpdate(userJohn);//simple save
 
-        db.bulk(new User("Ivan", 22), new User("Mary", 18));//bulk save
+        db.saveOrUpdate(new User("Ivan", 22), new User("Mary", 18));//bulk save
 
         Assert.assertEquals(3, db.getInfo().getDocCount());
 
@@ -58,7 +58,7 @@ public class UserDbTest {
             doc.setDeleted();
         }
 
-        db.bulk(otherUsers);//bulk delete
+        db.saveOrUpdate(otherUsers);//bulk delete
 
         Assert.assertEquals(0, db.getInfo().getDocCount());
     }

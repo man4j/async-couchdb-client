@@ -11,11 +11,11 @@ import com.n1global.acc.json.resultset.CouchDbMapRow;
 import com.n1global.acc.util.ExceptionHandler;
 
 public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K, V>, RS extends CouchDbAbstractMapResultSet<K, V, ROW>, T extends CouchDbAbstractMapQuery<K, V, ROW, RS, T>> extends CouchDbAbstractQuery<K, V, ROW, RS, T> {
-    private String lastKeyDocId;
+    String lastKeyDocId;
 
-    private K lastKey;
+    K lastKey;
 
-    private int totalRows;
+    int totalRows;
 
     static final int BATCH_SIZE = 1000;
 

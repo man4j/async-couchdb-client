@@ -40,27 +40,27 @@ public class BlogDbTest {
         Author author1 = new Author("John");
         Author author2 = new Author("Sally");
 
-        db.bulk(author1, author2);
+        db.saveOrUpdate(author1, author2);
 
         BlogPost blogPost1 = new BlogPost("First post", "This is first post!", author1.getDocId());
         BlogPost blogPost2 = new BlogPost("Second post", "This is second post!", author2.getDocId());
 
-        db.bulk(blogPost1, blogPost2);
+        db.saveOrUpdate(blogPost1, blogPost2);
 
         author1.getBlogPostsIds().add(blogPost1.getDocId());//because author1 is author of blogPost1
         author2.getBlogPostsIds().add(blogPost2.getDocId());//because author2 is author of blogPost2
 
-        db.bulk(author1, author2);
+        db.saveOrUpdate(author1, author2);
 
-        db.bulk(new BlogComment("Hey John! This is cool post!", blogPost1.getDocId(), author2.getDocId()),
-                new BlogComment("Thanks, Sally!", blogPost1.getDocId(), author1.getDocId()),
-                new BlogComment("Hey Sally! This is cool post!", blogPost2.getDocId(), author1.getDocId()),
-                new BlogComment("Thanks, John!", blogPost2.getDocId(), author2.getDocId()));
+        db.saveOrUpdate(new BlogComment("Hey John! This is cool post!", blogPost1.getDocId(), author2.getDocId()),
+                        new BlogComment("Thanks, Sally!", blogPost1.getDocId(), author1.getDocId()),
+                        new BlogComment("Hey Sally! This is cool post!", blogPost2.getDocId(), author1.getDocId()),
+                        new BlogComment("Thanks, John!", blogPost2.getDocId(), author2.getDocId()));
 
         author1.getBlogPostsIds().add(blogPost2.getDocId());//because author1 commented blogPost2
         author2.getBlogPostsIds().add(blogPost1.getDocId());//because author2 commented blogPost1
 
-        db.bulk(author1, author2);
+        db.saveOrUpdate(author1, author2);
 
         // Fetch
         List<BlogDocument> blogRelatedDocs = db.getJoinedView().<BlogDocument>createDocQuery().byKey(blogPost1.getDocId()).asDocs();

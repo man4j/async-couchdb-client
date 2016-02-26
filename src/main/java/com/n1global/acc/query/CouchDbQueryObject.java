@@ -51,7 +51,7 @@ public class CouchDbQueryObject<K> {
         this.mapper = mapper;
     }
 
-    public String toQuery() throws JsonGenerationException, JsonMappingException, IOException {
+    public String toQuery() throws IOException {
         UrlBuilder urlBuilder = new UrlBuilder("");
 
         if (isSetKey) urlBuilder.addQueryParam("key", mapper.writeValueAsString(key));
@@ -87,6 +87,7 @@ public class CouchDbQueryObject<K> {
 
     public String jsonKeys() throws JsonGenerationException, JsonMappingException, IOException {
         return mapper.writeValueAsString(new Object() {
+            @SuppressWarnings({ "synthetic-access", "hiding" })
             @JsonProperty("keys")
             K[] keys = CouchDbQueryObject.this.keys;
         });

@@ -70,7 +70,7 @@ public class CouchDbRawApiTest {
 
         m.put("name", "UpdatedName");
 
-        db.saveOrUpdateRaw(m);
+        db.saveOrUpdate(m);
 
         m = db.getRaw(testDoc.getDocId());
 
@@ -85,7 +85,7 @@ public class CouchDbRawApiTest {
         doc1.put("name", "name1");
         doc2.put("name", "name2");
 
-        db.bulkRaw(doc1, doc2);
+        db.saveOrUpdate(doc1, doc2);
 
         List<String> ids = Arrays.asList((String)doc1.get("_id"), (String)doc2.get("_id"));
 

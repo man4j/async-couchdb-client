@@ -17,7 +17,7 @@ import com.ning.http.client.AsyncHttpClient;
 public class CouchDbAdmin extends CouchDbBase {
     private CouchDbAdminAsyncOperations asyncOps = new CouchDbAdminAsyncOperations();
     
-    private AsyncHttpClient httpClient;
+    AsyncHttpClient httpClient;
 
     public CouchDbAdmin(CouchDbBaseConfig config) {
         super(config);

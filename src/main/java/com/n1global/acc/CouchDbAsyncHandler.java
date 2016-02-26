@@ -67,7 +67,7 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
             
             logger.debug((System.currentTimeMillis() - startTime) + " ms, " + couchDbHttpResponse.toString() + "\n");
         } catch (IOException e) {
-            throw new CouchDbResponseException(new CouchDbHttpResponse(statusCode, statusText, "Unable to get response", uri));
+            throw new CouchDbResponseException(new CouchDbHttpResponse(statusCode, statusText, "Unable to get response: " + e.getMessage(), uri));
         }
  
         if (response.getStatusCode() == 404 && !path.contains("_view")) {//this is not query request.
@@ -99,7 +99,7 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
         }
     }
 
-    private CouchDbResponseException responseCode2Exception(CouchDbHttpResponse response) {
+    private static CouchDbResponseException responseCode2Exception(CouchDbHttpResponse response) {
         switch (response.getStatusCode()) {
             case 400: return new CouchDbBadRequestException(response);
             case 401: return new CouchDbUnauthorizedException(response);
