@@ -1,8 +1,12 @@
 package com.n1global.acc.query;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.JavaType;
 import com.n1global.acc.CouchDb;
@@ -65,5 +69,27 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
 
     public CouchDbIterable<D> asDocIterator() {
         return asDocIterator(BATCH_SIZE);
+    }
+    
+    public Map<K, D> asDocMap() {
+        Map<K, D> map = new LinkedHashMap<>();
+        
+        for (Entry<K, CouchDbMapRowWithDoc<K, V, D>> e : asMap().entrySet()) {
+            map.put(e.getKey(), e.getValue().getDoc());
+        }
+        
+        return map;
+    }
+    
+    public Map<K, List<D>> asDocMultiMap() {
+        Map<K, List<D>> map = new LinkedHashMap<>();
+        
+        for (Entry<K, List<CouchDbMapRowWithDoc<K, V, D>>> e : asMultiMap().entrySet()) {
+            List<D> docs = e.getValue().stream().map(CouchDbMapRowWithDoc::getDoc).collect(Collectors.toList());
+            
+            map.put(e.getKey(), docs);
+        }
+        
+        return map;
     }
 }
