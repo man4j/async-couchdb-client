@@ -33,7 +33,7 @@ public class CouchDbAsyncOperations {
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
-        this.httpClient = couchDb.getConfig().getHttpClient();
+        this.httpClient = couchDb.config.getHttpClient();
     }
 
     private UrlBuilder createUrlBuilder() {
@@ -422,6 +422,16 @@ public class CouchDbAsyncOperations {
 
     public CompletableFuture<List<CouchDbDesignDocument>> getDesignDocs() {
         return couchDb.getBuiltInView().<CouchDbDesignDocument>createDocQuery().startKey("_design/").endKey("_design0").async().asDocs();
+    }
+    
+    /**
+     * Returns a list of databases on this server.
+     */
+    public CompletableFuture<List<String>> getAllDbsAsync() {
+        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setUrl(createUrlBuilder().addPathSegment("/_all_dbs").build())
+                                                   .setMethod("GET")
+                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<List<String>>() {/* empty */}, new NoopFunction<List<String>>(), couchDb.mapper)));
     }
 
     /**

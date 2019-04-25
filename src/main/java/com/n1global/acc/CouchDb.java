@@ -14,15 +14,14 @@ import java.util.concurrent.ExecutionException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.n1global.acc.annotation.DbName;
-import com.n1global.acc.annotation.Filter;
 import com.n1global.acc.annotation.IgnorePrefix;
 import com.n1global.acc.annotation.JsView;
 import com.n1global.acc.annotation.Security;
 import com.n1global.acc.annotation.SecurityPattern;
-import com.n1global.acc.annotation.UpdateHandler;
-import com.n1global.acc.annotation.ValidateDocUpdate;
 import com.n1global.acc.json.CouchDbDesignDocument;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbInfo;
@@ -38,9 +37,19 @@ import com.n1global.acc.view.CouchDbMapReduceView;
 import com.n1global.acc.view.CouchDbMapView;
 import com.n1global.acc.view.CouchDbReduceView;
 import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.Realm;
+import com.ning.http.client.Request;
+import com.ning.http.client.RequestBuilder;
 import com.ning.http.client.Response;
+import com.ning.http.client.Realm.AuthScheme;
 
-public class CouchDb extends CouchDbBase {
+public class CouchDb {
+    final CouchDbConfig config;
+
+    final ObjectMapper mapper = new ObjectMapper();
+
+    final Request prototype;
+    
     private String dbName;
 
     private CouchDbBuiltInView builtInView;
@@ -51,7 +60,25 @@ public class CouchDb extends CouchDbBase {
     private CouchDbAsyncOperations asyncOps = new CouchDbAsyncOperations(this);
 
     public CouchDb(CouchDbConfig config) {
-        super(config);
+        mapper.registerModule(new JavaTimeModule());
+        
+        this.config = config;
+
+        RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
+                                                     .setBodyEncoding("UTF-8");
+
+        if (this.config.getUser() != null && this.config.getPassword() != null) {
+            Realm realm = new Realm.RealmBuilder()
+                                   .setPrincipal(this.config.getUser())
+                                   .setPassword(this.config.getPassword())
+                                   .setUsePreemptiveAuth(true)
+                                   .setScheme(AuthScheme.BASIC)
+                                   .build();
+
+            builder.setRealm(realm);
+        }
+
+        prototype = builder.build();
         
         testConnection();
 
@@ -65,13 +92,21 @@ public class CouchDb extends CouchDbBase {
             selfDiscovering();
         }
     }
+    
+    public CouchDbConfig getConfig() {
+        return config;
+    }
+    
+    public ObjectMapper getMapper() {
+        return mapper;
+    }
 
     public String getDbName() {
         return dbName;
     }
 
     public String getDbUrl() {
-        return new UrlBuilder(getConfig().getServerUrl()).addPathSegment(getDbName()).toString();
+        return new UrlBuilder(config.getServerUrl()).addPathSegment(getDbName()).toString();
     }
 
     public CouchDbBuiltInView getBuiltInView() {
@@ -265,6 +300,13 @@ public class CouchDb extends CouchDbBase {
     public List<CouchDbDesignDocument> getDesignDocs() {
         return ExceptionHandler.handleFutureResult(asyncOps.getDesignDocs());
     }
+    
+    /**
+     * Returns a list of databases on this server.
+     */
+    public List<String> getAllDbs() {
+        return ExceptionHandler.handleFutureResult(asyncOps.getAllDbsAsync());
+    }
 
     /**
      * Create a new database.
@@ -328,13 +370,7 @@ public class CouchDb extends CouchDbBase {
         synchronizeDesignDocs();
 
         injectViews();
-
-        injectDirectUpdaters();
-
-        injectFilters();
-        
-        injectUpdaters();
-        
+                
         addSecurity();
 
         compactAllOnStart();
@@ -344,9 +380,9 @@ public class CouchDb extends CouchDbBase {
         try {
             if (config.getHttpClient().prepareRequest(prototype)
                                       .setMethod("GET")
-                                      .setUrl(getConfig().getServerUrl())
+                                      .setUrl(config.getServerUrl())
                                       .execute().get().getStatusCode() != 200) {
-                throw new ConnectException("Could not connect to " + getConfig().getServerUrl());
+                throw new ConnectException("Could not connect to " + config.getServerUrl());
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -354,7 +390,7 @@ public class CouchDb extends CouchDbBase {
     }
 
     private void generateDbName() {
-        dbName = getConfig().getDbName();
+        dbName = config.getDbName();
 
         if (dbName == null) {
             if (getClass().isAnnotationPresent(DbName.class)) {
@@ -365,14 +401,12 @@ public class CouchDb extends CouchDbBase {
         }
         
         if (!getClass().isAnnotationPresent(IgnorePrefix.class)) {
-            dbName = getConfig().getDbPrefix() + dbName;
+            dbName = config.getDbPrefix() + dbName;
         }
     }
 
     private void createDbIfNotExist() {
-        CouchDbAdmin admin = new CouchDbAdmin(getConfig());
-
-        if (!admin.getListDbs().contains(getDbName())) {
+        if (!getAllDbs().contains(getDbName())) {
             createDb();
         }
     }
@@ -402,7 +436,7 @@ public class CouchDb extends CouchDbBase {
                 if (viewClass == CouchDbMapView.class) {
                     CouchDbMapView<String, Object> view = new CouchDbMapView<>(this, designName, viewName, jts);
 
-                    if (((CouchDbConfig)getConfig()).isBuildViewsOnStart()) {
+                    if (config.isBuildViewsOnStart()) {
                         view.createQuery().byKey("123").asKey();
                     }
 
@@ -412,7 +446,7 @@ public class CouchDb extends CouchDbBase {
                 if (viewClass == CouchDbReduceView.class) {
                     CouchDbReduceView<String, Object> view = new CouchDbReduceView<>(this, designName, viewName, jts);
 
-                    if (((CouchDbConfig)getConfig()).isBuildViewsOnStart()) {
+                    if (config.isBuildViewsOnStart()) {
                         view.createQuery().byKey("123").asKey();
                     }
 
@@ -422,7 +456,7 @@ public class CouchDb extends CouchDbBase {
                 if (viewClass == CouchDbMapReduceView.class) {
                     CouchDbMapReduceView<String, Object, Object, Object> view = new CouchDbMapReduceView<>(this, designName, viewName, jts);
 
-                    if (((CouchDbConfig)getConfig()).isBuildViewsOnStart()) {
+                    if (config.isBuildViewsOnStart()) {
                         view.createMapQuery().byKey("123").asKey();
                     }
 
@@ -441,45 +475,11 @@ public class CouchDb extends CouchDbBase {
     private void injectBuiltInView() {
         builtInView = new CouchDbBuiltInView(this);
     }
-
-    private void injectDirectUpdaters() {
-        for (Field field : ReflectionUtils.getAllFields(getClass())) {
-            if (field.isAnnotationPresent(UpdateHandler.class)) {
-                UpdateHandler handler = field.getAnnotation(UpdateHandler.class);
-
-                String handlerName = handler.handlerName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : handler.handlerName();
-
-                setValue(field, new CouchDbDirectUpdater(this, handlerName, handler.designName()));
-            }
-        }
-    }
-
-    private void injectFilters() {
-        for (Field field : ReflectionUtils.getAllFields(getClass())) {
-            if (field.isAnnotationPresent(Filter.class)) {
-                Filter filter = field.getAnnotation(Filter.class);
-
-                String filterName = filter.filterName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : filter.filterName();
-
-                setValue(field, new CouchDbFilter(filter.designName(), filterName));
-            }
-        }
-    }
-    
-    private void injectUpdaters() {
-        for (Field field : ReflectionUtils.getAllFields(getClass())) {
-            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
-                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
-
-                setValue(field, new CouchDbValidator(vdu.predicate()));
-            }
-        }
-    }
-    
+        
     private void addSecurity() {
         try {
             @SuppressWarnings("resource")
-            AsyncHttpClient client = getConfig().getHttpClient();
+            AsyncHttpClient client = config.getHttpClient();
             
             CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
             
@@ -530,7 +530,7 @@ public class CouchDb extends CouchDbBase {
     }
     
     private void compactAllOnStart() {
-        if (((CouchDbConfig)config).isCompactAllOnStart()) {
+        if (config.isCompactAllOnStart()) {
             compact();
             cleanupViews();
 
@@ -586,41 +586,6 @@ public class CouchDb extends CouchDbBase {
 
                 designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
                 designMap.get(designName).addView(viewName, map, reduce);
-            }
-
-            if (field.isAnnotationPresent(Filter.class)) {
-                field.setAccessible(true);
-
-                Filter filter = field.getAnnotation(Filter.class);
-
-                String designName = "_design/" + filter.designName();
-                String filterName = filter.filterName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : filter.filterName();
-
-                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).addFilter(filterName, "function(doc, req) { " + filter.predicate() + ";}");
-            }
-            
-            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
-                field.setAccessible(true);
-
-                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
-
-                String designName = "_design/" + vdu.designName();
-
-                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.predicate() + ";}");
-            }
-
-            if (field.isAnnotationPresent(UpdateHandler.class)) {
-                field.setAccessible(true);
-
-                UpdateHandler handler = field.getAnnotation(UpdateHandler.class);
-
-                String designName = "_design/" + handler.designName();
-                String handlerName = handler.handlerName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : handler.handlerName();
-
-                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).addUpdateHandler(handlerName, "function(doc, req) { " + handler.func() + ";}");
             }
         }
 

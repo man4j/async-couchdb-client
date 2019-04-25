@@ -245,11 +245,4 @@ public class CouchDbCrudTest {
         Assert.assertTrue(findTestDocClass);
         Assert.assertTrue(findTestDocDescendantClass);
     }
-
-    @Test
-    public void shouldInsertDocWithHandler() {
-        db.getTestUpdater().update("myDocId");
-
-        Assert.assertEquals("myDocId", db.get("myDocId").getDocId());
-    }
 }

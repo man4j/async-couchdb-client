@@ -7,7 +7,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbFilter;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbEvent;
 import com.n1global.acc.util.UrlBuilder;
@@ -81,18 +80,10 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     }
 
     public Future<Void> startListening() {
-        return startListening(0, null);
+        return startListening(0);
     }
 
-    public Future<Void> startListening(long seq) {
-        return startListening(seq, null);
-    }
-
-    public Future<Void> startListening(CouchDbFilter filter) {
-        return startListening(0, filter);
-    }
-
-    public synchronized Future<Void> startListening(long seq, CouchDbFilter filter) {
+    public synchronized Future<Void> startListening(long seq) {
         if (asyncHandler == null) {
             TypeFactory typeFactory = TypeFactory.defaultInstance();
             
@@ -105,11 +96,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                                                  .addQueryParam("since", Long.toString(seq))
                                                                  .addQueryParam("heartbeat", Integer.toString(config.getHeartbeatInMillis()))
                                                                  .addQueryParam("include_docs", Boolean.toString(config.isIncludeDocs()));
-            
-            if (filter != null) {
-                urlBuilder.addQueryParam("filter", filter.getDesignName() + "/" + filter.getFilterName());
-            }
-            
+                        
             String url = urlBuilder.build();
 
             messagingFuture = httpClient.prepareRequest(prototype)
