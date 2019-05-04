@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import org.asynchttpclient.BoundRequestBuilder;
+
 import com.fasterxml.jackson.databind.JavaType;
 import com.n1global.acc.CouchDb;
 import com.n1global.acc.CouchDbAsyncHandler;
@@ -16,7 +18,6 @@ import com.n1global.acc.json.resultset.CouchDbAbstractRow;
 import com.n1global.acc.util.ExceptionHandler;
 import com.n1global.acc.util.FutureUtils;
 import com.n1global.acc.util.NoopFunction;
-import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
     String viewUrl;

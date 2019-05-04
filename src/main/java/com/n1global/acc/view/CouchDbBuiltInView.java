@@ -35,7 +35,7 @@ public final class CouchDbBuiltInView {
         keyType = tf.constructType(String.class);
         valueType = tf.constructType(CouchDbDocRev.class);
 
-        resultSetType = tf.constructParametrizedType(CouchDbMapResultSet.class, CouchDbMapResultSet.class, keyType, valueType);
+        resultSetType = tf.constructParametricType(CouchDbMapResultSet.class, keyType, valueType);
 
         this.viewUrl = new UrlBuilder(couchDb.getDbUrl()).addPathSegment("_all_docs").build();
     }
@@ -54,7 +54,7 @@ public final class CouchDbBuiltInView {
     public <T extends CouchDbDocument> CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> createDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        JavaType resultSetType = tf.constructParametrizedType(CouchDbMapResultSetWithDocs.class, CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructType(CouchDbDocument.class));
+        JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructType(CouchDbDocument.class));
 
         return new CouchDbMapQueryWithDocs<>(couchDb, viewUrl, resultSetType);
     }
@@ -73,7 +73,7 @@ public final class CouchDbBuiltInView {
     public CouchDbMapQueryWithDocs<String, CouchDbDocRev, Map<String, Object>> createRawDocQuery() {
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        JavaType resultSetType = tf.constructParametrizedType(CouchDbMapResultSetWithDocs.class, CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructMapType(Map.class, String.class, Object.class));
+        JavaType resultSetType = tf.constructParametricType(CouchDbMapResultSetWithDocs.class, keyType, valueType, tf.constructMapType(Map.class, String.class, Object.class));
 
         return new CouchDbMapQueryWithDocs<>(couchDb, viewUrl, resultSetType);
     }

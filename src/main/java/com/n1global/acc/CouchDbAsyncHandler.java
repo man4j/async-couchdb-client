@@ -1,8 +1,10 @@
 package com.n1global.acc;
 
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
+import org.asynchttpclient.AsyncCompletionHandler;
+import org.asynchttpclient.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,8 +27,8 @@ import com.n1global.acc.exception.http.CouchDbNotFoundException;
 import com.n1global.acc.exception.http.CouchDbPreconditionFailedException;
 import com.n1global.acc.exception.http.CouchDbRequestedRangeException;
 import com.n1global.acc.exception.http.CouchDbUnauthorizedException;
-import com.ning.http.client.AsyncCompletionHandler;
-import com.ning.http.client.Response;
+
+import io.netty.handler.codec.http.HttpHeaders;
 
 public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -34,7 +36,7 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
     private JavaType javaType;
 
     private Function<F, T> transformer;
-
+    
     private ObjectMapper mapper;
 
     private long startTime;
@@ -59,16 +61,13 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
         String statusText = response.getStatusText();
         int statusCode = response.getStatusCode();
         String uri = response.getUri().toString();
+        HttpHeaders headers = response.getHeaders();
 
-        try {
-            String body = response.getResponseBody("UTF-8");
-            
-            couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, uri);
-            
-            logger.debug((System.currentTimeMillis() - startTime) + " ms, " + couchDbHttpResponse.toString() + "\n");
-        } catch (IOException e) {
-            throw new CouchDbResponseException(new CouchDbHttpResponse(statusCode, statusText, "Unable to get response: " + e.getMessage(), uri));
-        }
+        String body = response.getResponseBody(StandardCharsets.UTF_8);
+        
+        couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, uri, headers);
+        
+        logger.debug((System.currentTimeMillis() - startTime) + " ms, " + couchDbHttpResponse.toString() + "\n");
  
         if (response.getStatusCode() == 404 && !path.contains("_view")) {//this is not query request.
             return transformResult(null, couchDbHttpResponse);

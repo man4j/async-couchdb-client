@@ -8,27 +8,17 @@ public class CouchDbEvent<D extends CouchDbDocument> {
     @JsonProperty("id")
     private String docId;
 
-    private long seq;
+    private String seq;
 
     private boolean deleted;
 
     private D doc;
 
-    public CouchDbEvent() {
-        /* empty */
-    }
-
-    public CouchDbEvent(String docId, long seq, boolean deleted) {
-        this.docId = docId;
-        this.seq = seq;
-        this.deleted = deleted;
-    }
-
     public String getDocId() {
         return docId;
     }
 
-    public long getSeq() {
+    public String getSeq() {
         return seq;
     }
 
@@ -42,6 +32,6 @@ public class CouchDbEvent<D extends CouchDbDocument> {
 
     @Override
     public String toString() {
-        return docId;
+        return docId + "/" + seq;
     }
 }

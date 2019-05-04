@@ -3,6 +3,8 @@ package com.n1global.acc.json.resultset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -21,23 +23,11 @@ public abstract class CouchDbAbstractResultSet<K, V, ROW extends CouchDbAbstract
     }
 
     public List<K> keys() {
-        List<K> keys = new ArrayList<>();
-
-        for (ROW row : rows) {
-            keys.add(row.getKey());
-        }
-
-        return keys;
+        return rows.stream().map(ROW::getKey).collect(Collectors.toList());
     }
 
     public List<V> values() {
-        List<V> values = new ArrayList<>();
-
-        for (ROW row : rows) {
-            values.add(row.getValue());
-        }
-
-        return values;
+        return rows.stream().map(ROW::getValue).collect(Collectors.toList());
     }
 
     public ROW firstRow() {
@@ -53,26 +43,10 @@ public abstract class CouchDbAbstractResultSet<K, V, ROW extends CouchDbAbstract
     }
 
     public LinkedHashMap<K, ROW> map() {
-        LinkedHashMap<K, ROW> m = new LinkedHashMap<>();
-
-        for (ROW row : rows) {
-            m.put(row.getKey(), row);
-        }
-
-        return m;
+        return rows.stream().collect(Collectors.toMap(ROW::getKey, Function.identity(), (r1, r2) -> r1, LinkedHashMap::new));
     }
 
     public LinkedHashMap<K, List<ROW>> multiMap() {
-        LinkedHashMap<K, List<ROW>> m = new LinkedHashMap<>();
-
-        for (ROW row : rows) {
-            if (!m.containsKey(row.getKey())) {
-                m.put(row.getKey(), new ArrayList<ROW>());
-            }
-
-            m.get(row.getKey()).add(row);
-        }
-
-        return m;
+        return rows.stream().collect(Collectors.groupingBy(ROW::getKey, LinkedHashMap::new, Collectors.toList()));
     }
 }

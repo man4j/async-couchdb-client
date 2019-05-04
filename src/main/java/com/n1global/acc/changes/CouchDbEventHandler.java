@@ -1,4 +1,4 @@
-package com.n1global.acc.notification;
+package com.n1global.acc.changes;
 
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbEvent;

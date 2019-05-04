@@ -72,23 +72,17 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
     }
     
     public Map<K, D> asDocMap() {
-        Map<K, D> map = new LinkedHashMap<>();
-        
-        for (Entry<K, CouchDbMapRowWithDoc<K, V, D>> e : asMap().entrySet()) {
-            map.put(e.getKey(), e.getValue().getDoc());
-        }
-        
-        return map;
+        return asMap().entrySet().stream().collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getDoc(), (e1, e2) -> e1, LinkedHashMap::new));
     }
     
     public Map<K, List<D>> asDocMultiMap() {
         Map<K, List<D>> map = new LinkedHashMap<>();
         
-        for (Entry<K, List<CouchDbMapRowWithDoc<K, V, D>>> e : asMultiMap().entrySet()) {
+        asMultiMap().entrySet().forEach(e -> {
             List<D> docs = e.getValue().stream().map(CouchDbMapRowWithDoc::getDoc).collect(Collectors.toList());
             
             map.put(e.getKey(), docs);
-        }
+        });
         
         return map;
     }

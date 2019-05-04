@@ -1,5 +1,7 @@
 package com.n1global.acc;
 
+import io.netty.handler.codec.http.HttpHeaders;
+
 public class CouchDbHttpResponse {
     private int statusCode;
 
@@ -8,12 +10,15 @@ public class CouchDbHttpResponse {
     private String responseBody;
 
     private String requestUri;
+    
+    private HttpHeaders headers;
 
-    public CouchDbHttpResponse(int statusCode, String statusText, String responseBody, String requestUri) {
+    public CouchDbHttpResponse(int statusCode, String statusText, String responseBody, String requestUri, HttpHeaders headers) {
         this.statusCode = statusCode;
         this.statusText = statusText;
         this.responseBody = responseBody;
         this.requestUri = requestUri;
+        this.headers = headers;
     }
 
     public int getStatusCode() {
@@ -30,6 +35,10 @@ public class CouchDbHttpResponse {
 
     public String getRequestUri() {
         return requestUri;
+    }
+    
+    public HttpHeaders getHeaders() {
+        return headers;
     }
 
     @Override

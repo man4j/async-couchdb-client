@@ -1,6 +1,6 @@
 package com.n1global.acc;
 
-import com.ning.http.client.AsyncHttpClient;
+import org.asynchttpclient.AsyncHttpClient;
 
 public class CouchDbConfig {
     private final String serverUrl;

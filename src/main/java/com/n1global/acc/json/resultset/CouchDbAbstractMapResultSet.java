@@ -1,7 +1,7 @@
 package com.n1global.acc.json.resultset;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.n1global.acc.json.CouchDbDocRev;
@@ -45,13 +45,7 @@ public abstract class CouchDbAbstractMapResultSet<K, V, ROW extends CouchDbMapRo
     }
 
     public List<String> ids() {
-        List<String> ids = new ArrayList<>();
-
-        for (ROW row : getRows()) {
-            ids.add(row.getDocId());
-        }
-
-        return ids;
+        return getRows().stream().map(ROW::getDocId).collect(Collectors.toList());
     }
 
     public String firstId() {

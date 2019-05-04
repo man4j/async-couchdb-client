@@ -6,8 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.notification.document.CouchDbDocumentListener;
-import com.n1global.acc.notification.document.CouchDbDocumentListenerConfig;
+import com.n1global.acc.changes.document.CouchDbDocumentListener;
+import com.n1global.acc.changes.document.CouchDbDocumentListenerConfig;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 

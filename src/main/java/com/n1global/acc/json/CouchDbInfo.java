@@ -13,30 +13,14 @@ public class CouchDbInfo {
 
     @JsonProperty("doc_del_count")
     private long docDelCount;
-
+    
     @JsonProperty("update_seq")
-    private long updateSeq;
+    private String updateSeq;
 
-    @JsonProperty("purge_seq")
-    private long purgeSeq;
-
-    @JsonProperty("compact_running")
-    private boolean compactRunning;
-
-    @JsonProperty("disk_size")
-    private long diskSize;
-
-    @JsonProperty("data_size")
-    private long dataSize;
+    private Size sizes;
 
     @JsonProperty("instance_start_time")
     private long instanceStartTime;
-
-    @JsonProperty("disk_format_version")
-    private int diskFormatVersion;
-
-    @JsonProperty("committed_update_seq")
-    private long committedUpdateSeq;
 
     /**
      * @return name of the database.
@@ -64,40 +48,16 @@ public class CouchDbInfo {
     public long getDocDelCount() {
         return docDelCount;
     }
-
+    
     /**
-     * @return current number of updates to the database.
+     * @return opaque string that describes the state of the database. Do not rely on this string for counting the number of updates.
      */
-    public long getUpdateSeq() {
+    public String getUpdateSeq() {
         return updateSeq;
     }
 
-    /**
-     * @return number of purge operations.
-     */
-    public long getPurgeSeq() {
-        return purgeSeq;
-    }
-
-    /**
-     * Indicates, if a compaction is running.
-     */
-    public boolean isCompactRunning() {
-        return compactRunning;
-    }
-
-    /**
-     * @return current size in Bytes of the database (Note: Size of views indexes on disk are not included).
-     */
-    public long getDiskSize() {
-        return diskSize;
-    }
-
-    /**
-     * @return current size in Bytes of the data.
-     */
-    public long getDataSize() {
-        return dataSize;
+    public Size getSizes() {
+        return sizes;
     }
 
     /**
@@ -107,22 +67,39 @@ public class CouchDbInfo {
         return instanceStartTime;
     }
 
-    /**
-     * @return current version of the internal database format on disk.
-     */
-    public int getDiskFormatVersion() {
-        return diskFormatVersion;
-    }
-
-    public long getCommittedUpdateSeq() {
-        return committedUpdateSeq;
-    }
-
     @Override
     public String toString() {
         return "CouchDbInfo [dbName=" + dbName + ", docCount=" + docCount + ", docDelCount=" + docDelCount
-                + ", updateSeq=" + updateSeq + ", purgeSeq=" + purgeSeq + ", compactRunning=" + compactRunning
-                + ", diskSize=" + diskSize + ", dataSize=" + dataSize + ", instanceStartTime=" + instanceStartTime
-                + ", diskFormatVersion=" + diskFormatVersion + ", committedUpdateSeq=" + committedUpdateSeq + "]";
+                + ", diskSize=" + sizes.getFile() + ", dataSize=" + sizes.getActive() + ", instanceStartTime=" + instanceStartTime
+                + "]";
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Size {
+        private long active;
+
+        private long file;
+
+        /**
+         * @return size of live data inside the database, in bytes.
+         */
+        public long getActive() {
+            return active;
+        }
+
+        public void setActive(long active) {
+            this.active = active;
+        }
+
+        /**
+         * @return size of the database file on disk in bytes. Views indexes are not included in the calculation.
+         */
+        public long getFile() {
+            return file;
+        }
+
+        public void setFile(long file) {
+            this.file = file;
+        }
     }
 }

@@ -2,7 +2,7 @@ package com.n1global.acc.util;
 
 import java.util.concurrent.CompletableFuture;
 
-import com.ning.http.client.ListenableFuture;
+import org.asynchttpclient.ListenableFuture;
 
 public class FutureUtils {
     public static <T> CompletableFuture<T> toCompletable(ListenableFuture<T> listenableFuture) {

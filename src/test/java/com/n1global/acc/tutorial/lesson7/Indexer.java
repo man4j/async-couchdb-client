@@ -23,7 +23,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.RAMDirectory;
 
-import com.n1global.acc.notification.document.CouchDbDocumentUpdateHandler;
+import com.n1global.acc.changes.document.CouchDbDocumentUpdateHandler;
 
 public class Indexer implements CouchDbDocumentUpdateHandler<ForumContent> {
     private IndexWriter indexWriter;

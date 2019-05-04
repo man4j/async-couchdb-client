@@ -2,11 +2,18 @@ package com.n1global.acc;
 
 import java.io.InputStream;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.Response;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -23,8 +30,6 @@ import com.n1global.acc.transformer.CouchDbBooleanResponseTransformer;
 import com.n1global.acc.util.FutureUtils;
 import com.n1global.acc.util.NoopFunction;
 import com.n1global.acc.util.UrlBuilder;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
 
 public class CouchDbAsyncOperations {
     private CouchDb couchDb;
@@ -40,49 +45,25 @@ public class CouchDbAsyncOperations {
         return new UrlBuilder(couchDb.getDbUrl());
     }
 
-    //------------------ Save API -------------------------
-
-    /**
-     * Inserts a new document with an automatically generated id or inserts a new version of the document.
-     *
-     * @param batch If batch param is true then revision number will not be returned and
-     * also CouchDB will silently reject update if document with same id already exists.
-     * Use this option with caution.
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T> saveOrUpdate(final T doc, boolean batch) {
-        return _saveOrUpdate(doc, batch);
-    }
+    //------------------ CRUD API -------------------------
 
     /**
      * Inserts a new document with an automatically generated id or inserts a new version of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> saveOrUpdate(final T doc) {
-        return saveOrUpdate(doc, false);
-    }
-
-    /**
-     * Inserts a new document with an automatically generated id or inserts a new version of the document.
-     *
-     * @param batch If batch param is true then revision number will not be returned and
-     * also CouchDB will silently reject update if document with same id already exists.
-     * Use this option with caution.
-     */
-    public CompletableFuture<Map<String, Object>> saveOrUpdate(final Map<String, Object> doc, boolean batch) {
-        return _saveOrUpdate(doc, batch);
+        return _saveOrUpdate(doc);
     }
 
     /**
      * Inserts a new document with an automatically generated id or inserts a new version of the document.
      */
     public CompletableFuture<Map<String, Object>> saveOrUpdate(final Map<String, Object> doc) {
-        return saveOrUpdate(doc, false);
+        return _saveOrUpdate(doc);
     }
 
-    private <T> CompletableFuture<T> _saveOrUpdate(final T doc, boolean batch) {
+    private <T> CompletableFuture<T> _saveOrUpdate(final T doc) {
         try {
             UrlBuilder urlBuilder = createUrlBuilder();
-
-            if (batch) urlBuilder.addQueryParam("batch", "ok");
 
             Function<CouchDbPutResponse, T> transformer = resp -> {
                 if (doc instanceof CouchDbDocument) {
@@ -113,13 +94,100 @@ public class CouchDbAsyncOperations {
         }
     }
     
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
+        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class));
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
+        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class));
+    }
+    
+    /**
+     * Returns the latest revision number of the document.
+     */
+    public CompletableFuture<CouchDbDocIdAndRev> getRev(String docId) {
+        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+
+        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docId);
+
+        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setMethod("HEAD")
+                                                   .setUrl(urlBuilder.build())
+                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbDocIdAndRev>() {/* empty */}, transformer, couchDb.mapper)));
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    private <T> CompletableFuture<T> get(String docId, JavaType docType) {
+        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+
+        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docId);
+
+        Function<T, T> transformer = doc -> {
+            if (doc != null && doc instanceof CouchDbDocument) {
+                new CouchDbDocumentAccessor((CouchDbDocument) doc).setCurrentDb(couchDb);
+            }
+
+            return doc;
+        };
+
+        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setMethod("GET")
+                                                   .setUrl(urlBuilder.build())
+                                                   .execute(new CouchDbAsyncHandler<>(docType, transformer, couchDb.mapper)));
+    }
+
+    /**
+     * Deletes the document.
+     *
+     * When you delete a document the database will create a new revision which contains the _id and _rev fields
+     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
+     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
+     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
+     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
+     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
+     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
+     * the old one (once the entries in it have all expired).
+     */
+    public CompletableFuture<Boolean> delete(CouchDbDocIdAndRev docIdAndRev) {
+        if (docIdAndRev.getDocId() == null || docIdAndRev.getDocId().trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+        if (docIdAndRev.getRev() == null || docIdAndRev.getRev().trim().isEmpty()) throw new IllegalStateException("The document revision cannot be null or empty");
+
+        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setMethod("DELETE")
+                                                   .setUrl(createUrlBuilder().addPathSegment(docIdAndRev.getDocId()).addQueryParam("rev", docIdAndRev.getRev()).build())
+                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
+    }
+
+    /**
+     * Deletes the document.
+     *
+     * When you delete a document the database will create a new revision which contains the _id and _rev fields
+     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
+     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
+     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
+     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
+     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
+     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
+     * the old one (once the entries in it have all expired).
+     */
+    public CompletableFuture<Boolean> delete(CouchDbDocument doc) {
+        return delete(doc.getDocIdAndRev());
+    }
+    
     //------------------ Bulk API -------------------------
 
     /**
-     * Insert or delete multiple documents in to the database in a single request.
+     * Insert or update multiple documents in to the database in a single request.
      *
      * @param docs
-     * @param callback
      * @return
      */
     @SafeVarargs
@@ -164,10 +232,9 @@ public class CouchDbAsyncOperations {
     }
 
     /**
-     * Insert or delete multiple documents in to the database in a single request.
+     * Insert or update multiple documents in to the database in a single request.
      *
      * @param docs
-     * @param callback
      * @return
      */
     public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(final List<T> docs) {
@@ -211,10 +278,9 @@ public class CouchDbAsyncOperations {
     }
 
     /**
-     * Insert or delete multiple documents in to the database in a single request.
+     * Insert or update multiple documents in to the database in a single request.
      *
      * @param docs
-     * @param callback
      * @return
      */
     @SafeVarargs
@@ -228,6 +294,8 @@ public class CouchDbAsyncOperations {
                 for (int i = 0; i < docs.length; i++) {
                     docs[i].put("_id", responses.get(i).getDocId());
                     docs[i].put("_rev", responses.get(i).getRev());
+                    docs[i].put("conflictReason", responses.get(i).getConflictReason());
+                    docs[i].put("error", responses.get(i).getError());
                 }
 
                 return responses;
@@ -238,6 +306,216 @@ public class CouchDbAsyncOperations {
                                                        .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(map))
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * Delete multiple documents from the database in a single request.
+     *
+     * @param docs
+     * @return
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> CompletableFuture<T[]> delete(final T... docs) {
+        try {
+            CouchDbDocument[] docsWithoutBody = new CouchDbDocument[docs.length]; 
+            
+            for (int i = 0; i < docs.length; i++) {
+                CouchDbDocument doc = docs[i];
+                
+                CouchDbDocument dummyDoc = new CouchDbDocument();
+                
+                dummyDoc.setDocId(doc.getDocId());
+                dummyDoc.setRev(doc.getRev());
+                dummyDoc.setDeleted();
+                
+                docsWithoutBody[i] = dummyDoc;
+            }
+        
+            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
+
+            for (CouchDbDocument doc : docsWithoutBody) {
+                arrayNode.addPOJO(doc);
+            }
+
+            ObjectNode objectNode = couchDb.mapper.createObjectNode();
+
+            objectNode.set("docs", arrayNode);
+
+            StringWriter writer = new StringWriter();
+
+            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
+
+            Function<List<CouchDbPutResponse>, T[]> transformer = responses -> {
+                for (int i = 0; i < docs.length; i++) {
+                    docs[i].setDocId(responses.get(i).getDocId());
+                    docs[i].setRev(responses.get(i).getRev());
+
+                    new CouchDbDocumentAccessor(docs[i]).setCurrentDb(couchDb)
+                                                        .setInConflict(responses.get(i).isInConflict())
+                                                        .setForbidden(responses.get(i).isForbidden())
+                                                        .setConflictReason(responses.get(i).getConflictReason());
+                }
+
+                return docs;
+            };
+
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
+                                                       .setBody(writer.toString())
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    /**
+     * Delete multiple documents from the database in a single request.
+     *
+     * @param docs
+     * @return
+     */
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> delete(final List<T> docs) {
+        try {
+            CouchDbDocument[] docsWithoutBody = new CouchDbDocument[docs.size()]; 
+            
+            for (int i = 0; i < docs.size(); i++) {
+                CouchDbDocument doc = docs.get(i);
+                
+                CouchDbDocument dummyDoc = new CouchDbDocument();
+                
+                dummyDoc.setDocId(doc.getDocId());
+                dummyDoc.setRev(doc.getRev());
+                dummyDoc.setDeleted();
+                
+                docsWithoutBody[i] = dummyDoc;
+            }
+
+            ArrayNode arrayNode = couchDb.mapper.createArrayNode();
+
+            for (CouchDbDocument doc : docsWithoutBody) {
+                arrayNode.addPOJO(doc);
+            }
+
+            ObjectNode objectNode = couchDb.mapper.createObjectNode();
+
+            objectNode.set("docs", arrayNode);
+
+            StringWriter writer = new StringWriter();
+
+            couchDb.mapper.writeTree(couchDb.mapper.getFactory().createGenerator(writer), objectNode);
+
+            Function<List<CouchDbPutResponse>, List<T>> transformer = responses -> {
+                for (int i = 0; i < docs.size(); i++) {
+                    docs.get(i).setDocId(responses.get(i).getDocId());
+                    docs.get(i).setRev(responses.get(i).getRev());
+
+                    new CouchDbDocumentAccessor(docs.get(i)).setCurrentDb(couchDb)
+                                                            .setInConflict(responses.get(i).isInConflict())
+                                                            .setForbidden(responses.get(i).isForbidden())
+                                                            .setConflictReason(responses.get(i).getConflictReason());
+                }
+
+                return docs;
+            };
+
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
+                                                       .setBody(writer.toString())
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbPutResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+    
+    //------------------ Purge API -------------------------
+    
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> CompletableFuture<T[]> purge(final CouchDbDocIdAndRev... docs) {
+        return null;
+    }
+    
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> CompletableFuture<T[]> purge(final List<CouchDbDocIdAndRev> docs) {
+        return null;
+    }
+
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    @SafeVarargs
+    public final <T extends CouchDbDocument> CompletableFuture<Map<String, Object>> purge(final T... docs) {
+        try {
+            Map<String, List<String>> purgedMap = new LinkedHashMap<>();
+            
+            for (T doc : docs) {
+                purgedMap.put(doc.getDocId(), Collections.singletonList(doc.getRev()));
+            }
+        
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_purge").build())
+                                                       .setBody(couchDb.mapper.writeValueAsString(purgedMap))
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, Function.identity(), couchDb.mapper)));
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     *
+     * @param docs
+     * @param callback
+     * @return
+     */
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> purge(final List<T> docs) {
+        try {
+            Map<String, List<String>> purgedMap = new LinkedHashMap<>();
+            
+            for (T doc : docs) {
+                purgedMap.put(doc.getDocId(), Collections.singletonList(doc.getRev()));
+            }
+        
+            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                       .setMethod("POST")
+                                                       .setUrl(createUrlBuilder().addPathSegment("_purge").build())
+                                                       .setBody(couchDb.mapper.writeValueAsString(purgedMap))
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, Function.identity(), couchDb.mapper)));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -322,102 +600,6 @@ public class CouchDbAsyncOperations {
         return deleteAttachment(doc.getDocIdAndRev(), name);
     }
 
-    //------------------ Fetch API -------------------------
-
-    /**
-     * Returns the latest revision of the document if revision not specified.
-     */
-    private <T> CompletableFuture<T> get(CouchDbDocIdAndRev docIdAndRev, JavaType docType, boolean revsInfo) {
-        if (docIdAndRev.getDocId() == null || docIdAndRev.getDocId().trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
-
-        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docIdAndRev.getDocId()).addQueryParam("revs_info", Boolean.toString(revsInfo));
-
-        if (docIdAndRev.getRev() != null && !docIdAndRev.getRev().isEmpty()) {
-            urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
-        }
-
-        Function<T, T> transformer = doc -> {
-            if (doc != null && doc instanceof CouchDbDocument) {
-                new CouchDbDocumentAccessor((CouchDbDocument) doc).setCurrentDb(couchDb);
-            }
-
-            return doc;
-        };
-
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setMethod("GET")
-                                                   .setUrl(urlBuilder.build())
-                                                   .execute(new CouchDbAsyncHandler<>(docType, transformer, couchDb.mapper)));
-    }
-
-    /**
-     * Returns the latest revision of the document if revision not specified.
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T> get(CouchDbDocIdAndRev docIdAndRev, boolean revsInfo) {
-        return get(docIdAndRev, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), revsInfo);
-    }
-
-    /**
-     * Returns the latest revision of the document if revision not specified.
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T> get(CouchDbDocIdAndRev docIdAndRev) {
-        return get(docIdAndRev, false);
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
-        return get(new CouchDbDocIdAndRev(docId, null));
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
-        return get(new CouchDbDocIdAndRev(docId, null), TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), false);
-    }
-
-    //------------------ Delete API -------------------------
-
-    /**
-     * Deletes the document.
-     *
-     * When you delete a document the database will create a new revision which contains the _id and _rev fields
-     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
-     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
-     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
-     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
-     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
-     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
-     * the old one (once the entries in it have all expired).
-     */
-    public CompletableFuture<Boolean> delete(CouchDbDocIdAndRev docIdAndRev) {
-        if (docIdAndRev.getDocId() == null || docIdAndRev.getDocId().trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
-        if (docIdAndRev.getRev() == null || docIdAndRev.getRev().trim().isEmpty()) throw new IllegalStateException("The document revision cannot be null or empty");
-
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setMethod("DELETE")
-                                                   .setUrl(createUrlBuilder().addPathSegment(docIdAndRev.getDocId()).addQueryParam("rev", docIdAndRev.getRev()).build())
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
-    }
-
-    /**
-     * Deletes the document.
-     *
-     * When you delete a document the database will create a new revision which contains the _id and _rev fields
-     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
-     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
-     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
-     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
-     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
-     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
-     * the old one (once the entries in it have all expired).
-     */
-    public CompletableFuture<Boolean> delete(CouchDbDocument doc) {
-        return delete(doc.getDocIdAndRev());
-    }
-
     //------------------ Admin API -------------------------
 
     public CompletableFuture<List<CouchDbDesignDocument>> getDesignDocs() {
@@ -497,16 +679,6 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<Boolean> cleanupViews() {
         return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                    .setUrl(createUrlBuilder().addPathSegment("_view_cleanup").build())
-                                                   .setMethod("POST")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
-    }
-
-    /**
-     * Makes sure all uncommited changes are written and synchronized to the disk.
-     */
-    public CompletableFuture<Boolean> ensureFullCommit() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().addPathSegment("_ensure_full_commit").build())
                                                    .setMethod("POST")
                                                    .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
     }
