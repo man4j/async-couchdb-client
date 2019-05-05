@@ -1,8 +1,8 @@
 package com.n1global.acc.tutorial.lesson5;
 
+import com.equiron.acc.json.CouchDbDocument;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.n1global.acc.json.CouchDbDocument;
 
 public class Book extends CouchDbDocument {
     private String title;

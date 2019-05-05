@@ -13,9 +13,9 @@ import org.slf4j.LoggerFactory;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 
-import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.json.CouchDbDocument;
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.json.CouchDbDocument;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 

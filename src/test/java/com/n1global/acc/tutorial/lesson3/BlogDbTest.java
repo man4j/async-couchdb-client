@@ -11,8 +11,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.json.CouchDbDocument;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.json.CouchDbDocument;
 import com.ning.http.client.AsyncHttpClient;
 
 public class BlogDbTest {

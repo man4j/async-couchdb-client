@@ -6,12 +6,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.n1global.acc.changes.CouchDbEventHandler;
-import com.n1global.acc.changes.CouchDbEventListener;
-import com.n1global.acc.changes.CouchDbNotificationConfig;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.changes.CouchDbEventHandler;
+import com.equiron.acc.changes.CouchDbEventListener;
+import com.equiron.acc.changes.CouchDbNotificationConfig;
+import com.equiron.acc.json.CouchDbEvent;
 import com.n1global.acc.fixture.TestDb;
 import com.n1global.acc.fixture.TestDoc;
-import com.n1global.acc.json.CouchDbEvent;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 

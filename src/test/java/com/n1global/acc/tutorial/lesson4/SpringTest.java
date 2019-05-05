@@ -10,7 +10,7 @@ import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
-import com.n1global.acc.json.CouchDbDocument;
+import com.equiron.acc.json.CouchDbDocument;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations={"/com/n1global/acc/tutorial/lesson4/example-context.xml"})

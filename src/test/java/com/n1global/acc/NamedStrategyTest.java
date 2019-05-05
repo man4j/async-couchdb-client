@@ -3,7 +3,7 @@ package com.n1global.acc;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.n1global.acc.util.NamedStrategy;
+import com.equiron.acc.util.NamedStrategy;
 
 public class NamedStrategyTest {
     @Test

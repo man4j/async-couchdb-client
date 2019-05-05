@@ -2,9 +2,9 @@ package com.n1global.acc.tutorial.lesson2;
 
 import java.util.List;
 
-import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.CouchDbConstants;
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.CouchDbConstants;
 
 public class SimpleCityDb extends CouchDb {
     public SimpleCityDb(CouchDbConfig config) {

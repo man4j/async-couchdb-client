@@ -5,9 +5,9 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.changes.document.CouchDbDocumentListener;
-import com.n1global.acc.changes.document.CouchDbDocumentListenerConfig;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.changes.document.CouchDbDocumentListener;
+import com.equiron.acc.changes.document.CouchDbDocumentListenerConfig;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 

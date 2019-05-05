@@ -1,12 +1,12 @@
 package com.n1global.acc.fixture;
 
-import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.annotation.JsView;
-import com.n1global.acc.annotation.Security;
-import com.n1global.acc.annotation.SecurityPattern;
-import com.n1global.acc.view.CouchDbMapView;
-import com.n1global.acc.view.CouchDbReduceView;
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.annotation.JsView;
+import com.equiron.acc.annotation.Security;
+import com.equiron.acc.annotation.SecurityPattern;
+import com.equiron.acc.view.CouchDbMapView;
+import com.equiron.acc.view.CouchDbReduceView;
 
 @Security(admins = @SecurityPattern(names = "admin"))
 public class TestDb extends CouchDb {

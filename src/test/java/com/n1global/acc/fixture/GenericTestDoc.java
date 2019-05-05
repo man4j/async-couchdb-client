@@ -1,6 +1,6 @@
 package com.n1global.acc.fixture;
 
-import com.n1global.acc.json.CouchDbDocument;
+import com.equiron.acc.json.CouchDbDocument;
 
 public class GenericTestDoc<T> extends CouchDbDocument {
     private T value;

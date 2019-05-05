@@ -5,7 +5,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.n1global.acc.CouchDbConfig;
+import com.equiron.acc.CouchDbConfig;
 import com.ning.http.client.AsyncHttpClient;
 
 public class BookDbTest {

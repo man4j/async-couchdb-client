@@ -5,9 +5,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.json.CouchDbDesignInfo;
 import com.n1global.acc.fixture.TestDb;
 import com.n1global.acc.fixture.TestDoc;
-import com.n1global.acc.json.CouchDbDesignInfo;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 

@@ -1,10 +1,10 @@
 package com.n1global.acc.tutorial.lesson3;
 
-import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.annotation.JsView;
-import com.n1global.acc.json.CouchDbDocument;
-import com.n1global.acc.view.CouchDbMapView;
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.annotation.JsView;
+import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.view.CouchDbMapView;
 
 public class BlogDb extends CouchDb {
     /**

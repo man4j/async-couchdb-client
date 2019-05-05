@@ -12,8 +12,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.springframework.util.FileCopyUtils;
 
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.json.CouchDbDocumentAttachment;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 import com.ning.http.util.Base64;

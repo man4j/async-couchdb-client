@@ -4,7 +4,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.n1global.acc.exception.http.CouchDbForbiddenException;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.n1global.acc.fixture.TestDb;
 import com.n1global.acc.fixture.TestDoc;
 import com.ning.http.client.AsyncHttpClient;

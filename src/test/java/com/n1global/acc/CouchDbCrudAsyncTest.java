@@ -9,6 +9,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.equiron.acc.CouchDbConfig;
 import com.n1global.acc.fixture.TestDb;
 import com.n1global.acc.fixture.TestDoc;
 import com.ning.http.client.AsyncHttpClient;

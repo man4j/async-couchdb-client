@@ -1,9 +1,9 @@
 package com.n1global.acc.tutorial.lesson5;
 
-import com.n1global.acc.CouchDb;
-import com.n1global.acc.CouchDbConfig;
-import com.n1global.acc.annotation.JsView;
-import com.n1global.acc.view.CouchDbMapReduceView;
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.annotation.JsView;
+import com.equiron.acc.view.CouchDbMapReduceView;
 
 public class BookDb extends CouchDb {
     @JsView(map = "emit(doc.publisherName, 1)", reduce = JsView.SUM)
