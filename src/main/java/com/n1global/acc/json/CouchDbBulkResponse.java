@@ -5,7 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.n1global.acc.CouchDbDocIdAndRev;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CouchDbPutResponse {
+public class CouchDbBulkResponse {
     @JsonProperty("id")
     private String docId;
 

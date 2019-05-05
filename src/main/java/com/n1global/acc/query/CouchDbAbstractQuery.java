@@ -17,7 +17,6 @@ import com.n1global.acc.json.resultset.CouchDbAbstractResultSet;
 import com.n1global.acc.json.resultset.CouchDbAbstractRow;
 import com.n1global.acc.util.ExceptionHandler;
 import com.n1global.acc.util.FutureUtils;
-import com.n1global.acc.util.NoopFunction;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
     String viewUrl;
@@ -134,19 +133,10 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
     }
 
     /**
-     * If stale=ok is set, CouchDB will not refresh the view even if it is stale, the benefit is a an improved query latency.
+     * Whether or not the view results should be returned from a stable set of shards. 
      */
-    public T stale() {
-        queryObject.setStale("ok");
-
-        return derived.cast(this);
-    }
-
-    /**
-     * If stale=update_after is set, CouchDB will update the view after the stale result is returned. update_after was added in version 1.1.0.
-     */
-    public T updateAfter() {
-        queryObject.setStale("update_after");
+    public T stable() {
+        queryObject.setStable(true);
 
         return derived.cast(this);
     }
@@ -180,7 +170,7 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
         }
 
         public CompletableFuture<RS> asResultSet() {
-            return executeRequest(new NoopFunction<RS>());
+            return executeRequest(Function.identity());
         }
 
         public CompletableFuture<K> asKey() {

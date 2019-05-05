@@ -16,6 +16,8 @@ import java.util.concurrent.ExecutionException;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Realm;
 import org.asynchttpclient.Realm.AuthScheme;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
@@ -30,10 +32,10 @@ import com.n1global.acc.annotation.IgnorePrefix;
 import com.n1global.acc.annotation.JsView;
 import com.n1global.acc.annotation.Security;
 import com.n1global.acc.annotation.SecurityPattern;
+import com.n1global.acc.json.CouchDbBulkResponse;
 import com.n1global.acc.json.CouchDbDesignDocument;
 import com.n1global.acc.json.CouchDbDocument;
 import com.n1global.acc.json.CouchDbInfo;
-import com.n1global.acc.json.CouchDbPutResponse;
 import com.n1global.acc.json.security.CouchDbSecurityObject;
 import com.n1global.acc.json.security.CouchDbSecurityPattern;
 import com.n1global.acc.util.ExceptionHandler;
@@ -46,6 +48,8 @@ import com.n1global.acc.view.CouchDbMapView;
 import com.n1global.acc.view.CouchDbReduceView;
 
 public class CouchDb {
+    private Logger logger = LoggerFactory.getLogger(getClass().getName());
+
     final CouchDbConfig config;
 
     final ObjectMapper mapper = new ObjectMapper();
@@ -121,83 +125,14 @@ public class CouchDb {
         return asyncOps;
     }
 
-    //------------------ CRUD API -------------------------
-
-    /**
-     * Inserts a new document with an automatically generated id or inserts a new version of the document.
-     */
-    public <T extends CouchDbDocument> T saveOrUpdate(T doc) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc));
-    }
-
-    /**
-     * Inserts a new document with an automatically generated id or inserts a new version of the document.
-     */
-    public Map<String, Object> saveOrUpdate(Map<String, Object> doc) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc));
-    }
-    
-    /**
-     * Returns the latest revision of the document.
-     */
-    public <T extends CouchDbDocument> T get(CouchDbDocIdAndRev docIdAndRev) {
-        return ExceptionHandler.handleFutureResult(asyncOps.get(docIdAndRev));
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public <T extends CouchDbDocument> T get(String docId) {
-        return get(new CouchDbDocIdAndRev(docId, null));
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public Map<String, Object> getRaw(String docId) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getRaw(docId));
-    }
-
-    /**
-     * Deletes the document.
-     *
-     * When you delete a document the database will create a new revision which contains the _id and _rev fields
-     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
-     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
-     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
-     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
-     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
-     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
-     * the old one (once the entries in it have all expired).
-     */
-    public boolean delete(CouchDbDocument doc) {
-        return ExceptionHandler.handleFutureResult(asyncOps.delete(doc));
-    }
-
-    /**
-     * Deletes the document.
-     *
-     * When you delete a document the database will create a new revision which contains the _id and _rev fields
-     * as well as a deleted flag. This revision will remain even after a database compaction so that the deletion
-     * can be replicated. Deleted documents, like non-deleted documents, can affect view build times, PUT and
-     * DELETE requests time and size of database on disk, since they increase the size of the B+Tree's. You can
-     * see the number of deleted documents in database {@link com.n1global.acc.CouchDb#getInfo() information}.
-     * If your use case creates lots of deleted documents (for example, if you are storing short-term data like
-     * logfile entries, message queues, etc), you might want to periodically switch to a new database and delete
-     * the old one (once the entries in it have all expired).
-     */
-    public boolean delete(CouchDbDocIdAndRev docId) {
-        return ExceptionHandler.handleFutureResult(asyncOps.delete(docId));
-    }
-    
     //------------------ Bulk API -------------------------
 
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
     @SafeVarargs
-    public final <T extends CouchDbDocument> T[] saveOrUpdate(T... docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+    public final <T extends CouchDbDocument> List<T> saveOrUpdate(T doc, T... docs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc, docs));
     }
 
     /**
@@ -211,8 +146,44 @@ public class CouchDb {
      * Insert or update multiple documents in to the database in a single request.
      */
     @SafeVarargs
-    public final List<CouchDbPutResponse> saveOrUpdate(Map<String, Object>... docs) {
+    public final List<CouchDbBulkResponse> saveOrUpdate(Map<String, Object>... docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+    }
+    
+    /**
+     * Delete multiple documents from the database in a single request.
+     */
+    @SafeVarargs
+    public final List<CouchDbBulkResponse> delete(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.delete(docRev, docRevs));
+    }
+    
+    /**
+     * Delete multiple documents from the database in a single request.
+     */
+    public final List<CouchDbBulkResponse> delete(final List<CouchDbDocIdAndRev> docRevs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.delete(docRevs));
+    }
+    
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     */
+    @SafeVarargs
+    public final Map<String, Object> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.purge(docRev, docRevs));
+    }
+    
+    /**
+     * As a result of this purge operation, a document will be completely removed from the database’s 
+     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
+     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
+     * and update_seq will be increased.
+     */
+    public Map<String, Object> purge(final List<CouchDbDocIdAndRev> docRevs) {
+        return ExceptionHandler.handleFutureResult(asyncOps.purge(docRevs));
     }
 
     //------------------ Attach API -------------------------
@@ -220,21 +191,14 @@ public class CouchDb {
     /**
      * Attach content to the document.
      */
-    public CouchDbPutResponse attach(CouchDbDocIdAndRev docIdAndRev, InputStream in, String name, String contentType) {
+    public CouchDbBulkResponse attach(CouchDbDocIdAndRev docIdAndRev, InputStream in, String name, String contentType) {
         return ExceptionHandler.handleFutureResult(asyncOps.attach(docIdAndRev, in, name, contentType));
-    }
-
-    /**
-     * Attach content to the document.
-     */
-    public CouchDbPutResponse attach(CouchDbDocument doc, InputStream in, String name, String contentType) {
-        return attach(doc.getDocIdAndRev(), in, name, contentType);
     }
 
     /**
      * Attach content to non-existing document.
      */
-    public CouchDbPutResponse attach(String docId, InputStream in, String name, String contentType) {
+    public CouchDbBulkResponse attach(String docId, InputStream in, String name, String contentType) {
         return attach(new CouchDbDocIdAndRev(docId, null), in, name, contentType);
     }
 
@@ -246,24 +210,10 @@ public class CouchDb {
     }
 
     /**
-     * Gets an attachment of the document.
-     */
-    public Response getAttachment(CouchDbDocument doc, String name) {
-        return getAttachment(doc.getDocId(), name);
-    }
-
-    /**
      * Deletes an attachment from the document.
      */
     public boolean deleteAttachment(CouchDbDocIdAndRev docIdAndRev, String name) {
         return ExceptionHandler.handleFutureResult(asyncOps.deleteAttachment(docIdAndRev, name));
-    }
-
-    /**
-     * Deletes an attachment from the document.
-     */
-    public boolean deleteAttachment(CouchDbDocument doc, String name) {
-        return deleteAttachment(doc.getDocIdAndRev(), name);
     }
 
     //------------------ Admin API -------------------------
@@ -275,8 +225,8 @@ public class CouchDb {
     /**
      * Returns a list of databases on this server.
      */
-    public List<String> getAllDbs() {
-        return ExceptionHandler.handleFutureResult(asyncOps.getAllDbsAsync());
+    public List<String> getDatabases() {
+        return ExceptionHandler.handleFutureResult(asyncOps.getDatabases());
     }
 
     /**
@@ -370,7 +320,7 @@ public class CouchDb {
     }
 
     private void createDbIfNotExist() {
-        if (!getAllDbs().contains(getDbName())) {
+        if (!getDatabases().contains(getDbName())) {
             createDb();
         }
     }
@@ -401,7 +351,10 @@ public class CouchDb {
                     CouchDbMapView<String, Object> view = new CouchDbMapView<>(this, designName, viewName, jts);
 
                     if (config.isBuildViewsOnStart()) {
+                        long t = System.currentTimeMillis();
+                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
                         view.createQuery().byKey("123").asKey();
+                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
                     }
 
                     injectedView = view;
@@ -411,7 +364,10 @@ public class CouchDb {
                     CouchDbReduceView<String, Object> view = new CouchDbReduceView<>(this, designName, viewName, jts);
 
                     if (config.isBuildViewsOnStart()) {
+                        long t = System.currentTimeMillis();
+                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
                         view.createQuery().byKey("123").asKey();
+                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
                     }
 
                     injectedView = view;
@@ -421,7 +377,10 @@ public class CouchDb {
                     CouchDbMapReduceView<String, Object, Object, Object> view = new CouchDbMapReduceView<>(this, designName, viewName, jts);
 
                     if (config.isBuildViewsOnStart()) {
+                        long t = System.currentTimeMillis();
+                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
                         view.createMapQuery().byKey("123").asKey();
+                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");                        
                     }
 
                     injectedView = view;
@@ -442,7 +401,6 @@ public class CouchDb {
         
     private void addSecurity() {
         try {
-            @SuppressWarnings("resource")
             AsyncHttpClient client = config.getHttpClient();
             
             CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
@@ -495,10 +453,24 @@ public class CouchDb {
     
     private void compactAllOnStart() {
         if (config.isCompactAllOnStart()) {
-            compact();
-            cleanupViews();
+            long t = System.currentTimeMillis();
+            logger.info("Compacting database: " + config.getDbName() + "...");
+            compact();            
+            logger.info("Complete compacting database: " + config.getDbName() + " in " + (System.currentTimeMillis() - t) + " seconds");
 
-            for (CouchDbDesignDocument d : getDesignDocs()) compactViews(d.getDocId().substring(d.getDocId().indexOf("/") + 1));
+            t = System.currentTimeMillis();
+            logger.info("Cleanup views in database: " + config.getDbName() + "...");
+            cleanupViews();
+            logger.info("Complete cleanup views in database: " + config.getDbName() + " in " + (System.currentTimeMillis() - t) + " seconds");
+
+            for (CouchDbDesignDocument d : getDesignDocs()) {
+                String designName = d.getDocId().substring(d.getDocId().indexOf("/") + 1);
+
+                t = System.currentTimeMillis();
+                logger.info("Compacting views in database: " + config.getDbName() + ", design name: " + designName);
+                compactViews(designName);
+                logger.info("Complete compacting views in database: " + config.getDbName() + ", design name: " + designName + " in " + (System.currentTimeMillis() - t) + " seconds");
+            }
         }
     }
 
@@ -509,14 +481,14 @@ public class CouchDb {
 
         for (CouchDbDesignDocument oldDoc : oldDesignDocs) {
             if (!newDesignDocs.containsKey(oldDoc.getDocId())) {
-                delete(oldDoc);
+                delete(oldDoc.getDocIdAndRev());
             } else {
                 CouchDbDesignDocument newDoc = newDesignDocs.get(oldDoc.getDocId());
 
                 if (newDoc.equals(oldDoc)) {
                     newDesignDocs.remove(oldDoc.getDocId());
                 } else {
-                    delete(oldDoc);
+                    delete(oldDoc.getDocIdAndRev());
                 }
             }
         }

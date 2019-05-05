@@ -10,7 +10,7 @@ import org.junit.Test;
 
 import com.n1global.acc.fixture.TestDb;
 import com.n1global.acc.json.CouchDbDocument;
-import com.n1global.acc.json.CouchDbPutResponse;
+import com.n1global.acc.json.CouchDbBulkResponse;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.Response;
@@ -60,7 +60,7 @@ public class CouchDbAttachmentsTest {
         try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbPutResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
@@ -91,7 +91,7 @@ public class CouchDbAttachmentsTest {
         try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbPutResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
 

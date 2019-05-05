@@ -1,6 +1,7 @@
 package com.n1global.acc.view;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -10,7 +11,6 @@ import com.n1global.acc.CouchDbFieldAccessor;
 import com.n1global.acc.json.CouchDbDesignInfo;
 import com.n1global.acc.util.ExceptionHandler;
 import com.n1global.acc.util.FutureUtils;
-import com.n1global.acc.util.NoopFunction;
 import com.n1global.acc.util.UrlBuilder;
 
 public abstract class CouchDbAbstractView {
@@ -49,7 +49,7 @@ public abstract class CouchDbAbstractView {
                 return FutureUtils.toCompletable(couchDb.getConfig().getHttpClient().prepareRequest(couchDbFieldAccessor.getPrototype())
                                                         .setMethod("GET")
                                                         .setUrl(designUrl + "/_info")
-                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbDesignInfo>() {/* empty */}, new NoopFunction<CouchDbDesignInfo>(), couchDbFieldAccessor.getMapper())));
+                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDbFieldAccessor.getMapper())));
             } catch(Exception e) {
                 throw new RuntimeException(e);
             }

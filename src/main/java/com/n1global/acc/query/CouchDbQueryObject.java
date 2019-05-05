@@ -39,7 +39,7 @@ public class CouchDbQueryObject<K> {
 
     private int limit;
 
-    private String stale;
+    private boolean stable;
 
     private int skip;
 
@@ -62,7 +62,7 @@ public class CouchDbQueryObject<K> {
 
         if (isSetStartKey) urlBuilder.addQueryParam("startkey", mapper.writeValueAsString(startKey));
 
-        if (startKeyDocId != null) urlBuilder.addQueryParam("startkey_docid", startKeyDocId + "");
+        if (startKeyDocId != null) urlBuilder.addQueryParam("startkey_docid", startKeyDocId);
 
         if (descending) urlBuilder.addQueryParam("descending", "true");
 
@@ -74,7 +74,7 @@ public class CouchDbQueryObject<K> {
 
         if (limit != 0) urlBuilder.addQueryParam("limit", limit + "");
 
-        if (stale != null) urlBuilder.addQueryParam("stale", stale +"");
+        if (stable) urlBuilder.addQueryParam("stable", "true");
 
         if (skip != 0) urlBuilder.addQueryParam("skip", skip + "");
 
@@ -157,8 +157,8 @@ public class CouchDbQueryObject<K> {
         this.limit = limit;
     }
 
-    public void setStale(String stale) {
-        this.stale = stale;
+    public void setStable(boolean stable) {
+        this.stable = stable;
     }
 
     public void setSkip(int skip) {
