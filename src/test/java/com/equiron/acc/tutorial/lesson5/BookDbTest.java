@@ -1,28 +1,35 @@
 package com.equiron.acc.tutorial.lesson5;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import java.io.IOException;
+
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.CouchDbConfig;
-import com.ning.http.client.AsyncHttpClient;
 
 public class BookDbTest {
     private BookDb db;
 
-    private AsyncHttpClient httpClient = new AsyncHttpClient();
+    private AsyncHttpClient httpClient;
 
-    @Before
+    @BeforeEach
     public void before() {
-        db = new BookDb(new CouchDbConfig.Builder().setUser("admin")
-                                                    .setPassword("root")
-                                                    .setHttpClient(httpClient)
-                                                    .build());
-    }
+        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
-    @After
-    public void after() {
+        db = new BookDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                                   .setUser("admin")
+                                                   .setPassword("root")
+                                                   .setHttpClient(httpClient)
+                                                   .build());
+    }
+    
+    @AfterEach
+    public void after() throws IOException {
         db.deleteDb();
 
         httpClient.close();
@@ -36,8 +43,8 @@ public class BookDbTest {
                         new Book("Spring in Action", "manning"),
                         new Book("JBoss in Action", "manning"));
 
-        Assert.assertEquals(2, db.getPublishersBooksView().createDocQuery().byKey("manning").asDocs().size());
-        Assert.assertEquals(3, db.getPublishersBooksView().createDocQuery().byKey("oreilly").asDocs().size());
+        Assertions.assertEquals(2, db.getPublishersBooksView().createDocQuery().byKey("manning").asDocs().size());
+        Assertions.assertEquals(3, db.getPublishersBooksView().createDocQuery().byKey("oreilly").asDocs().size());
     }
 
     @Test
@@ -48,7 +55,7 @@ public class BookDbTest {
                         new Book("Spring in Action", "manning"),
                         new Book("JBoss in Action", "manning"));
 
-        Assert.assertEquals(Integer.valueOf(2), db.getPublishersBooksView().createReduceQuery().group().byKey("manning").asValue());
-        Assert.assertEquals(Integer.valueOf(3), db.getPublishersBooksView().createReduceQuery().group().byKey("oreilly").asValue());
+        Assertions.assertEquals(Integer.valueOf(2), db.getPublishersBooksView().createReduceQuery().group().byKey("manning").asValue());
+        Assertions.assertEquals(Integer.valueOf(3), db.getPublishersBooksView().createReduceQuery().group().byKey("oreilly").asValue());
     }
 }

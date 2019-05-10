@@ -51,6 +51,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
 
             UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
                                                                  .addQueryParam("feed", "continuous")
+                                                                 .addQueryParam("heartbeat", "30000")
                                                                  .addQueryParam("since", seq)
                                                                  .addQueryParam("include_docs", Boolean.toString(true));
                         

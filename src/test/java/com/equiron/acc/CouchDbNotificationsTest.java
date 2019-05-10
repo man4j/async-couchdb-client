@@ -14,7 +14,7 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
     public void shouldWork() throws Exception {
         db.saveOrUpdate(new TestDoc());
 
-        try(CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<TestDoc>(db) {/*empty*/};) {
+        try(CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db) {/*empty*/};) {
             final CountDownLatch latch = new CountDownLatch(1);
 
             listener.addEventHandler(new CouchDbEventHandler<TestDoc>() {
@@ -27,11 +27,24 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
                 public void onError(Throwable e) {
                     e.printStackTrace();
                 }
+
+                @Override
+                public void onStart() throws Exception {
+                    //empty
+                    
+                }
+
+                @Override
+                public void onCancel() throws Exception {
+                    //empty                    
+                }
             });
 
             listener.startListening();
 
             latch.await();
+            
+            listener.stopListening();
         }
     }
 }

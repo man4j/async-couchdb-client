@@ -4,6 +4,7 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,6 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.util.Assert;
 
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbDocument;
@@ -46,6 +46,6 @@ public class SpringTest {
     public void shouldWork() {
         exampleDb.saveOrUpdate(new CouchDbDocument("Hello!"));
 
-        Assert.assertEquals("Hello!", exampleDb.get("Hello!").getDocId());
+        Assertions.assertEquals("Hello!", exampleDb.get("Hello!").getDocId());
     }
 }

@@ -39,10 +39,18 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
         this.eventType = eventType;
         this.url = url;
     }
-
+    
     @Override
     public void onThrowable(Throwable t) {
-        if (!(t instanceof CancellationException)) {
+        if (t instanceof CancellationException) {
+            for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
+                try {
+                    eventHandler.onCancel();
+                } catch (Exception e) {
+                    logger.error("Error in " + url, e);
+                }
+            }
+        } else {
             for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
                 try {
                     eventHandler.onError(t);
@@ -55,7 +63,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
 
             try {
                 Thread.sleep(5_000);
-            } catch (InterruptedException e1) {
+            } catch (@SuppressWarnings("unused") InterruptedException e1) {
                 //ignore
             }
 
@@ -117,6 +125,14 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
         if (responseStatus.getStatusCode() == 200) {
             logger.debug("Start listening " + url);
+            
+            for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
+                try {
+                    eventHandler.onStart();
+                } catch (Exception e) {
+                    logger.error("Error in " + url, e);
+                }
+            }
 
             return State.CONTINUE;
         }
@@ -132,7 +148,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     @Override
     public Void onCompleted() throws Exception {
         logger.debug("Stop listening " + url);
-
+        
         return null;
     }
 }

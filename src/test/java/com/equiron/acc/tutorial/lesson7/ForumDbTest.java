@@ -1,68 +1,65 @@
 package com.equiron.acc.tutorial.lesson7;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.changes.document.CouchDbDocumentListener;
-import com.equiron.acc.changes.document.CouchDbDocumentListenerConfig;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
+import com.equiron.acc.changes.CouchDbEventListener;
 
 public class ForumDbTest {
     private ForumDb db;
+    
+    private AsyncHttpClient httpClient;
+    
+    private CouchDbEventListener<ForumContent> listener;
 
-    private AsyncHttpClient httpClient = new AsyncHttpClient();
-
-    private AsyncHttpClient notificationHttpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1)
-                                                                                                            .setIOThreadMultiplier(1)
-                                                                                                            .build());
-
-    private CouchDbDocumentListener listener;
-
-    private Indexer indexer;
-
-    @Before
+    @BeforeEach
     public void before() throws Exception {
-        db = new ForumDb(new CouchDbConfig.Builder().setUser("admin")
+        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
+
+        db = new ForumDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                                    .setUser("admin")
                                                     .setPassword("root")
                                                     .setHttpClient(httpClient)
                                                     .build());
-
-        listener = new CouchDbDocumentListener(db, ForumContent.class, new CouchDbDocumentListenerConfig.Builder().setHttpClient(notificationHttpClient).build());
+        
+        listener = new CouchDbEventListener<>(db) { /* empty */};
 
         indexer = new Indexer();
 
-        listener.addDocumentUpdateHandler(indexer);
+        listener.addEventHandler(indexer);
 
         listener.startListening();
-    }
 
-    @After
+    }
+    
+    @AfterEach
     public void after() throws Exception {
         listener.close();
-
-        notificationHttpClient.close();
-
         db.deleteDb();
-
         httpClient.close();
     }
 
+    private Indexer indexer;
+
     @Test
     public void shouldIndexing() throws Exception {
-        Topic topic = db.saveOrUpdate(new Topic("This is cool topic!"));
-
-        Message catsMessage = db.saveOrUpdate(new Message("Message about cats", topic.getDocId()));
-
-        db.saveOrUpdate(new Message("Message about cars", topic.getDocId()),
+        Topic topic = new Topic("This is cool topic!");
+        Message messageAboutCats = new Message("Message about cats", topic.getDocId());
+        
+        db.saveOrUpdate(topic, 
+                        messageAboutCats, 
+                        new Message("Message about cars", topic.getDocId()),
                         new Message("Message about dogs", topic.getDocId()));
 
-        Thread.sleep(1000);//sleep while indexing our docs.
+        Thread.sleep(5_000);//sleep while indexing our docs.
 
-        Assert.assertEquals(catsMessage.getDocId(), indexer.search("cats").iterator().next());
-        Assert.assertEquals(topic.getDocId(), indexer.search("topic").iterator().next());
+        Assertions.assertEquals(messageAboutCats.getDocId(), indexer.search("cats").iterator().next());
+        Assertions.assertEquals(topic.getDocId(), indexer.search("topic").iterator().next());
     }
 }

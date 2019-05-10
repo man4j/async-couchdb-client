@@ -2,6 +2,7 @@ package com.equiron.acc.tutorial.lesson7;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,51 +22,57 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.store.MMapDirectory;
 
-import com.equiron.acc.changes.document.CouchDbDocumentUpdateHandler;
+import com.equiron.acc.changes.CouchDbEventHandler;
+import com.equiron.acc.json.CouchDbEvent;
 
-public class Indexer implements CouchDbDocumentUpdateHandler<ForumContent> {
+public class Indexer implements CouchDbEventHandler<ForumContent> {
     private IndexWriter indexWriter;
 
     @SuppressWarnings("resource")
     public Indexer() throws Exception {
-        indexWriter = new IndexWriter(new RAMDirectory(), new IndexWriterConfig(new StandardAnalyzer()));
+        indexWriter = new IndexWriter(new MMapDirectory(Files.createTempDirectory("tmp")), new IndexWriterConfig(new StandardAnalyzer()));
     }
 
     @Override
-    public void close() throws IOException {
-        indexWriter.close();
-    }
-
-    @Override
-    public void onUpdate(ForumContent doc) throws Exception {
-        Document luceneDoc = new Document();
-
-        luceneDoc.add(new StringField("uid", doc.getDocId(), Store.YES));
-
-        if (doc instanceof Topic) {
-            Topic topic = (Topic) doc;
-
-            luceneDoc.add(new StringField("type", "topic", Store.YES));
-            luceneDoc.add(new TextField("text", topic.getText(), Store.NO));
-        } else if (doc instanceof Message) {
-            Message message = (Message) doc;
-
-            luceneDoc.add(new StringField("type", "message", Store.YES));
-            luceneDoc.add(new TextField("text", message.getText(), Store.NO));
+    public void onCancel() {
+        try {
+            indexWriter.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-
-        indexWriter.updateDocument(new Term("uid", doc.getDocId()), luceneDoc);
     }
 
     @Override
-    public void onDelete(String docId) throws Exception {
-        indexWriter.deleteDocuments(new Term("uid", docId));
+    public void onEvent(CouchDbEvent<ForumContent> e) throws Exception {
+        if (e.isDeleted()) {
+            indexWriter.deleteDocuments(new Term("uid", e.getDocId()));
+        } else {
+            ForumContent doc = e.getDoc();
+
+            Document luceneDoc = new Document();
+
+            luceneDoc.add(new StringField("uid", doc.getDocId(), Store.YES));
+
+            if (doc instanceof Topic) {
+                Topic topic = (Topic) doc;
+
+                luceneDoc.add(new StringField("type", "topic", Store.YES));
+                luceneDoc.add(new TextField("text", topic.getText(), Store.NO));
+            } else if (doc instanceof Message) {
+                Message message = (Message) doc;
+
+                luceneDoc.add(new StringField("type", "message", Store.YES));
+                luceneDoc.add(new TextField("text", message.getText(), Store.NO));
+            }
+
+            indexWriter.updateDocument(new Term("uid", doc.getDocId()), luceneDoc);
+        }
     }
 
     public List<String> search(String query) throws Exception {
-        IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(indexWriter, true));
+        IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(indexWriter));
 
         BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
 
@@ -90,5 +97,15 @@ public class Indexer implements CouchDbDocumentUpdateHandler<ForumContent> {
         }
 
         return results;
+    }
+
+    @Override
+    public void onStart() throws Exception {
+        //empty
+    }
+
+    @Override
+    public void onError(Throwable e) throws Exception {
+        e.printStackTrace();
     }
 }
