@@ -40,6 +40,22 @@ public class CouchDbAsyncOperations {
         return new UrlBuilder(couchDb.getDbUrl());
     }
     
+    //------------------ Fetch API -------------------------
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
+        return couchDb.getBuiltInView().<T>createDocQuery().byKey(docId).async().asDoc();
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
+        return couchDb.getBuiltInView().createRawDocQuery().byKey(docId).async().asDoc();
+    }
+    
     //------------------ Bulk API -------------------------
 
     /**

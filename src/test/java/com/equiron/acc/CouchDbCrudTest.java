@@ -1,8 +1,6 @@
 package com.equiron.acc;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +13,6 @@ import com.equiron.acc.fixture.TestDocDescendant;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
-import com.equiron.acc.json.CouchDbDocumentAttachment;
 
 public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
@@ -29,19 +26,6 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
     }
 
     @Test
-    public void shouldSaveDocWithAttachment() throws UnsupportedEncodingException {
-        TestDoc testDoc = new TestDoc();
-
-        testDoc.addAttachment("qwe", new CouchDbDocumentAttachment("text/plain", Base64.getEncoder().encodeToString("Привет!".getBytes("UTF-8"))));
-
-        db.saveOrUpdate(testDoc);
-
-        testDoc = db.getBuiltInView().<TestDoc>createDocQuery().byKey(testDoc.getDocId()).asDoc();
-
-        Assertions.assertTrue(testDoc.getAttachment("qwe").isStub());
-    }
-
-    @Test
     public void shouldSaveGenericDoc() {
         GenericTestDocWrapper d = new GenericTestDocWrapper();
 
@@ -49,7 +33,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
 
         db.saveOrUpdate(d);
 
-        d = db.getBuiltInView().<GenericTestDocWrapper>createDocQuery().byKey(d.getDocId()).asDoc();
+        d = db.get(d.getDocId());
 
         Assertions.assertEquals(BigDecimal.class, d.getValue().getClass());
         Assertions.assertEquals(new BigDecimal("123"), d.getValue());
@@ -74,7 +58,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         
         String docId = response.get(0).getDocId();
 
-        TestDoc testDoc = db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDoc();
+        TestDoc testDoc = db.get(docId);
         
         List<CouchDbBulkResponse> deleteResponse = db.delete(testDoc.getDocIdAndRev());
         
@@ -91,7 +75,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         
         String docId = response.get(0).getDocId();
 
-        TestDoc testDoc = db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDoc();
+        TestDoc testDoc = db.get(docId);
         
         testDoc.setName("qweqwe");
         
@@ -104,17 +88,6 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         Assertions.assertFalse(purgeResponse.get("qwe"));
         
         Assertions.assertEquals(0, db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDocs().size());
-    }
-
-    @Test
-    public void shouldSaveOneDocWhenDocIdIsSame() {
-        CouchDbDocument d1 = new CouchDbDocument("1");
-        CouchDbDocument d2 = new CouchDbDocument("1");
-
-        db.saveOrUpdate(d1, d2);
-
-        Assertions.assertFalse(d1.isInConflict());
-        Assertions.assertTrue(d2.isInConflict()); //not saved
     }
 
     @Test
