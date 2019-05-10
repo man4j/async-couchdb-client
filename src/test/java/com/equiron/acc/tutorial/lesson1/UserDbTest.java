@@ -3,36 +3,43 @@ package com.equiron.acc.tutorial.lesson1;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.asynchttpclient.Response;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.util.FileCopyUtils;
 
 import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.json.CouchDbBulkResponse;
+import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAttachment;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.Response;
-import com.ning.http.util.Base64;
 
 public class UserDbTest {
     private UserDb db;
 
-    private AsyncHttpClient httpClient = new AsyncHttpClient();
+    private AsyncHttpClient httpClient;
 
-    @Before
+    @BeforeEach
     public void before() {
-        db = new UserDb(new CouchDbConfig.Builder().setUser("admin")
+        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
+
+        db = new UserDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                                   .setUser("admin")
                                                    .setPassword("root")
                                                    .setHttpClient(httpClient)
                                                    .build());
     }
 
-    @After
-    public void after() {
+    @AfterEach
+    public void after() throws IOException {
         db.deleteDb();
 
         httpClient.close();
@@ -41,41 +48,26 @@ public class UserDbTest {
     @Test
     public void shouldSaveAndDelete() {
         User userJohn = new User("John", 25);
+        
+        for (User u : db.saveOrUpdate(userJohn, new User("Ivan", 22), new User("Mary", 18))) {
+            Assertions.assertTrue(u.isOk());
+        }
 
-        db.saveOrUpdate(userJohn);//simple save
+        Assertions.assertEquals(3, db.getInfo().getDocCount());
 
-        db.saveOrUpdate(new User("Ivan", 22), new User("Mary", 18));//bulk save
+        for (CouchDbBulkResponse res : db.delete(userJohn.getDocIdAndRev())) {
+            Assertions.assertTrue(res.isOk());
+        }
 
-        Assert.assertEquals(3, db.getInfo().getDocCount());
-
-        db.delete(userJohn); // userJohn has correct assigned docId and revision after saveOrUpdate
-
-        Assert.assertEquals(2, db.getInfo().getDocCount());
+        Assertions.assertEquals(2, db.getInfo().getDocCount());
 
         List<User> otherUsers = db.getBuiltInView().<User>createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList());//filter design docs if exists
 
-        for (User doc : otherUsers) {
-            doc.setDeleted();
+        for (CouchDbBulkResponse res : db.delete(otherUsers.stream().map(CouchDbDocument::getDocIdAndRev).collect(Collectors.toList()))) {
+            Assertions.assertTrue(res.isOk());
         }
 
-        db.saveOrUpdate(otherUsers);//bulk delete
-
-        Assert.assertEquals(0, db.getInfo().getDocCount());
-    }
-
-    @Test
-    public void shouldSaveAndGetAndDelete() {
-        String docId = db.saveOrUpdate(new User("John", 25)).getDocId();
-
-        User userJohn = db.get(docId);
-
-        Assert.assertNotNull(userJohn);
-
-        db.delete(userJohn);
-
-        userJohn = db.get(docId);
-
-        Assert.assertNull(userJohn);
+        Assertions.assertEquals(0, db.getInfo().getDocCount());
     }
 
     @Test
@@ -83,14 +75,14 @@ public class UserDbTest {
         User userJohn = new User("John", 25);
 
         db.saveOrUpdate(userJohn);
-
+        
         try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
-            db.attach(userJohn, in, "avatar", "image/gif");
+            db.attach(userJohn.getDocIdAndRev(), in, "avatar", "image/gif");
         }
 
-        Response r = db.getAttachment(userJohn, "avatar");
+        Response r = db.getAttachment(userJohn.getDocId(), "avatar");
 
-        Assert.assertEquals(200, r.getStatusCode());
+        Assertions.assertEquals(200, r.getStatusCode());
     }
 
     @Test
@@ -103,12 +95,12 @@ public class UserDbTest {
             FileCopyUtils.copy(in, out);
         }
 
-        userJohn.addAttachment("avatar", new CouchDbDocumentAttachment("image/gif", Base64.encode(out.toByteArray())));
+        userJohn.addAttachment("avatar", new CouchDbDocumentAttachment("image/gif", Base64.getEncoder().encodeToString(out.toByteArray())));
 
         db.saveOrUpdate(userJohn);
 
-        Response r = db.getAttachment(userJohn, "avatar");
+        Response r = db.getAttachment(userJohn.getDocId(), "avatar");
 
-        Assert.assertEquals(200, r.getStatusCode());
+        Assertions.assertEquals(200, r.getStatusCode());
     }
 }

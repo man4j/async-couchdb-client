@@ -31,6 +31,10 @@ public class CouchDbBulkResponse {
     public boolean isForbidden() {
         return error.contains("forbidden");
     }
+    
+    public boolean isOk() {
+        return !isInConflict() && !isForbidden();
+    }
 
     public String getError() {
         return error;

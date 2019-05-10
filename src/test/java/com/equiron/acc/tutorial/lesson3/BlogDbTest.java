@@ -1,35 +1,41 @@
 package com.equiron.acc.tutorial.lesson3;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbDocument;
-import com.ning.http.client.AsyncHttpClient;
 
 public class BlogDbTest {
     private BlogDb db;
 
-    private AsyncHttpClient httpClient = new AsyncHttpClient();
+    private AsyncHttpClient httpClient;
 
-    @Before
+    @BeforeEach
     public void before() {
-        db = new BlogDb(new CouchDbConfig.Builder().setUser("admin")
+        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
+
+        db = new BlogDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                                   .setUser("admin")
                                                    .setPassword("root")
                                                    .setHttpClient(httpClient)
                                                    .build());
     }
-
-    @After
-    public void after() {
+    
+    @AfterEach
+    public void after() throws IOException {
         db.deleteDb();
 
         httpClient.close();
@@ -77,12 +83,12 @@ public class BlogDbTest {
             authors.put(author.getDocId(), (Author)author);
         }
 
-        Assert.assertEquals("John", authors.get(((BlogPost)post).getAuthorId()).getName());//John is blog post author
-        Assert.assertEquals("Sally", authors.get(((BlogComment)comments.get(0)).getAuthorId()).getName());//Sally is author of the first comment
-        Assert.assertEquals("John", authors.get(((BlogComment)comments.get(1)).getAuthorId()).getName());//John is author of the second comment
+        Assertions.assertEquals("John", authors.get(((BlogPost)post).getAuthorId()).getName());//John is blog post author
+        Assertions.assertEquals("Sally", authors.get(((BlogComment)comments.get(0)).getAuthorId()).getName());//Sally is author of the first comment
+        Assertions.assertEquals("John", authors.get(((BlogComment)comments.get(1)).getAuthorId()).getName());//John is author of the second comment
 
-        Assert.assertEquals(2, comments.size());
-        Assert.assertEquals(2, authors.size());
-        Assert.assertEquals(5, blogRelatedDocs.size());
+        Assertions.assertEquals(2, comments.size());
+        Assertions.assertEquals(2, authors.size());
+        Assertions.assertEquals(5, blogRelatedDocs.size());
     }
 }

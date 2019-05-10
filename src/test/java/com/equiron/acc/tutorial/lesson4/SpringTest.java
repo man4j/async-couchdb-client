@@ -1,27 +1,45 @@
 package com.equiron.acc.tutorial.lesson4;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
+import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.util.Assert;
 
+import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbDocument;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@ContextConfiguration(locations={"/com/n1global/acc/tutorial/lesson4/example-context.xml"})
+@ExtendWith(SpringExtension.class)
+@ContextConfiguration(classes=SpringTest.class)
 @DirtiesContext(classMode=ClassMode.AFTER_EACH_TEST_METHOD)
+@ComponentScan(basePackageClasses=ExampleDb.class)
 public class SpringTest {
     @Autowired
     private ExampleDb exampleDb;
-
-    @After
+    
+    @AfterEach
     public void after() {
         exampleDb.deleteDb();
+    }
+    
+    @Bean
+    public CouchDbConfig couchDbConfig() {
+        AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
+        
+        return new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                          .setUser("admin")
+                                          .setPassword("root")
+                                          .setHttpClient(httpClient)
+                                          .build();
     }
 
     @Test

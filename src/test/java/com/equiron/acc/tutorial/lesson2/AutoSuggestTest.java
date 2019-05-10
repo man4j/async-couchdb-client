@@ -1,28 +1,36 @@
 package com.equiron.acc.tutorial.lesson2;
 
-import org.assertj.core.api.Assertions;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import java.io.IOException;
+import java.util.List;
+
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.CouchDbConfig;
-import com.ning.http.client.AsyncHttpClient;
 
 public class AutoSuggestTest {
     private SimpleCityDb db;
 
-    private AsyncHttpClient httpClient = new AsyncHttpClient();
+    private AsyncHttpClient httpClient;
 
-    @Before
+    @BeforeEach
     public void before() {
-        db = new SimpleCityDb(new CouchDbConfig.Builder().setUser("admin")
-                                                         .setPassword("root")
-                                                         .setHttpClient(httpClient)
-                                                         .build());
-    }
+        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
-    @After
-    public void after() {
+        db = new SimpleCityDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+                                                   .setUser("admin")
+                                                   .setPassword("root")
+                                                   .setHttpClient(httpClient)
+                                                   .build());
+    }
+    
+    @AfterEach
+    public void after() throws IOException {
         db.deleteDb();
 
         httpClient.close();
@@ -32,8 +40,8 @@ public class AutoSuggestTest {
     public void shouldWork() {
         db.saveOrUpdate(new City("Moscow"), new City("London"), new City("Minsk"));
 
-        Assertions.assertThat(db.suggest("M"))
-                  .extracting("name")
-                  .containsSequence("Minsk", "Moscow");
+        List<City> cities = db.suggest("M");
+        
+        Assertions.assertEquals(2, cities.size());
     }
 }

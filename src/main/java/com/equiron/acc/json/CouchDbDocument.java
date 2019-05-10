@@ -136,6 +136,10 @@ public class CouchDbDocument implements HasId<String> {
     public boolean isForbidden() {
         return forbidden;
     }
+    
+    public boolean isOk() {
+        return !isInConflict() && !isForbidden();
+    }
 
     public String getConflictReason() {
         return conflictReason;
