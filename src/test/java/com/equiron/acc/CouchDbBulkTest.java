@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
+import com.equiron.acc.json.CouchDbDocument;
 
 public class CouchDbBulkTest extends CouchDbAbstractTest {
     @Test
@@ -20,5 +21,16 @@ public class CouchDbBulkTest extends CouchDbAbstractTest {
         
         Assertions.assertEquals("updated 1", db.getBuiltInView().<TestDoc>createDocQuery().byKey(testDoc1.getDocId()).asDoc().getName());
         Assertions.assertEquals("updated 2", db.getBuiltInView().<TestDoc>createDocQuery().byKey(testDoc2.getDocId()).asDoc().getName());
+    }
+    
+    @Test
+    public void shouldSaveCOnflictingDocs() {
+        CouchDbDocument d1 = new CouchDbDocument("1");
+        CouchDbDocument d2 = new CouchDbDocument("1");
+
+        db.saveOrUpdate(d1, d2);
+
+        Assertions.assertFalse(d1.isInConflict());
+        Assertions.assertTrue(d2.isInConflict()); //not saved
     }
 }

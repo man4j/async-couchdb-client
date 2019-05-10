@@ -134,6 +134,22 @@ public class CouchDb {
         return asyncOps;
     }
 
+    //------------------ Fetch API -------------------------
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> T get(String docId) {
+        return builtInView.<T>createDocQuery().byKey(docId).asDoc();
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public Map<String, Object> getRaw(String docId) {
+        return builtInView.createRawDocQuery().byKey(docId).asDoc();
+    }
+    
     //------------------ Bulk API -------------------------
 
     /**
