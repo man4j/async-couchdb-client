@@ -3,6 +3,7 @@ package com.equiron.acc;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,21 +57,21 @@ public class CouchDbAsyncOperations {
      */
     public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(final List<T> docs) {
         try {
-            @SuppressWarnings("unchecked")
-            T[] allDocs = (T[]) docs.toArray();
+            CouchDbDocument[] allDocs = docs.toArray(new CouchDbDocument[] {});
             
+            @SuppressWarnings("unchecked")
             Function<List<CouchDbBulkResponse>, List<T>> transformer = responses -> {
                 for (int i = 0; i < allDocs.length; i++) {
                     allDocs[i].setDocId(responses.get(i).getDocId());
                     allDocs[i].setRev(responses.get(i).getRev());
 
                     new CouchDbDocumentAccessor(allDocs[i]).setCurrentDb(couchDb)
-                                                        .setInConflict(responses.get(i).isInConflict())
-                                                        .setForbidden(responses.get(i).isForbidden())
-                                                        .setConflictReason(responses.get(i).getConflictReason());
+                                                           .setInConflict(responses.get(i).isInConflict())
+                                                           .setForbidden(responses.get(i).isForbidden())
+                                                           .setConflictReason(responses.get(i).getConflictReason());
                 }
 
-                return Arrays.asList(allDocs);
+                return (List<T>) Arrays.asList(allDocs);
             };
 
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
@@ -152,7 +153,7 @@ public class CouchDbAsyncOperations {
      * and update_seq will be increased.
      */
     @SafeVarargs
-    public final CompletableFuture<Map<String, Object>> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public final CompletableFuture<Map<String, Boolean>> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
         CouchDbDocIdAndRev[] allDocs = ArrayUtils.insert(0, docRevs, docRev);
         
         return purge(Arrays.asList(allDocs));
@@ -164,19 +165,32 @@ public class CouchDbAsyncOperations {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    public CompletableFuture<Map<String, Object>> purge(final List<CouchDbDocIdAndRev> docRevs) {
+    public CompletableFuture<Map<String, Boolean>> purge(final List<CouchDbDocIdAndRev> docRevs) {
         try {
             Map<String, List<String>> purgedMap = new LinkedHashMap<>();
             
             for (CouchDbDocIdAndRev docRev : docRevs) {
                 purgedMap.put(docRev.getDocId(), Collections.singletonList(docRev.getRev()));
             }
+            
+            Function<Map<String, Object>, Map<String, Boolean>> transformer = response -> {
+                Map<String, Boolean> result = new HashMap<>();
+                
+                @SuppressWarnings("unchecked")
+                Map<String, List<String>> revsMap = (Map<String, List<String>>) response.get("purged");
+                
+                revsMap.forEach((String docId, List<String> revs) -> {
+                    result.put(docId, revs.isEmpty() ? false : true);
+                });
+                
+                return result;
+            };
         
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
                                                        .setUrl(createUrlBuilder().addPathSegment("_purge").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(purgedMap))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, Function.identity(), couchDb.mapper)));
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -251,7 +265,7 @@ public class CouchDbAsyncOperations {
      */
     public CompletableFuture<List<String>> getDatabases() {
         return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().addPathSegment("/_all_dbs").build())
+                                                   .setUrl(new UrlBuilder(couchDb.getServerUrl()).addPathSegment("_all_dbs").build())
                                                    .setMethod("GET")
                                                    .execute(new CouchDbAsyncHandler<>(new TypeReference<List<String>>() {/* empty */}, Function.identity(), couchDb.mapper)));
     }

@@ -8,16 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.slf4j.LoggerFactory;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbDocument;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 
 public class ConcurrentTest {
     private static final int CONCURRENT_CONNECTIONS_COUNT = 15000;
@@ -85,7 +86,7 @@ public class ConcurrentTest {
     }
 
     public static void shouldWorkWithClient() throws Exception {
-        AsyncHttpClient httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
+        AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
         CouchDb db = new CouchDb(new CouchDbConfig.Builder().setUser("admin")
                                                             .setPassword("root")
@@ -93,7 +94,7 @@ public class ConcurrentTest {
                                                             .setHttpClient(httpClient)
                                                             .build());
 
-        List<Future<CouchDbDocument>> futures = new ArrayList<>(CONCURRENT_CONNECTIONS_COUNT);
+        List<Future<List<CouchDbDocument>>> futures = new ArrayList<>(CONCURRENT_CONNECTIONS_COUNT);
 
         long t = System.currentTimeMillis();
 
@@ -103,7 +104,7 @@ public class ConcurrentTest {
 
         System.out.println("t1: " + (System.currentTimeMillis() - t));
 
-        for (Future<CouchDbDocument> f : futures) {
+        for (Future<List<CouchDbDocument>> f : futures) {
             f.get();
         }
 

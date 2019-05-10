@@ -4,15 +4,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.slf4j.LoggerFactory;
-
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.LoggerContext;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbDocument;
-import com.ning.http.client.AsyncHttpClient;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 
 public class BigDb extends CouchDb {
     public static class User extends CouchDbDocument {
@@ -139,7 +140,7 @@ public class BigDb extends CouchDb {
     public static void main(String[] args) throws Exception {
         loggerOff();
 
-        AsyncHttpClient httpClient = new AsyncHttpClient();
+        AsyncHttpClient httpClient = new DefaultAsyncHttpClient();
 
         BigDb db = new BigDb(new CouchDbConfig.Builder().setUser("admin")
                                                         .setPassword("root")

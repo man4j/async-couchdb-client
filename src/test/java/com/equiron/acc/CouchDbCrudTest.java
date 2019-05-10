@@ -1,21 +1,15 @@
 package com.equiron.acc;
 
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.GenericTestDocWrapper;
-import com.equiron.acc.fixture.TestDb;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.fixture.TestDocDescendant;
 import com.equiron.acc.json.CouchDbBulkResponse;
@@ -23,29 +17,7 @@ import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAttachment;
 
-public class CouchDbCrudTest {
-    private TestDb db;
-
-    private AsyncHttpClient httpClient;
-
-    @BeforeAll
-    public void before() {
-        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
-        db = new TestDb(new CouchDbConfig.Builder().setServerUrl("http://127.0.0.1:5984")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
-                                                   .setHttpClient(httpClient)
-                                                   .build());
-    }
-
-    @AfterAll
-    public void after() throws IOException {
-        db.deleteDb();
-
-        httpClient.close();
-    }
-
+public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDoc() {
         TestDoc testDoc = new TestDoc();
@@ -86,7 +58,7 @@ public class CouchDbCrudTest {
 
     @Test
     public void shouldGetDesignDocs() {
-        Assertions.assertEquals(1, db.getDesignDocs().size());
+        Assertions.assertEquals(3, db.getDesignDocs().size());
     }
 
     @Test
@@ -109,6 +81,29 @@ public class CouchDbCrudTest {
         Assertions.assertFalse(deleteResponse.get(0).isInConflict());
         Assertions.assertEquals("", deleteResponse.get(0).getError());
         Assertions.assertEquals("", deleteResponse.get(0).getConflictReason());
+        
+        Assertions.assertEquals(0, db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDocs().size());
+    }
+    
+    @Test
+    public void shouldPurgeDoc() {
+        List<TestDoc> response = db.saveOrUpdate(new TestDoc());
+        
+        String docId = response.get(0).getDocId();
+
+        TestDoc testDoc = db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDoc();
+        
+        testDoc.setName("qweqwe");
+        
+        db.saveOrUpdate(testDoc);
+        
+        Map<String, Boolean> purgeResponse = db.purge(testDoc.getDocIdAndRev());
+        Assertions.assertTrue(purgeResponse.get(testDoc.getDocId()));
+        
+        purgeResponse = db.purge(new CouchDbDocIdAndRev("qwe", "2-1fa02a0db59fe257fa879cc7f69d6672"));
+        Assertions.assertFalse(purgeResponse.get("qwe"));
+        
+        Assertions.assertEquals(0, db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDocs().size());
     }
 
     @Test

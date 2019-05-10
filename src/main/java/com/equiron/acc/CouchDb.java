@@ -64,7 +64,7 @@ public class CouchDb {
     /**
      * For async query processing.
      */
-    private CouchDbAsyncOperations asyncOps = new CouchDbAsyncOperations(this);
+    private CouchDbAsyncOperations asyncOps;
 
     public CouchDb(CouchDbConfig config) {
         mapper.registerModule(new JavaTimeModule());
@@ -84,6 +84,8 @@ public class CouchDb {
         }
 
         prototype = builder.build();
+        
+        asyncOps = new CouchDbAsyncOperations(this);
         
         testConnection();
 
@@ -118,6 +120,10 @@ public class CouchDb {
 
     public String getDbUrl() {
         return new UrlBuilder(config.getServerUrl()).addPathSegment(getDbName()).toString();
+    }
+    
+    public String getServerUrl() {
+        return new UrlBuilder(config.getServerUrl()).toString();
     }
 
     public CouchDbBuiltInView getBuiltInView() {
@@ -175,7 +181,7 @@ public class CouchDb {
      * and update_seq will be increased.
      */
     @SafeVarargs
-    public final Map<String, Object> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public final Map<String, Boolean> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.purge(docRev, docRevs));
     }
     
@@ -185,7 +191,7 @@ public class CouchDb {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    public Map<String, Object> purge(final List<CouchDbDocIdAndRev> docRevs) {
+    public Map<String, Boolean> purge(final List<CouchDbDocIdAndRev> docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.purge(docRevs));
     }
 
@@ -315,7 +321,7 @@ public class CouchDb {
     private void injectViews() {
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             String viewName = NamedStrategy.addUnderscores(field.getName());
-            String designName = "_design/" + viewName;
+            String designName = viewName;
 
             Class<?> viewClass = field.getType();
 
@@ -366,8 +372,6 @@ public class CouchDb {
 
             if (injectedView != null) {
                 setValue(field, injectedView);
-            } else {
-                throw new IllegalStateException("Invalid view class");
             }
         }
     }

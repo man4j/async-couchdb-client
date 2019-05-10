@@ -1,40 +1,12 @@
 package com.equiron.acc;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.fixture.TestDb;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.CouchDbDesignInfo;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
 
-public class CouchDbMapViewTest {
-    private TestDb db;
-
-    private AsyncHttpClient httpClient;
-
-    @Before
-    public void before() {
-        httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
-        db = new TestDb(new CouchDbConfig.Builder().setServerUrl("http://127.0.0.1:5984")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
-                                                   .setHttpClient(httpClient)
-                                                   .build());
-    }
-
-    @After
-    public void after() {
-        db.deleteDb();
-
-        httpClient.close();
-    }
-
+public class CouchDbMapViewTest extends CouchDbAbstractTest {
     @Test
     public void shouldIterateAndRemove() {
         long docCount = db.getInfo().getDocCount();
@@ -44,19 +16,19 @@ public class CouchDbMapViewTest {
         }
 
         for (TestDoc doc : db.getTestView().<TestDoc>createDocQuery().asDocIterator(3)) {
-            db.delete(doc);
+            db.delete(doc.getDocIdAndRev());
         }
 
-        Assert.assertEquals(docCount, db.getInfo().getDocCount());
+        Assertions.assertEquals(docCount, db.getInfo().getDocCount());
 
-        Assert.assertEquals(10, db.getInfo().getDocDelCount());
+        Assertions.assertEquals(10, db.getInfo().getDocDelCount());
     }
 
     @Test
     public void shouldGetViewInfo() {
         CouchDbDesignInfo designInfo = db.getTestView().getInfo();
 
-        Assert.assertEquals("default", designInfo.getName());
-        Assert.assertEquals("javascript", designInfo.getViewInfo().getLanguage());
+        Assertions.assertEquals("test_view", designInfo.getName());
+        Assertions.assertEquals("javascript", designInfo.getViewInfo().getLanguage());
     }
 }

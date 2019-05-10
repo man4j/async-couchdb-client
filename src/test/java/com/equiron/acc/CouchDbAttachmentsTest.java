@@ -3,42 +3,14 @@ package com.equiron.acc;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.asynchttpclient.Response;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.fixture.TestDb;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDocument;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.Response;
 
-public class CouchDbAttachmentsTest {
-    private TestDb db;
-
-    private AsyncHttpClient httpClient;
-
-    @Before
-    public void before() {
-        httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
-        db = new TestDb(new CouchDbConfig.Builder().setServerUrl("http://127.0.0.1:5984")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
-                                                   .setHttpClient(httpClient)
-                                                   .build());
-    }
-
-    @After
-    public void after() {
-        db.deleteDb();
-
-        httpClient.close();
-    }
-
+public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     @Test
     public void shouldAddAttachmentToExistingDocument() throws IOException {
         try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
@@ -48,11 +20,11 @@ public class CouchDbAttachmentsTest {
 
             db.saveOrUpdate(doc);
 
-            db.attach(doc, in, attachmentName, "image/gif");
+            db.attach(doc.getDocIdAndRev(), in, attachmentName, "image/gif");
 
             Response r = db.getAttachment(doc.getDocId(), attachmentName);
 
-            Assert.assertEquals(9559, r.getResponseBodyAsBytes().length);
+            Assertions.assertEquals(9559, r.getResponseBodyAsBytes().length);
         }
     }
 
@@ -65,7 +37,7 @@ public class CouchDbAttachmentsTest {
 
             Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
-            Assert.assertEquals(9559, r.getResponseBodyAsBytes().length);
+            Assertions.assertEquals(9559, r.getResponseBodyAsBytes().length);
         }
     }
 
@@ -73,7 +45,7 @@ public class CouchDbAttachmentsTest {
     public void tryFetchNonExistingAttachment() {
         Response r = db.getAttachment("123", "Non-existing attachment");
 
-        Assert.assertEquals(404, r.getStatusCode());
+        Assertions.assertEquals(404, r.getStatusCode());
     }
 
     @Test
@@ -82,9 +54,9 @@ public class CouchDbAttachmentsTest {
 
         db.saveOrUpdate(doc);
 
-        boolean result = db.deleteAttachment(doc, "Non-existing attachment");
+        boolean result = db.deleteAttachment(doc.getDocIdAndRev(), "Non-existing attachment");
 
-        Assert.assertTrue(result);//why true?
+        Assertions.assertTrue(result);//why true?
     }
 
     @Test
@@ -96,13 +68,13 @@ public class CouchDbAttachmentsTest {
 
             Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
-            Assert.assertEquals(200, r.getStatusCode());
+            Assertions.assertEquals(200, r.getStatusCode());
 
-            Assert.assertTrue(db.deleteAttachment(putResponse.getDocIdAndRev(), attachmentName));
+            Assertions.assertTrue(db.deleteAttachment(putResponse.getDocIdAndRev(), attachmentName));
 
             r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
-            Assert.assertEquals(404, r.getStatusCode());
+            Assertions.assertEquals(404, r.getStatusCode());
         }
     }
 }

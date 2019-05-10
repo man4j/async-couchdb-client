@@ -1,39 +1,11 @@
 package com.equiron.acc;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.fixture.TestDb;
 import com.equiron.acc.json.CouchDbDocument;
-import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
 
-public class CouchDbBuiltInViewTest {
-    private TestDb db;
-
-    private AsyncHttpClient httpClient;
-
-    @Before
-    public void before() {
-        httpClient = new AsyncHttpClient(new AsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
-        db = new TestDb(new CouchDbConfig.Builder().setServerUrl("http://127.0.0.1:5984")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
-                                                   .setHttpClient(httpClient)
-                                                   .build());
-    }
-
-    @After
-    public void after() {
-        db.deleteDb();
-
-        httpClient.close();
-    }
-
+public class CouchDbBuiltInViewTest extends CouchDbAbstractTest {
     @Test
     public void shouldIterateDocs() {
         for (int i = 0; i < 11; i++) {
@@ -45,11 +17,11 @@ public class CouchDbBuiltInViewTest {
         long docsCount = db.getInfo().getDocCount();
 
         for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator(5)) {
-            Assert.assertFalse(d.getDocId().isEmpty());
+            Assertions.assertFalse(d.getDocId().isEmpty());
 
             docsIterated++;
         }
 
-        Assert.assertEquals(docsCount, docsIterated);
+        Assertions.assertEquals(docsCount, docsIterated);
     }
 }
