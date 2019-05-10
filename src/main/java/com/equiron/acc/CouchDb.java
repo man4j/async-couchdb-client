@@ -16,17 +16,18 @@ import java.util.concurrent.ExecutionException;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Realm;
 import org.asynchttpclient.Realm.AuthScheme;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.annotation.DbName;
 import com.equiron.acc.annotation.IgnorePrefix;
 import com.equiron.acc.annotation.JsView;
 import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
+import com.equiron.acc.annotation.ValidateDocUpdate;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
@@ -91,6 +92,8 @@ public class CouchDb {
         createDbIfNotExist();
         
         injectBuiltInView();
+        
+        injectValidators();
         
         if (config.isSelfDiscovering()) {
             selfDiscovering();
@@ -311,76 +314,76 @@ public class CouchDb {
 
     private void injectViews() {
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
-            String designName = null, viewName = null;
+            String viewName = NamedStrategy.addUnderscores(field.getName());
+            String designName = "_design/" + viewName;
 
-            if (field.isAnnotationPresent(JsView.class)) {
-                JsView view = field.getAnnotation(JsView.class);
+            Class<?> viewClass = field.getType();
 
-                designName = view.designName();
-                viewName = view.viewName();
+            TypeFactory tf = TypeFactory.defaultInstance();
+
+            JavaType[] jts = tf.findTypeParameters(tf.constructType(field.getGenericType()), viewClass);
+
+            Object injectedView = null;
+
+            if (viewClass == CouchDbMapView.class) {
+                CouchDbMapView<String, Object> view = new CouchDbMapView<>(this, designName, viewName, jts);
+
+                if (config.isBuildViewsOnStart()) {
+                    long t = System.currentTimeMillis();
+                    logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
+                    view.createQuery().byKey("123").asKey();
+                    logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
+                }
+
+                injectedView = view;
             }
 
-            if (designName != null && viewName != null) {
-                viewName = viewName.isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : viewName;
+            if (viewClass == CouchDbReduceView.class) {
+                CouchDbReduceView<String, Object> view = new CouchDbReduceView<>(this, designName, viewName, jts);
 
-                Class<?> viewClass = field.getType();
-
-                TypeFactory tf = TypeFactory.defaultInstance();
-
-                JavaType[] jts = tf.findTypeParameters(tf.constructType(field.getGenericType()), viewClass);
-
-                Object injectedView = null;
-
-                if (viewClass == CouchDbMapView.class) {
-                    CouchDbMapView<String, Object> view = new CouchDbMapView<>(this, designName, viewName, jts);
-
-                    if (config.isBuildViewsOnStart()) {
-                        long t = System.currentTimeMillis();
-                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                        view.createQuery().byKey("123").asKey();
-                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
-                    }
-
-                    injectedView = view;
+                if (config.isBuildViewsOnStart()) {
+                    long t = System.currentTimeMillis();
+                    logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
+                    view.createQuery().byKey("123").asKey();
+                    logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
                 }
 
-                if (viewClass == CouchDbReduceView.class) {
-                    CouchDbReduceView<String, Object> view = new CouchDbReduceView<>(this, designName, viewName, jts);
+                injectedView = view;
+            }
 
-                    if (config.isBuildViewsOnStart()) {
-                        long t = System.currentTimeMillis();
-                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                        view.createQuery().byKey("123").asKey();
-                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
-                    }
+            if (viewClass == CouchDbMapReduceView.class) {
+                CouchDbMapReduceView<String, Object, Object, Object> view = new CouchDbMapReduceView<>(this, designName, viewName, jts);
 
-                    injectedView = view;
+                if (config.isBuildViewsOnStart()) {
+                    long t = System.currentTimeMillis();
+                    logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
+                    view.createMapQuery().byKey("123").asKey();
+                    logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");                        
                 }
 
-                if (viewClass == CouchDbMapReduceView.class) {
-                    CouchDbMapReduceView<String, Object, Object, Object> view = new CouchDbMapReduceView<>(this, designName, viewName, jts);
+                injectedView = view;
+            }
 
-                    if (config.isBuildViewsOnStart()) {
-                        long t = System.currentTimeMillis();
-                        logger.info("Building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                        view.createMapQuery().byKey("123").asKey();
-                        logger.info("Complete building view in database: " + config.getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");                        
-                    }
-
-                    injectedView = view;
-                }
-
-                if (injectedView != null) {
-                    setValue(field, injectedView);
-                } else {
-                    throw new IllegalStateException("Invalid view class");
-                }
+            if (injectedView != null) {
+                setValue(field, injectedView);
+            } else {
+                throw new IllegalStateException("Invalid view class");
             }
         }
     }
 
     private void injectBuiltInView() {
         builtInView = new CouchDbBuiltInView(this);
+    }
+    
+    private void injectValidators() {
+        for (Field field : ReflectionUtils.getAllFields(getClass())) {
+            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
+                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
+
+                setValue(field, new CouchDbValidator(vdu.predicate()));
+            }
+        }
     }
         
     private void addSecurity() {
@@ -466,9 +469,9 @@ public class CouchDb {
             if (field.isAnnotationPresent(JsView.class)) {
                 JsView view = field.getAnnotation(JsView.class);
 
-                String designName = "_design/" + view.designName();
-                String viewName = view.viewName().isEmpty() ? NamedStrategy.addUnderscores(field.getName()) : view.viewName();
-
+                String viewName = NamedStrategy.addUnderscores(field.getName());
+                String designName = "_design/" + viewName;
+                
                 String map = "function(doc) {" + view.map() + ";}";
 
                 String reduce = null;
@@ -483,6 +486,17 @@ public class CouchDb {
 
                 designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
                 designMap.get(designName).addView(viewName, map, reduce);
+            }
+            
+            if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
+                field.setAccessible(true);
+
+                ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
+
+                String designName = "_design/" + NamedStrategy.addUnderscores(field.getName());
+
+                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
+                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.predicate() + ";}");
             }
         }
 

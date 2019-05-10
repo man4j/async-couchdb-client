@@ -8,10 +8,6 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface JsView {
-    String designName() default "default";
-
-    String viewName() default "";
-
     String map();
 
     String reduce() default "";

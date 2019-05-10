@@ -12,13 +12,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public final class CouchDbDesignDocument extends CouchDbDocument {
     private Map<String, CouchDbMapReduceFunction> views = new LinkedHashMap<>();
 
-    private Map<String, String> filters = new LinkedHashMap<>();
-    
     @JsonProperty("validate_doc_update")
     private String validateDocUpdate;
-
-    @JsonProperty("updates")
-    private Map<String, String> updatesHandlers = new LinkedHashMap<>();
 
     @JsonInclude(Include.NON_NULL)
     private String language = "javascript";
@@ -41,16 +36,8 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
         return views;
     }
 
-    public Map<String, String> getFilters() {
-        return filters;
-    }
-    
     public void setValidateDocUpdate(String validateDocUpdate) {
         this.validateDocUpdate = validateDocUpdate;
-    }
-
-    public Map<String, String> getUpdatesHandlers() {
-        return updatesHandlers;
     }
 
     public void addView(String name, CouchDbMapReduceFunction function) {
@@ -65,36 +52,12 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
         views.put(name, new CouchDbMapReduceFunction(map));
     }
 
-    public void addFilter(String name, String fun) {
-        filters.put(name, fun);
-    }
-
-    public void addUpdateHandler(String name, String fun) {
-        updatesHandlers.put(name, fun);
-    }
-
     public CouchDbMapReduceFunction getView(String name) {
         return views.get(name);
     }
 
-    public String getFilter(String name) {
-        return filters.get(name);
-    }
-
-    public String getUpdateHandler(String name) {
-        return updatesHandlers.get(name);
-    }
-
     public CouchDbMapReduceFunction deleteView(String name) {
         return views.remove(name);
-    }
-
-    public String deleteFilter(String name) {
-        return filters.remove(name);
-    }
-
-    public String deleteUpdateHandler(String name) {
-        return updatesHandlers.remove(name);
     }
 
     public String getLanguage() {
@@ -113,15 +76,13 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
 
         CouchDbDesignDocument other = (CouchDbDesignDocument)obj;
 
-        if (views.equals(other.views)
-            && filters.equals(other.filters)
-            && updatesHandlers.equals(other.updatesHandlers)) return true;
+        if (views.equals(other.views) && Objects.equals(validateDocUpdate, other.validateDocUpdate)) return true;
 
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(views, filters, updatesHandlers);
+        return Objects.hash(views, validateDocUpdate);
     }
 }
