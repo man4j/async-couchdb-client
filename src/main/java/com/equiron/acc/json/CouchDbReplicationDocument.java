@@ -1,11 +1,13 @@
 package com.equiron.acc.json;
 
+import java.util.Map;
+
 public class CouchDbReplicationDocument extends CouchDbDocument {
     private String source;
     
     private String target;
     
-    private String selector;
+    private Map<String, Object> selector;
     
     private boolean continuous = true;
 
@@ -26,14 +28,14 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
         this.continuous = continuous;
     }
     
-    public CouchDbReplicationDocument(String docId, String source, String target, String selector) {
+    public CouchDbReplicationDocument(String docId, String source, String target, Map<String, Object> selector) {
         setDocId(docId);
         this.source = source;
         this.target = target;
         this.selector = selector;
     }
     
-    public CouchDbReplicationDocument(String docId, String source, String target, String selector, boolean continuous) {
+    public CouchDbReplicationDocument(String docId, String source, String target, Map<String, Object> selector, boolean continuous) {
         setDocId(docId);
         this.source = source;
         this.target = target;
@@ -53,7 +55,7 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
         return target;
     }
     
-    public String getSelector() {
+    public Map<String, Object> getSelector() {
         return selector;
     }
 }

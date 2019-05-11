@@ -14,6 +14,7 @@ import com.equiron.acc.json.CouchDbEvent;
 import com.equiron.acc.util.BufUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.netty.handler.codec.http.HttpHeaders;
@@ -33,11 +34,12 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     
     private volatile String lastSuccessSeq;
 
-    public CouchDbEventAsyncHandler(CouchDbEventListener<D> eventListener, ObjectMapper mapper, JavaType eventType, String url) {
+    public CouchDbEventAsyncHandler(CouchDbEventListener<D> eventListener, ObjectMapper mapper, JavaType eventType, String url, String lastSuccessSeq) {
         this.eventListener = eventListener;
         this.mapper = mapper;
         this.eventType = eventType;
         this.url = url;
+        this.lastSuccessSeq = lastSuccessSeq;
     }
     
     @Override
@@ -104,14 +106,22 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
         return State.CONTINUE;
     }
 
-    @SuppressWarnings("unchecked")
     private void processEvent(byte[] eventArray) {
         for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
-            try {                
-                CouchDbEvent<CouchDbDocument> event = mapper.readValue(eventArray, new TypeReference<CouchDbEvent<CouchDbDocument>>() { /* empty */});
+            try {
+                JsonNode node = mapper.readTree(eventArray);
+                
+                CouchDbEvent<D> event;
+                
+                if (node.path("deleted").asBoolean()) {
+                    event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);
+                    eventHandler.onEvent(event);
+                } else {
+                    event = mapper.readValue(eventArray, new TypeReference<CouchDbEvent<CouchDbDocument>>() { /* empty */});
 
-                if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
-                    eventHandler.onEvent((CouchDbEvent<D>) event);
+                    if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
+                        eventHandler.onEvent((CouchDbEvent<D>) event);
+                    }
                 }
                 
                 lastSuccessSeq = event.getSeq();

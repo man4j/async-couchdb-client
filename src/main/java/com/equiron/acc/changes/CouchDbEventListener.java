@@ -59,12 +59,12 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
 
             messagingFuture = db.getConfig().getHttpClient().prepareRequest(db.getPrototype())
                                             .setUrl(url)
-                                            .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url));
+                                            .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
 
             return messagingFuture;
         }
 
-        throw new IllegalStateException("Already connected!");
+        return null;
     }
 
     public synchronized void stopListening() {

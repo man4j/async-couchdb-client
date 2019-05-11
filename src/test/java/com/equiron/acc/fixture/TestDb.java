@@ -18,7 +18,7 @@ public class TestDb extends CouchDb {
     @JsView(map = "emit(doc._id, 1)", reduce = "return sum(values)")
     private CouchDbReduceView<String, Integer> reducedTestView;
     
-    @ValidateDocUpdate(predicate = "if (newDoc.name === 'bomb') throw({forbidden: 'Only admins may plant bombs.'}); ")
+    @ValidateDocUpdate("if (newDoc.name === 'bomb') throw({forbidden: 'Only admins may plant bombs.'});")
     private CouchDbValidator validator;
 
     public TestDb(CouchDbConfig config) {

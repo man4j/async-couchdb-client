@@ -8,6 +8,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class CouchDbUser extends CouchDbDocument {
+    public static final String COUCHDB_USER_PREFIX = "org.couchdb.user:";
+
     private String name;
     
     private String password;
@@ -19,7 +21,7 @@ public class CouchDbUser extends CouchDbDocument {
 
     @JsonCreator
     public CouchDbUser(@JsonProperty("name") String name, @JsonProperty("password") String password, @JsonProperty("roles") Set<String> roles) {
-        super("org.couchdb.user:" + name);
+        super(COUCHDB_USER_PREFIX + name);
         
         this.name = name;
         this.password = password;

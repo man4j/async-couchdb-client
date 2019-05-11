@@ -12,7 +12,10 @@ import com.equiron.acc.json.CouchDbEvent;
 public class CouchDbNotificationsTest extends CouchDbAbstractTest {
     @Test
     public void shouldWork() throws Exception {
-        db.saveOrUpdate(new TestDoc());
+        TestDoc testDoc = new TestDoc("qwe");
+        
+        db.saveOrUpdate(testDoc);
+        db.delete(testDoc.getDocIdAndRev());
 
         try(CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db) {/*empty*/};) {
             final CountDownLatch latch = new CountDownLatch(1);

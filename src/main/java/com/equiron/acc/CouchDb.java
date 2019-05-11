@@ -401,7 +401,7 @@ public class CouchDb {
             if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
                 ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
 
-                setValue(field, new CouchDbValidator(vdu.predicate()));
+                setValue(field, new CouchDbValidator(vdu.value()));
             }
         }
     }
@@ -516,7 +516,7 @@ public class CouchDb {
                 String designName = "_design/" + NamedStrategy.addUnderscores(field.getName());
 
                 designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.predicate() + ";}");
+                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.value() + ";}");
             }
         }
 

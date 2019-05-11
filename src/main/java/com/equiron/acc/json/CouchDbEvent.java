@@ -1,5 +1,6 @@
 package com.equiron.acc.json;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -13,6 +14,13 @@ public class CouchDbEvent<D extends CouchDbDocument> {
     private boolean deleted;
 
     private D doc;
+
+    @JsonCreator
+    public CouchDbEvent(@JsonProperty("id") String docId, @JsonProperty("seq") String seq, @JsonProperty("deleted") boolean deleted) {
+        this.docId = docId;
+        this.seq = seq;
+        this.deleted = deleted;
+    }
 
     public String getDocId() {
         return docId;
