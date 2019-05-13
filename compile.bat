@@ -1,0 +1,1 @@
+call mvn clean install deploy:deploy -Dmaven.test.skip=true

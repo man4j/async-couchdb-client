@@ -133,7 +133,11 @@ public class SyncTest {
     }
 
     private void registerNewClient() {
-        CouchDbUser client = new CouchDbUser("oms1", "123456", Collections.singleton("OMS"));
+        CustomUser client = new CustomUser("oms1", "123456", Collections.singleton("OMS"));
+        
+        client.setFirstName("first name");
+        client.setLastName("last name");
+        
         usersDb.saveOrUpdate(client);//регистрируем нового клиента
         Assertions.assertTrue(client.isOk());//Проверка, что все ок
     }
