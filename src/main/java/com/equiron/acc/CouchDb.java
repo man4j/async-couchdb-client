@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import javax.annotation.PostConstruct;
+
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Realm;
 import org.asynchttpclient.Realm.AuthScheme;
@@ -21,6 +23,7 @@ import org.asynchttpclient.RequestBuilder;
 import org.asynchttpclient.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.equiron.acc.annotation.DbName;
 import com.equiron.acc.annotation.IgnorePrefix;
@@ -51,11 +54,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 public class CouchDb {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
-    final CouchDbConfig config;
+    @Autowired
+    CouchDbConfig config;
 
-    final ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = new ObjectMapper();
 
-    final Request prototype;
+    Request prototype;
     
     private String dbName;
 
@@ -65,12 +69,11 @@ public class CouchDb {
      * For async query processing.
      */
     private CouchDbAsyncOperations asyncOps;
-
-    public CouchDb(CouchDbConfig config) {
+    
+    @PostConstruct
+    public void init() {
         mapper.registerModule(new JavaTimeModule());
         
-        this.config = config;
-
         RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
                                                      .setCharset(StandardCharsets.UTF_8);
 
@@ -100,6 +103,15 @@ public class CouchDb {
         if (config.isSelfDiscovering()) {
             selfDiscovering();
         }
+    }
+    
+    public CouchDb() {
+        //empty
+    }
+    
+    public CouchDb(CouchDbConfig config) {
+        this.config = config;
+        init();
     }
     
     public Request getPrototype() {
