@@ -18,9 +18,11 @@ import org.asynchttpclient.Response;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAccessor;
 import com.equiron.acc.json.CouchDbInfo;
+import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.transformer.CouchDbBooleanResponseTransformer;
 import com.equiron.acc.util.FutureUtils;
 import com.equiron.acc.util.UrlBuilder;
@@ -46,14 +48,40 @@ public class CouchDbAsyncOperations {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
-        return couchDb.getBuiltInView().<T>createDocQuery().byKey(docId).async().asDoc();
+        return get(docId, false);
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public CompletableFuture<Map<String, Object>> getRaw(String docId) {
-        return couchDb.getBuiltInView().createRawDocQuery().byKey(docId).async().asDoc();
+        return getRaw(docId, false);
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId, boolean attachments) {
+        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = couchDb.getBuiltInView().<T>createDocQuery();
+        
+        if (attachments) {
+            query.includeAttachments();
+        }
+        
+        return query.byKey(docId).async().asDoc();
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public CompletableFuture<Map<String, Object>> getRaw(String docId, boolean attachments) {
+        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = couchDb.getBuiltInView().createRawDocQuery();
+        
+        if (attachments) {
+            query.includeAttachments();
+        }
+        
+        return query.byKey(docId).async().asDoc();
     }
     
     //------------------ Bulk API -------------------------

@@ -49,6 +49,15 @@ public class CouchDbMapQueryWithDocs<K, V, D> extends CouchDbAbstractMapQuery<K,
             return super.executeRequest(delegate);
         }
     }
+    
+    /**
+     * Include attachments into the document.
+     */
+    public CouchDbMapQueryWithDocs<K, V, D> includeAttachments() {
+        queryObject.setAttachments(true);
+
+        return this;
+    }
 
     @Override
     public CouchDbMapQueryWithDocsAsyncOperations async() {

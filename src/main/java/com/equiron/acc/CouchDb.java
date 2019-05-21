@@ -33,10 +33,12 @@ import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbInfo;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
+import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.util.ExceptionHandler;
 import com.equiron.acc.util.NamedStrategy;
 import com.equiron.acc.util.ReflectionUtils;
@@ -152,14 +154,40 @@ public class CouchDb {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> T get(String docId) {
-        return builtInView.<T>createDocQuery().byKey(docId).asDoc();
+        return get(docId, false);
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public Map<String, Object> getRaw(String docId) {
-        return builtInView.createRawDocQuery().byKey(docId).asDoc();
+        return getRaw(docId, false);
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> T get(String docId, boolean attachments) {
+        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = builtInView.<T>createDocQuery();
+        
+        if (attachments) {
+            query.includeAttachments();
+        }
+        
+        return query.byKey(docId).asDoc();
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public Map<String, Object> getRaw(String docId, boolean attachments) {
+        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = builtInView.createRawDocQuery();
+        
+        if (attachments) {
+            query.includeAttachments();
+        }
+        
+        return query.byKey(docId).asDoc();
     }
     
     //------------------ Bulk API -------------------------

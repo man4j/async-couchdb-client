@@ -1,10 +1,19 @@
 package com.equiron.acc.json;
 
+import java.util.Base64;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 
+@JsonAutoDetect(fieldVisibility=Visibility.ANY,
+                creatorVisibility=Visibility.NONE,
+                getterVisibility=Visibility.NONE,
+                isGetterVisibility=Visibility.NONE,
+                setterVisibility=Visibility.NONE)
 @JsonInclude(Include.NON_DEFAULT)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CouchDbDocumentAttachment {
@@ -23,9 +32,14 @@ public class CouchDbDocumentAttachment {
         /* empty */
     }
 
-    public CouchDbDocumentAttachment(String contentType, String data) {
+    public CouchDbDocumentAttachment(String contentType, String textData) {
         this.contentType = contentType;
-        this.data = data;
+        this.data = Base64.getEncoder().encodeToString(textData.getBytes());
+    }
+    
+    public CouchDbDocumentAttachment(String contentType, byte[] data) {
+        this.contentType = contentType;
+        this.data = Base64.getEncoder().encodeToString(data);
     }
 
     public String getContentType() {
@@ -36,8 +50,12 @@ public class CouchDbDocumentAttachment {
         this.contentType = contentType;
     }
 
-    public String getData() {
-        return data;
+    public String getTextData() {
+        return new String(Base64.getDecoder().decode(data));
+    }
+    
+    public byte[] getData() {
+        return Base64.getDecoder().decode(data);
     }
 
     public void setData(String data) {

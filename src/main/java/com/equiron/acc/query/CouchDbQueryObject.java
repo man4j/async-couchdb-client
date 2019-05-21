@@ -10,9 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class CouchDbQueryObject<K> {
     private ObjectMapper mapper;
-
+    
     private K[] keys;
-
+    
     private K key;
 
     private boolean descending;
@@ -36,6 +36,8 @@ public class CouchDbQueryObject<K> {
     private int groupLevel;
 
     private boolean inclusiveEnd = true;
+
+    private boolean attachments = false;
 
     private int limit;
 
@@ -71,6 +73,8 @@ public class CouchDbQueryObject<K> {
         if (groupLevel != 0) urlBuilder.addQueryParam("group_level", groupLevel + "");
 
         if (!inclusiveEnd) urlBuilder.addQueryParam("inclusive_end", "false");
+        
+        if (attachments) urlBuilder.addQueryParam("attachments", "true");
 
         if (limit != 0) urlBuilder.addQueryParam("limit", limit + "");
 
@@ -147,6 +151,10 @@ public class CouchDbQueryObject<K> {
 
     public void setInclusiveEnd(boolean inclusiveEnd) {
         this.inclusiveEnd = inclusiveEnd;
+    }
+    
+    public void setAttachments(boolean attachments) {
+        this.attachments = attachments;
     }
 
     public int getLimit() {

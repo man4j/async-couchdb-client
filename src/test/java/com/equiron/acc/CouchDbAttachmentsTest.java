@@ -9,8 +9,22 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.CouchDbDocumentAttachment;
 
 public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
+    @Test
+    public void shouldUseBuiltInAttachments() {
+        CouchDbDocument doc = new CouchDbDocument();
+        
+        doc.getAttachments().put("key", new CouchDbDocumentAttachment("text/plain", "value"));
+        
+        db.saveOrUpdate(doc);
+
+        doc = db.get(doc.getDocId(), true);
+        
+        Assertions.assertEquals("value", doc.getAttachment("key").getTextData());
+    }
+    
     @Test
     public void shouldAddAttachmentToExistingDocument() throws IOException {
         try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
