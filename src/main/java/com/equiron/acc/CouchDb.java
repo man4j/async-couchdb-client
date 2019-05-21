@@ -72,38 +72,44 @@ public class CouchDb {
      */
     private CouchDbAsyncOperations asyncOps;
     
+    private volatile boolean initialized;
+    
     @PostConstruct
     public void init() {
-        mapper.registerModule(new JavaTimeModule());
-        
-        RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
-                                                     .setCharset(StandardCharsets.UTF_8);
-
-        if (this.config.getUser() != null && this.config.getPassword() != null) {
-            Realm realm = new Realm.Builder(this.config.getUser(), this.config.getPassword())
-                                   .setUsePreemptiveAuth(true)
-                                   .setScheme(AuthScheme.BASIC)
-                                   .build();
-
-            builder.setRealm(realm);
-        }
-
-        prototype = builder.build();
-        
-        asyncOps = new CouchDbAsyncOperations(this);
-        
-        testConnection();
-
-        generateDbName();
-
-        createDbIfNotExist();
-        
-        injectBuiltInView();
-        
-        injectValidators();
-        
-        if (config.isSelfDiscovering()) {
-            selfDiscovering();
+        if (!initialized) {//может быть инициализирована в конструкторе
+            mapper.registerModule(new JavaTimeModule());
+            
+            RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
+                                                         .setCharset(StandardCharsets.UTF_8);
+    
+            if (this.config.getUser() != null && this.config.getPassword() != null) {
+                Realm realm = new Realm.Builder(this.config.getUser(), this.config.getPassword())
+                                       .setUsePreemptiveAuth(true)
+                                       .setScheme(AuthScheme.BASIC)
+                                       .build();
+    
+                builder.setRealm(realm);
+            }
+    
+            prototype = builder.build();
+            
+            asyncOps = new CouchDbAsyncOperations(this);
+            
+            testConnection();
+    
+            generateDbName();
+    
+            createDbIfNotExist();
+            
+            injectBuiltInView();
+            
+            injectValidators();
+            
+            if (config.isSelfDiscovering()) {
+                selfDiscovering();
+            }
+            
+            initialized = true;
         }
     }
     
@@ -122,6 +128,13 @@ public class CouchDb {
     
     public CouchDbConfig getConfig() {
         return config;
+    }
+    
+    @Autowired
+    public void setConfig(CouchDbConfig config) {
+        if (this.config == null) {//может быть уже инициализирован через конструктор
+            this.config = config;
+        }
     }
     
     public ObjectMapper getMapper() {
