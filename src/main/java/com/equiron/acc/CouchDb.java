@@ -11,7 +11,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
 
@@ -25,17 +29,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.equiron.acc.annotation.DbName;
-import com.equiron.acc.annotation.IgnorePrefix;
 import com.equiron.acc.annotation.JsView;
+import com.equiron.acc.annotation.Replicated;
 import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
+import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbInfo;
+import com.equiron.acc.json.CouchDbReplicationDocument;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
 import com.equiron.acc.query.CouchDbMapQueryWithDocs;
@@ -48,6 +53,7 @@ import com.equiron.acc.view.CouchDbMapReduceView;
 import com.equiron.acc.view.CouchDbMapView;
 import com.equiron.acc.view.CouchDbReduceView;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
@@ -57,33 +63,42 @@ public class CouchDb {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
     @Autowired
-    CouchDbConfig config;
+    private CouchDbConfig config;
 
     ObjectMapper mapper = new ObjectMapper();
 
     Request prototype;
     
+    private String ip;
+    
+    private int port;
+    
+    private String user;
+    
+    private String password;
+    
     private String dbName;
-
+    
     private CouchDbBuiltInView builtInView;
 
-    /**
-     * For async query processing.
-     */
     private CouchDbAsyncOperations asyncOps;
     
-    private volatile boolean initialized;
+    private boolean selfDiscovering = true;
+    
+    private boolean initialized;
     
     @PostConstruct
     public void init() {
         if (!initialized) {//может быть инициализирована в конструкторе
             mapper.registerModule(new JavaTimeModule());
             
+            applyConfig();
+
             RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
                                                          .setCharset(StandardCharsets.UTF_8);
     
-            if (this.config.getUser() != null && this.config.getPassword() != null) {
-                Realm realm = new Realm.Builder(this.config.getUser(), this.config.getPassword())
+            if (this.user != null && this.password != null) {
+                Realm realm = new Realm.Builder(this.user, this.password)
                                        .setUsePreemptiveAuth(true)
                                        .setScheme(AuthScheme.BASIC)
                                        .build();
@@ -95,18 +110,24 @@ public class CouchDb {
             
             asyncOps = new CouchDbAsyncOperations(this);
             
+            builtInView = new CouchDbBuiltInView(this);
+            
             testConnection();
     
-            generateDbName();
+            if (selfDiscovering) {            
+                createDbIfNotExist();
+                
+                synchronizeDesignDocs();
+
+                injectViews();
     
-            createDbIfNotExist();
-            
-            injectBuiltInView();
-            
-            injectValidators();
-            
-            if (config.isSelfDiscovering()) {
-                selfDiscovering();
+                injectValidators();
+
+                addSecurity();
+    
+                cleanupViews();
+                
+                synchronizeReplicationDocs();
             }
             
             initialized = true;
@@ -126,8 +147,8 @@ public class CouchDb {
         return prototype;
     }
     
-    public CouchDbConfig getConfig() {
-        return config;
+    public AsyncHttpClient getHttpClient() {
+        return config.getHttpClient();
     }
     
     @Autowired
@@ -144,15 +165,15 @@ public class CouchDb {
     public String getDbName() {
         return dbName;
     }
-
-    public String getDbUrl() {
-        return new UrlBuilder(config.getServerUrl()).addPathSegment(getDbName()).toString();
-    }
     
     public String getServerUrl() {
-        return new UrlBuilder(config.getServerUrl()).toString();
+        return String.format("http://%s:%s", ip, port);
     }
 
+    public String getDbUrl() {
+        return new UrlBuilder(getServerUrl()).addPathSegment(getDbName()).toString();
+    }
+    
     public CouchDbBuiltInView getBuiltInView() {
         return builtInView;
     }
@@ -342,42 +363,35 @@ public class CouchDb {
 
     //------------------ Discovering methods -------------------------
 
-    private void selfDiscovering() {
-        synchronizeDesignDocs();
-
-        injectViews();
-                
-        addSecurity();
-
-        cleanupViews();
-    }
-
     private void testConnection() {
         try {
             if (config.getHttpClient().prepareRequest(prototype)
                                       .setMethod("GET")
-                                      .setUrl(config.getServerUrl())
+                                      .setUrl(getServerUrl())
                                       .execute().get().getStatusCode() != 200) {
-                throw new ConnectException("Could not connect to " + config.getServerUrl());
+                throw new ConnectException("Could not connect to " + getServerUrl());
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private void generateDbName() {
-        dbName = config.getDbName();
-
-        if (dbName == null) {
-            if (getClass().isAnnotationPresent(DbName.class)) {
-                dbName = getClass().getAnnotation(DbName.class).value();
-            } else {
-                dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
-            }
-        }
+    private void applyConfig() {
+        ip = config.getIp(); 
+        port = config.getPort();
+        user = config.getUser();
+        password = config.getPassword();
+        dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
         
-        if (!getClass().isAnnotationPresent(IgnorePrefix.class)) {
-            dbName = config.getDbPrefix() + dbName;
+        if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
+            com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
+
+            ip = annotationConfig.ip().isBlank() ? ip : annotationConfig.ip(); 
+            port = annotationConfig.port() == 0 ? port : annotationConfig.port();
+            user = annotationConfig.user().isBlank() ? user : annotationConfig.user();
+            password = annotationConfig.password().isBlank() ? password : annotationConfig.password();
+            dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
+            selfDiscovering = annotationConfig.selfDiscovering();
         }
     }
 
@@ -445,10 +459,6 @@ public class CouchDb {
         }
     }
 
-    private void injectBuiltInView() {
-        builtInView = new CouchDbBuiltInView(this);
-    }
-    
     private void injectValidators() {
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
@@ -461,6 +471,7 @@ public class CouchDb {
         
     private void addSecurity() {
         try {
+            @SuppressWarnings("resource")
             AsyncHttpClient client = config.getHttpClient();
             
             CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
@@ -489,6 +500,123 @@ public class CouchDb {
             throw new RuntimeException(e);
         }
     }
+    
+    private void synchronizeReplicationDocs() {
+        Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
+        
+        if (getClass().isAnnotationPresent(Replicated.class)) {
+            String ip = getClass().getAnnotation(Replicated.class).targetIp();
+            int port = getClass().getAnnotation(Replicated.class).targetPort();
+            String user = getClass().getAnnotation(Replicated.class).targetUser();
+            String password = getClass().getAnnotation(Replicated.class).targetPassword();
+            String remoteDb = getClass().getAnnotation(Replicated.class).targetDbName();
+            String selector = getClass().getAnnotation(Replicated.class).selector();
+            
+            if (ip.startsWith("s:") || ip.startsWith("e:") || ip.startsWith("p:")) {
+                String propName = ip.split(":")[1];
+                
+                Optional<String> value = Stream.of(System.getProperty(propName),
+                                                   System.getProperty(propName.toLowerCase()), 
+                                                   System.getProperty(propName.toUpperCase()),
+                                                   System.getenv(propName),
+                                                   System.getenv(propName.toLowerCase()), 
+                                                   System.getenv(propName.toUpperCase())
+                                                   ).filter(v -> v != null).findFirst();
+                
+                if (value.isPresent()) {
+                    ip = value.get();
+                } else {
+                    ip = "";
+                }
+            }
+            
+            if (!ip.isBlank()) {
+                if (remoteDb.isBlank()) {
+                    remoteDb = getDbName();
+                }
+                
+                String remoteServer;
+                
+                if (user.isBlank() && password.isBlank()) {
+                    remoteServer = String.format("http://%s:%s/%s", ip, port, remoteDb);
+                }
+                else {
+                    remoteServer = String.format("http://%s:%s@%s:%s/%s", user, password, ip, port, remoteDb);
+                }
+                
+                logger.info("Starting replication to remote server: " + remoteServer);
+                
+                Map<String, Object> selectorMap = null;
+                
+                if (!selector.isBlank()) {
+                    try {
+                        selectorMap = mapper.readValue(selector, new TypeReference<Map<String, Object>>(){/*empty*/});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", getDbUrl(), remoteServer, selectorMap);
+                CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, getDbUrl(), selectorMap);
+
+                newReplicationDocs.put(toRemote.getDocId(), toRemote);
+                newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
+            }
+        }
+        
+        CouchDbConfig config = new CouchDbConfig.Builder().setHttpClient(getHttpClient())
+                                                          .setIp(ip)
+                                                          .setPort(port)
+                                                          .setUser(user)
+                                                          .setPassword(password)
+                                                          .build();
+        
+        ReplicatorDb replicatorDb = new ReplicatorDb(config);
+        
+        List<String> replicationsDocsIds = replicatorDb.getBuiltInView().createQuery()
+                                                                        .asIds()
+                                                                        .stream()
+                                                                        .filter(id -> !id.startsWith("_design/"))//exclude design docs
+                                                                        .collect(Collectors.toList());
+        
+        List<CouchDbReplicationDocument> replicationsDocs = replicatorDb.getBuiltInView().<CouchDbReplicationDocument>createDocQuery().byKeys(replicationsDocsIds).asDocs();
+        
+        for (var doc : replicationsDocs) {
+            if (doc.getDocId().startsWith(getDbName() + "$")) {//находим документы связанные с этой базой
+                if (newReplicationDocs.containsKey(doc.getDocId())) {//значит надо просто обновить
+                    CouchDbReplicationDocument updatedReplicationDoc = newReplicationDocs.get(doc.getDocId());
+                    
+                    if (!updatedReplicationDoc.equals(doc)) {
+                        updatedReplicationDoc.setRev(doc.getRev());
+                    
+                        replicatorDb.saveOrUpdate(updatedReplicationDoc);
+                 
+                        if (updatedReplicationDoc.isOk()) {
+                            logger.info("Replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
+                        } else {
+                            logger.info("Replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
+                        }
+                    }
+                    
+                    newReplicationDocs.remove(doc.getDocId());
+                } else {
+                    replicatorDb.delete(doc.getDocIdAndRev());
+                }
+            }
+        }
+        
+        if (!newReplicationDocs.isEmpty()) {
+            replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
+            
+            for (var d : newReplicationDocs.values()) {
+                if (d.isOk()) {
+                    logger.info("Replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
+                } else {
+                    logger.info("Replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
+                }
+            }
+        }
+    }
 
     private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, ExecutionException, JsonProcessingException {
         Response r = client.prepareRequest(prototype).setMethod("PUT")
@@ -512,31 +640,25 @@ public class CouchDb {
     }
     
     private void synchronizeDesignDocs() {
-        List<CouchDbDesignDocument> oldDesignDocs = getDesignDocs();
+        Set<CouchDbDesignDocument> oldDesignDocs = new HashSet<>(getDesignDocs());
 
-        Map<String, CouchDbDesignDocument> newDesignDocs = generateNewDesignDocs();
+        Set<CouchDbDesignDocument> newDesignDocs = generateNewDesignDocs();
 
         for (CouchDbDesignDocument oldDoc : oldDesignDocs) {
-            if (!newDesignDocs.containsKey(oldDoc.getDocId())) {
+            if (!newDesignDocs.contains(oldDoc)) {
                 delete(oldDoc.getDocIdAndRev());
             } else {
-                CouchDbDesignDocument newDoc = newDesignDocs.get(oldDoc.getDocId());
-
-                if (newDoc.equals(oldDoc)) {
-                    newDesignDocs.remove(oldDoc.getDocId());
-                } else {
-                    delete(oldDoc.getDocIdAndRev());
-                }
+                newDesignDocs.remove(oldDoc);
             }
         }
 
         if (!newDesignDocs.isEmpty()) {
-            saveOrUpdate(new ArrayList<>(newDesignDocs.values()));
+            saveOrUpdate(new ArrayList<>(newDesignDocs));
         }
     }
 
-    private Map<String, CouchDbDesignDocument> generateNewDesignDocs() {
-        Map<String, CouchDbDesignDocument> designMap = new HashMap<>();
+    private Set<CouchDbDesignDocument> generateNewDesignDocs() {
+        Set<CouchDbDesignDocument> designSet = new HashSet<>();
 
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             if (field.isAnnotationPresent(JsView.class)) {
@@ -557,8 +679,10 @@ public class CouchDb {
                     }
                 }
 
-                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).addView(viewName, map, reduce);
+                CouchDbDesignDocument designDocument = new CouchDbDesignDocument(designName);
+                designDocument.addView(viewName, map, reduce);
+                
+                designSet.add(designDocument);
             }
             
             if (field.isAnnotationPresent(ValidateDocUpdate.class)) {
@@ -567,13 +691,15 @@ public class CouchDb {
                 ValidateDocUpdate vdu = field.getAnnotation(ValidateDocUpdate.class);
 
                 String designName = "_design/" + NamedStrategy.addUnderscores(field.getName());
-
-                designMap.putIfAbsent(designName, new CouchDbDesignDocument(designName));
-                designMap.get(designName).setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.value() + ";}");
+                
+                CouchDbDesignDocument designDocument = new CouchDbDesignDocument(designName);
+                designDocument.setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.value() + ";}");
+                
+                designSet.add(designDocument);
             }
         }
 
-        return designMap;
+        return designSet;
     }
     
     private void setValue(Field field, Object value) {

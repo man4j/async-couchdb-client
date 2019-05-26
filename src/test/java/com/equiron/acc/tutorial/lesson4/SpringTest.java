@@ -35,7 +35,7 @@ public class SpringTest {
     public CouchDbConfig couchDbConfig() {
         AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
         
-        return new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+        return new CouchDbConfig.Builder().setIp("91.242.38.71")
                                           .setUser("admin")
                                           .setPassword("root")
                                           .setHttpClient(httpClient)

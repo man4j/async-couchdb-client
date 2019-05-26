@@ -46,7 +46,7 @@ public abstract class CouchDbAbstractView {
             try {
                 CouchDbFieldAccessor couchDbFieldAccessor = new CouchDbFieldAccessor(couchDb);
 
-                return FutureUtils.toCompletable(couchDb.getConfig().getHttpClient().prepareRequest(couchDbFieldAccessor.getPrototype())
+                return FutureUtils.toCompletable(couchDb.getHttpClient().prepareRequest(couchDbFieldAccessor.getPrototype())
                                                         .setMethod("GET")
                                                         .setUrl(designUrl + "/_info")
                                                         .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDbFieldAccessor.getMapper())));

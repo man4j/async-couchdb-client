@@ -120,7 +120,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                     event = mapper.readValue(eventArray, new TypeReference<CouchDbEvent<CouchDbDocument>>() { /* empty */});
 
                     if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
-                        eventHandler.onEvent((CouchDbEvent<D>) event);
+                        eventHandler.onEvent(event);
                     }
                 }
                 

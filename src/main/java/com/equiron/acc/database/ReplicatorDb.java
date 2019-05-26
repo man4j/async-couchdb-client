@@ -3,16 +3,12 @@ package com.equiron.acc.database;
 import org.springframework.stereotype.Component;
 
 import com.equiron.acc.CouchDb;
-import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.annotation.CouchDbConfig;
 
 @Component
+@CouchDbConfig(dbName = "_replicator", selfDiscovering = false)
 public class ReplicatorDb extends CouchDb {
-    public ReplicatorDb(CouchDbConfig config) {
-        super(new CouchDbConfig.Builder().setDbName("_replicator")
-                                         .setHttpClient(config.getHttpClient())
-                                         .setUser(config.getUser())
-                                         .setPassword(config.getPassword())
-                                         .setServerUrl(config.getServerUrl())
-                                         .setSelfDiscovering(false).build());
+    public ReplicatorDb(com.equiron.acc.CouchDbConfig config) {
+        super(config);
     }
 }

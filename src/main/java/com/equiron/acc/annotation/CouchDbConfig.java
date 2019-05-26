@@ -7,6 +7,16 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface DbName {
-    String value();
+public @interface CouchDbConfig {
+    String ip() default "";
+    
+    int port() default 0;
+    
+    String user() default "";
+    
+    String password() default "";
+    
+    String dbName() default "";
+    
+    boolean selfDiscovering() default true;
 }

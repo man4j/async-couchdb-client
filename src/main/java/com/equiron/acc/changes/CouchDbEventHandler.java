@@ -11,7 +11,7 @@ public interface CouchDbEventHandler<D extends CouchDbDocument> {
     
     void onEvent(CouchDbEvent<D> event) throws Exception;
 
-    default void onError(Throwable e) throws Exception {
+    default void onError(@SuppressWarnings("unused") Throwable e) throws Exception {
         //empty
     }
     

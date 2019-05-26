@@ -15,7 +15,7 @@ public class CouchDbRawApiTest extends CouchDbAbstractTest {
 
         db.saveOrUpdate(testDoc);
 
-        Map<String, Object> m = db.get(testDoc.getDocId());
+        Map<String, Object> m = db.getRaw(testDoc.getDocId());
 
         Assertions.assertTrue(m.get("name").equals("Name"));
     }

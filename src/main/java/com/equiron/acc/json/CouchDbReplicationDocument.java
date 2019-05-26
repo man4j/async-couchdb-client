@@ -1,6 +1,7 @@
 package com.equiron.acc.json;
 
 import java.util.Map;
+import java.util.Objects;
 
 public class CouchDbReplicationDocument extends CouchDbDocument {
     private String source;
@@ -57,5 +58,23 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
     
     public Map<String, Object> getSelector() {
         return selector;
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) return false;
+
+        if (this == obj) return true;
+
+        CouchDbReplicationDocument other = (CouchDbReplicationDocument)obj;
+
+        if (getDocId().equals(other.getDocId()) && source.equals(other.source) && target.equals(other.target) && Objects.equals(selector, other.selector)) return true;
+
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(getDocId(), source, target, selector);
     }
 }

@@ -57,9 +57,9 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                         
             String url = urlBuilder.build();
 
-            messagingFuture = db.getConfig().getHttpClient().prepareRequest(db.getPrototype())
-                                            .setUrl(url)
-                                            .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
+            messagingFuture = db.getHttpClient().prepareRequest(db.getPrototype())
+                                                .setUrl(url)
+                                                .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
 
             return messagingFuture;
         }

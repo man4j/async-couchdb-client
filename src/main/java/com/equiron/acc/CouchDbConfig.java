@@ -3,11 +3,9 @@ package com.equiron.acc;
 import org.asynchttpclient.AsyncHttpClient;
 
 public class CouchDbConfig {
-    private final String serverUrl;
-
-    private final String dbName;
-
-    private final String dbPrefix;
+    private final String ip;
+    
+    private final int port;
 
     private final String user;
 
@@ -17,50 +15,38 @@ public class CouchDbConfig {
     
     private final boolean buildViewsOnStart;
 
-    private final boolean selfDiscovering;
-    
-    CouchDbConfig(String serverUrl, String dbName, String dbPrefix, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
-        this.serverUrl = serverUrl;
-        this.dbName = dbName;
-        this.dbPrefix = dbPrefix;
+    CouchDbConfig(String ip, int port, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart) {
+        this.ip = ip;
+        this.port = port;
         this.user = user;
         this.password = password;
         this.httpClient = httpClient;
         this.buildViewsOnStart = buildViewsOnStart;
-        this.selfDiscovering = selfDiscovering;
     }
 
     public static class Builder {
-        String serverUrl = "http://localhost:5984";
-
-        String dbName;
-
-        String dbPrefix = "";
+        String ip;
+        
+        int port = 5984;
 
         String user;
 
         String password;
 
+        String dbName;
+
         AsyncHttpClient httpClient;
         
-        boolean selfDiscovering = true;
-
         boolean buildViewsOnStart = true;
 
-        public Builder setServerUrl(String serverUrl) {
-            this.serverUrl = serverUrl;
+        public Builder setIp(String ip) {
+            this.ip = ip;
 
             return this;
         }
-
-        public Builder setDbName(String dbName) {
-            this.dbName = dbName;
-
-            return this;
-        }
-
-        public Builder setDbPrefix(String dbPrefix) {
-            this.dbPrefix = dbPrefix;
+        
+        public Builder setPort(int port) {
+            this.port = port;
 
             return this;
         }
@@ -77,14 +63,14 @@ public class CouchDbConfig {
             return this;
         }
 
-        public Builder setHttpClient(AsyncHttpClient httpClient) {
-            this.httpClient = httpClient;
-
+        public Builder setDbName(String dbName) {
+            this.dbName = dbName;
+            
             return this;
         }
 
-        public Builder setSelfDiscovering(boolean selfDiscovering) {
-            this.selfDiscovering = selfDiscovering;
+        public Builder setHttpClient(AsyncHttpClient httpClient) {
+            this.httpClient = httpClient;
 
             return this;
         }
@@ -96,20 +82,16 @@ public class CouchDbConfig {
         }
 
         public CouchDbConfig build() {
-            return new CouchDbConfig(serverUrl, dbName, dbPrefix, user, password, httpClient, buildViewsOnStart, selfDiscovering);
+            return new CouchDbConfig(ip, port, user, password, httpClient, buildViewsOnStart);
         }
     }
     
-    public String getServerUrl() {
-        return serverUrl;
+    public String getIp() {
+        return ip;
     }
 
-    public String getDbName() {
-        return dbName;
-    }
-
-    public String getDbPrefix() {
-        return dbPrefix;
+    public int getPort() {
+        return port;
     }
 
     public String getUser() {
@@ -126,9 +108,5 @@ public class CouchDbConfig {
 
     public boolean isBuildViewsOnStart() {
         return buildViewsOnStart;
-    }
-
-    public boolean isSelfDiscovering() {
-        return selfDiscovering;
     }
 }

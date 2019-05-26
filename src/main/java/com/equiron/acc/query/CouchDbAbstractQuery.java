@@ -191,10 +191,10 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
 
         protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
             try {
-                BoundRequestBuilder builder = couchDb.getConfig().getHttpClient()
-                                                                 .prepareRequest(couchDbFieldAccessor.getPrototype())
-                                                                 .setUrl(viewUrl + queryObject.toQuery())
-                                                                 .setMethod("GET");
+                BoundRequestBuilder builder = couchDb.getHttpClient()
+                                                     .prepareRequest(couchDbFieldAccessor.getPrototype())
+                                                     .setUrl(viewUrl + queryObject.toQuery())
+                                                     .setMethod("GET");
 
                 if (queryObject.getKeys() != null) {
                     builder.setMethod("POST")

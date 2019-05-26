@@ -76,13 +76,13 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
 
         CouchDbDesignDocument other = (CouchDbDesignDocument)obj;
 
-        if (views.equals(other.views) && Objects.equals(validateDocUpdate, other.validateDocUpdate)) return true;
+        if (getDocId().equals(other.getDocId()) && views.equals(other.views) && Objects.equals(validateDocUpdate, other.validateDocUpdate)) return true;
 
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(views, validateDocUpdate);
+        return Objects.hash(getDocId(), views, validateDocUpdate);
     }
 }

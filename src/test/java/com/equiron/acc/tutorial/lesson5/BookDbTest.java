@@ -21,7 +21,7 @@ public class BookDbTest {
     public void before() {
         httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
-        db = new BookDb(new CouchDbConfig.Builder().setServerUrl("http://91.242.38.71:5984")
+        db = new BookDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
                                                    .setUser("admin")
                                                    .setPassword("root")
                                                    .setHttpClient(httpClient)

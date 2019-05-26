@@ -35,7 +35,7 @@ public class CouchDbAsyncOperations {
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
-        this.httpClient = couchDb.config.getHttpClient();
+        this.httpClient = couchDb.getHttpClient();
     }
 
     private UrlBuilder createUrlBuilder() {
