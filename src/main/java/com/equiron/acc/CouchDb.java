@@ -561,6 +561,8 @@ public class CouchDb {
 
                 newReplicationDocs.put(toRemote.getDocId(), toRemote);
                 newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
+            } else {
+                logger.warn("Replication not started. IP is not set.");
             }
         }
         
@@ -592,9 +594,9 @@ public class CouchDb {
                         replicatorDb.saveOrUpdate(updatedReplicationDoc);
                  
                         if (updatedReplicationDoc.isOk()) {
-                            logger.info("Replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
+                            logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
                         } else {
-                            logger.info("Replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
+                            logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
                         }
                     }
                     
