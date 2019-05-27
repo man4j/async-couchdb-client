@@ -116,9 +116,9 @@ public class CouchDb {
             
             testConnection();
     
+            createDbIfNotExist();
+            
             if (selfDiscovering) {            
-                createDbIfNotExist();
-                
                 synchronizeDesignDocs();
 
                 injectViews();
