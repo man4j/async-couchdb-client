@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface Replicated {
     String targetIp();
     
-    int targetPort() default 5984;
+    String targetPort() default "5984";
     
     String targetUser() default "";
     

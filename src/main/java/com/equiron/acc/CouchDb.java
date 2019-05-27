@@ -14,6 +14,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -506,27 +508,33 @@ public class CouchDb {
         
         if (getClass().isAnnotationPresent(Replicated.class)) {
             String ip = getClass().getAnnotation(Replicated.class).targetIp();
-            int port = getClass().getAnnotation(Replicated.class).targetPort();
+            String port = getClass().getAnnotation(Replicated.class).targetPort();
             String user = getClass().getAnnotation(Replicated.class).targetUser();
             String password = getClass().getAnnotation(Replicated.class).targetPassword();
             String remoteDb = getClass().getAnnotation(Replicated.class).targetDbName();
             String selector = getClass().getAnnotation(Replicated.class).selector();
             
-            if (ip.startsWith("s:") || ip.startsWith("e:") || ip.startsWith("p:")) {
-                String propName = ip.split(":")[1];
+            ip = resolve(ip);
+            port = resolve(port);
+            user = resolve(user);
+            password = resolve(password);
+            remoteDb = resolve(remoteDb);
+            
+            Pattern r = Pattern.compile("e:\\w+");
+
+            Matcher m = r.matcher(selector);
+            
+            if (m.find( )) {
+                String group = m.group(0);
                 
-                Optional<String> value = Stream.of(System.getProperty(propName),
-                                                   System.getProperty(propName.toLowerCase()), 
-                                                   System.getProperty(propName.toUpperCase()),
-                                                   System.getenv(propName),
-                                                   System.getenv(propName.toLowerCase()), 
-                                                   System.getenv(propName.toUpperCase())
-                                                   ).filter(v -> v != null).findFirst();
+                String placeholder = group.split(":")[1];
+                
+                Optional<String> value = findEnvValue(placeholder);
                 
                 if (value.isPresent()) {
-                    ip = value.get();
+                    selector = selector.replace(group, value.get());
                 } else {
-                    ip = "";
+                    throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
                 }
             }
             
@@ -618,6 +626,33 @@ public class CouchDb {
                 }
             }
         }
+    }
+
+    private String resolve(String param) {
+        if (param.startsWith("s:") || param.startsWith("e:") || param.startsWith("p:")) {
+            String propName = param.split(":")[1];
+            
+            Optional<String> value = findEnvValue(propName);
+            
+            if (value.isPresent()) {
+                param = value.get();
+            } else {
+                param = "";
+            }
+        }
+        
+        return param;
+    }
+
+    private Optional<String> findEnvValue(String propName) {
+        Optional<String> value = Stream.of(System.getProperty(propName),
+                                           System.getProperty(propName.toLowerCase()), 
+                                           System.getProperty(propName.toUpperCase()),
+                                           System.getenv(propName),
+                                           System.getenv(propName.toLowerCase()), 
+                                           System.getenv(propName.toUpperCase())
+                                           ).filter(v -> v != null).findFirst();
+        return value;
     }
 
     private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, ExecutionException, JsonProcessingException {
