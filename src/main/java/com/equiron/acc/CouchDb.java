@@ -519,8 +519,8 @@ public class CouchDb {
             
             if (!ip.isBlank()) {            
                 port = resolve(port, false);
-                user = resolve(user, false);
-                password = resolve(password, false);
+                user = resolve(user, true);
+                password = resolve(password, true);
                 remoteDb = resolve(remoteDb, false);
                 
                 Pattern r = Pattern.compile("e:\\w+");
