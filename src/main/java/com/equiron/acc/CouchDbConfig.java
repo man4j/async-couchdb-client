@@ -14,7 +14,7 @@ public class CouchDbConfig {
     private final AsyncHttpClient httpClient;
     
     private final boolean buildViewsOnStart;
-
+    
     CouchDbConfig(String ip, int port, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart) {
         this.ip = ip;
         this.port = port;
@@ -38,7 +38,7 @@ public class CouchDbConfig {
         AsyncHttpClient httpClient;
         
         boolean buildViewsOnStart = true;
-
+        
         public Builder setIp(String ip) {
             this.ip = ip;
 

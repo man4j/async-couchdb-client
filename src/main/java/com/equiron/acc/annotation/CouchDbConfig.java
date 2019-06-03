@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 public @interface CouchDbConfig {
     String ip() default "";
     
-    int port() default 0;
+    String port() default "";
     
     String user() default "";
     

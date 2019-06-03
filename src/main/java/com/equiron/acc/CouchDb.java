@@ -379,22 +379,29 @@ public class CouchDb {
     }
 
     private void applyConfig() {
-        ip = config.getIp(); 
-        port = config.getPort();
-        user = config.getUser();
-        password = config.getPassword();
-        dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
+        String ip = config.getIp();
+        String port = config.getPort() + "";
+        String user = config.getUser();
+        String password = config.getPassword();
+        String dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
 
-            ip = annotationConfig.ip().isBlank() ? ip : annotationConfig.ip(); 
-            port = annotationConfig.port() == 0 ? port : annotationConfig.port();
+            ip = annotationConfig.ip().isBlank() ? ip : annotationConfig.ip();
+            port = annotationConfig.port().isBlank() ? port : annotationConfig.port();
             user = annotationConfig.user().isBlank() ? user : annotationConfig.user();
             password = annotationConfig.password().isBlank() ? password : annotationConfig.password();
             dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
+            
             selfDiscovering = annotationConfig.selfDiscovering();
         }
+            
+        this.ip = resolve(ip, false);
+        this.port = Integer.parseInt(resolve(port, false));
+        this.user = resolve(user, true);
+        this.password = resolve(password, true);
+        this.dbName = resolve(dbName, true);
     }
 
     private void createDbIfNotExist() {
@@ -507,40 +514,23 @@ public class CouchDb {
         Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
         
         if (getClass().isAnnotationPresent(Replicated.class)) {
-            String ip = getClass().getAnnotation(Replicated.class).targetIp();
+            String enabled = getClass().getAnnotation(Replicated.class).enabled();
             
+            String ip = getClass().getAnnotation(Replicated.class).targetIp();
             String port = getClass().getAnnotation(Replicated.class).targetPort();
             String user = getClass().getAnnotation(Replicated.class).targetUser();
             String password = getClass().getAnnotation(Replicated.class).targetPassword();
             String remoteDb = getClass().getAnnotation(Replicated.class).targetDbName();
             String selector = getClass().getAnnotation(Replicated.class).selector();
             
-            ip = resolve(ip, true);
-            
-            if (!ip.isBlank()) {            
+            if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
+                ip = resolve(ip, false);
                 port = resolve(port, false);
                 user = resolve(user, true);
                 password = resolve(password, true);
-                remoteDb = resolve(remoteDb, false);
+                remoteDb = resolve(remoteDb, true);
+                selector = resolve(selector, false);
                 
-                Pattern r = Pattern.compile("e:\\w+");
-    
-                Matcher m = r.matcher(selector);
-                
-                if (m.find()) {
-                    String group = m.group(0);
-                    
-                    String placeholder = group.split(":")[1];
-                    
-                    Optional<String> value = findEnvValue(placeholder);
-                    
-                    if (value.isPresent()) {
-                        selector = selector.replace(group, value.get());
-                    } else {
-                        throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
-                    }
-                }
-            
                 if (remoteDb.isBlank()) {
                     remoteDb = getDbName();
                 }
@@ -549,8 +539,7 @@ public class CouchDb {
                 
                 if (user.isBlank() && password.isBlank()) {
                     remoteServer = String.format("http://%s:%s/%s", ip, port, remoteDb);
-                }
-                else {
+                } else {
                     remoteServer = String.format("http://%s:%s@%s:%s/%s", user, password, ip, port, remoteDb);
                 }
                 
@@ -630,19 +619,27 @@ public class CouchDb {
         }
     }
 
-    private String resolve(String param, boolean emptyIfNotResolve) {
-        if (param.startsWith("e:")) {
-            String propName = param.split(":")[1];
-            
-            Optional<String> value = findEnvValue(propName);
-            
-            if (value.isPresent()) {
-                param = value.get();
-            } else {
-                if (emptyIfNotResolve) {
-                    param = "";
-                } else {                
-                    throw new IllegalStateException("Environment variable or system property not found: " + propName);
+    private String resolve(String param, boolean emptyIfNotResolve) {        
+        if (param != null) {
+            Pattern r = Pattern.compile("e:\\w+");
+                
+            Matcher m = r.matcher(param);
+                
+            if (m.find()) {
+                String group = m.group(0);
+                    
+                String placeholder = group.split(":")[1];
+                    
+                Optional<String> value = findEnvValue(placeholder);
+                    
+                if (value.isPresent()) {
+                    return param.replace(group, value.get());
+                } else {
+                    if (emptyIfNotResolve) {
+                        return "";
+                    } else {
+                        throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
+                    }
                 }
             }
         }

@@ -19,4 +19,6 @@ public @interface Replicated {
     String targetDbName() default "";
     
     String selector() default "";
+    
+    String enabled() default "true";
 }
