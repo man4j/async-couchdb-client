@@ -516,6 +516,8 @@ public class CouchDb {
         if (getClass().isAnnotationPresent(Replicated.class)) {
             String enabled = getClass().getAnnotation(Replicated.class).enabled();
             
+            enabled = resolve(enabled, false);
+            
             String ip = getClass().getAnnotation(Replicated.class).targetIp();
             String port = getClass().getAnnotation(Replicated.class).targetPort();
             String user = getClass().getAnnotation(Replicated.class).targetUser();
@@ -561,7 +563,7 @@ public class CouchDb {
                 newReplicationDocs.put(toRemote.getDocId(), toRemote);
                 newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
             } else {
-                logger.warn("Replication not started. IP is not set.");
+                logger.warn("Replication disabled");
             }
         }
         
@@ -634,13 +636,13 @@ public class CouchDb {
                     
                 if (value.isPresent()) {
                     return param.replace(group, value.get());
-                } else {
-                    if (emptyIfNotResolve) {
-                        return "";
-                    } else {
-                        throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
-                    }
+                } 
+                
+                if (emptyIfNotResolve) {
+                    return "";
                 }
+                    
+                throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
             }
         }
         
