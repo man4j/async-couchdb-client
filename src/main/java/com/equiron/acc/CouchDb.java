@@ -516,7 +516,7 @@ public class CouchDb {
         if (getClass().isAnnotationPresent(Replicated.class)) {
             String enabled = getClass().getAnnotation(Replicated.class).enabled();
             
-            enabled = resolve(enabled, false);
+            enabled = resolve(enabled, true);
             
             String ip = getClass().getAnnotation(Replicated.class).targetIp();
             String port = getClass().getAnnotation(Replicated.class).targetPort();
@@ -531,7 +531,7 @@ public class CouchDb {
                 user = resolve(user, true);
                 password = resolve(password, true);
                 remoteDb = resolve(remoteDb, true);
-                selector = resolve(selector, false);
+                selector = resolve(selector, true);
                 
                 if (remoteDb.isBlank()) {
                     remoteDb = getDbName();
