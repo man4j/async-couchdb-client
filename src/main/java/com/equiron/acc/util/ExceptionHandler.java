@@ -2,14 +2,16 @@ package com.equiron.acc.util;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.equiron.acc.exception.CouchDbResponseException;
 
 public class ExceptionHandler {
     public static <T> T handleFutureResult(Future<T> future) {
         try {
-            return future.get();
-        } catch (InterruptedException | ExecutionException e) {
+            return future.get(1, TimeUnit.MINUTES);
+        } catch (ExecutionException e) {
             Throwable originalException = e.getCause().getCause();
 
             if (originalException instanceof CouchDbResponseException) {
@@ -18,6 +20,10 @@ public class ExceptionHandler {
                 throw (CouchDbResponseException) originalException;
             }
 
+            throw new RuntimeException(e);
+        } catch (TimeoutException e) {
+            throw new RuntimeException("CouchDB async future timeout!", e);
+        } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
     }
