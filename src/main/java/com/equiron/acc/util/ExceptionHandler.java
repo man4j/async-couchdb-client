@@ -22,6 +22,7 @@ public class ExceptionHandler {
 
             throw new RuntimeException(e);
         } catch (TimeoutException e) {
+            future.cancel(true);
             throw new RuntimeException("CouchDB async future timeout!", e);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
