@@ -2,6 +2,9 @@ package com.equiron.acc;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.asynchttpclient.AsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClient;
+import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.changes.CouchDbEventHandler;
@@ -16,8 +19,9 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
         
         db.saveOrUpdate(testDoc);
         db.delete(testDoc.getDocIdAndRev());
-
-        try(CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db) {/*empty*/};) {
+        
+        try(AsyncHttpClient listenerClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
+            CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db, listenerClient) {/*empty*/};) {
             final CountDownLatch latch = new CountDownLatch(1);
 
             listener.addEventHandler(new CouchDbEventHandler<TestDoc>() {
@@ -43,7 +47,7 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
                 }
             });
 
-            listener.startListening();
+            listener.startListening("0");
 
             latch.await();
             

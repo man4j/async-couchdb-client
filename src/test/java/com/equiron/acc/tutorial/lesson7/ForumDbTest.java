@@ -17,9 +17,13 @@ public class ForumDbTest {
     private AsyncHttpClient httpClient;
     
     private CouchDbEventListener<ForumContent> listener;
+    
+    private AsyncHttpClient listenerClient;
 
     @BeforeEach
     public void before() throws Exception {
+        listenerClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
+
         httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
         db = new ForumDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
@@ -28,13 +32,13 @@ public class ForumDbTest {
                                                     .setHttpClient(httpClient)
                                                     .build());
         
-        listener = new CouchDbEventListener<>(db) { /* empty */};
+        listener = new CouchDbEventListener<>(db, listenerClient) { /* empty */};
 
         indexer = new Indexer();
 
         listener.addEventHandler(indexer);
 
-        listener.startListening();
+        listener.startListening("0");
 
     }
     
@@ -43,6 +47,7 @@ public class ForumDbTest {
         listener.close();
         db.deleteDb();
         httpClient.close();
+        listenerClient.close();
     }
 
     private Indexer indexer;

@@ -3,6 +3,8 @@ package com.equiron.acc.changes;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
+import org.asynchttpclient.AsyncHttpClient;
+
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbEvent;
@@ -16,9 +18,12 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     private Future<Void> messagingFuture;
 
     private final CouchDb db;
+    
+    private final AsyncHttpClient client;
 
-    public CouchDbEventListener(CouchDb db) {
+    public CouchDbEventListener(CouchDb db, AsyncHttpClient client) {
         this.db = db;
+        this.client = client;
     }
 
     public CouchDbEventListener<D> addEventHandler(CouchDbEventHandler<D> eventHandler) {
@@ -37,10 +42,6 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         return handlers;
     }
 
-    public Future<Void> startListening() {
-        return startListening("0");
-    }
-
     public synchronized Future<Void> startListening(String seq) {
         if (messagingFuture == null) {
             TypeFactory typeFactory = TypeFactory.defaultInstance();
@@ -57,9 +58,9 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                         
             String url = urlBuilder.build();
 
-            messagingFuture = db.getHttpClient().prepareRequest(db.getPrototype())
-                                                .setUrl(url)
-                                                .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
+            messagingFuture = client.prepareRequest(db.getPrototype())
+                                    .setUrl(url)
+                                    .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
 
             return messagingFuture;
         }
