@@ -1,5 +1,7 @@
 package com.equiron.acc.changes;
 
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
@@ -10,6 +12,7 @@ import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbEvent;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public abstract class CouchDbEventListener<D extends CouchDbDocument> implements AutoCloseable {
@@ -41,8 +44,12 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     public CopyOnWriteArrayList<CouchDbEventHandler<D>> getHandlers() {
         return handlers;
     }
-
+    
     public synchronized Future<Void> startListening(String seq) {
+        return startListening(seq, null);
+    }
+
+    public synchronized Future<Void> startListening(String seq, Map<String, Object> selector) {
         if (messagingFuture == null) {
             TypeFactory typeFactory = TypeFactory.defaultInstance();
             
@@ -55,14 +62,24 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                                                  .addQueryParam("heartbeat", "15000")
                                                                  .addQueryParam("since", seq)
                                                                  .addQueryParam("include_docs", Boolean.toString(true));
-                        
+            
+            if (selector != null) {
+                urlBuilder.addQueryParam("filter", "_selector");
+            }
+            
             String url = urlBuilder.build();
 
-            messagingFuture = client.prepareRequest(db.getPrototype())
-                                    .setUrl(url)
-                                    .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
-
-            return messagingFuture;
+            try {
+                messagingFuture = client.prepareRequest(db.getPrototype())
+                                        .setMethod(selector == null ? "GET" : "POST")
+                                        .setBody(selector == null ? null : new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)))
+                                        .setUrl(url)
+                                        .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
+    
+                return messagingFuture;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
 
         return null;

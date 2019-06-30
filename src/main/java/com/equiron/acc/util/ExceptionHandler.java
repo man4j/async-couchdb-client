@@ -12,12 +12,14 @@ public class ExceptionHandler {
         try {
             return future.get(1, TimeUnit.MINUTES);
         } catch (ExecutionException e) {
-            Throwable originalException = e.getCause().getCause();
-
-            if (originalException instanceof CouchDbResponseException) {
-                originalException.fillInStackTrace();//for correct line number
-
-                throw (CouchDbResponseException) originalException;
+            if (e.getCause() != null && e.getCause().getCause() != null) {
+                Throwable originalException = e.getCause().getCause();
+    
+                if (originalException instanceof CouchDbResponseException) {
+                    originalException.fillInStackTrace();//for correct line number
+    
+                    throw (CouchDbResponseException) originalException;
+                } 
             }
 
             throw new RuntimeException(e);
