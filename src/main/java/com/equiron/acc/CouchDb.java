@@ -430,7 +430,7 @@ public class CouchDb {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
                     view.createQuery().byKey("123").asKey();
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
+                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
                 }
 
                 injectedView = view;
@@ -443,7 +443,7 @@ public class CouchDb {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
                     view.createQuery().byKey("123").asKey();
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");
+                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
                 }
 
                 injectedView = view;
@@ -456,7 +456,7 @@ public class CouchDb {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
                     view.createMapQuery().byKey("123").asKey();
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " seconds");                        
+                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");                        
                 }
 
                 injectedView = view;
