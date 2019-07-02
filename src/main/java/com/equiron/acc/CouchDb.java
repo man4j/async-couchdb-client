@@ -545,6 +545,14 @@ public class CouchDb {
                     remoteServer = String.format("http://%s:%s@%s:%s/%s", user, password, ip, port, remoteDb);
                 }
                 
+                String localServer;
+                
+                if (this.user == null && this.password == null) {
+                    localServer = String.format("http://%s:%s/%s", this.ip, this.port, getDbName());
+                } else {
+                    localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
+                }
+                
                 logger.info("Starting replication to remote server: " + remoteServer);
                 
                 Map<String, Object> selectorMap = null;
@@ -557,8 +565,8 @@ public class CouchDb {
                     }
                 }
 
-                CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", getDbUrl(), remoteServer, selectorMap);
-                CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, getDbUrl(), selectorMap);
+                CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", localServer, remoteServer, selectorMap);
+                CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, localServer, selectorMap);
 
                 newReplicationDocs.put(toRemote.getDocId(), toRemote);
                 newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
