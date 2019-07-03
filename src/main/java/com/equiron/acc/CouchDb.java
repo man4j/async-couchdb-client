@@ -385,6 +385,7 @@ public class CouchDb {
         String user = config.getUser();
         String password = config.getPassword();
         String dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
+        selfDiscovering = config.isSelfDiscovering();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);

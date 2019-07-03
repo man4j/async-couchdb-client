@@ -17,7 +17,9 @@ public class CouchDbConfig {
     
     private final boolean buildViewsOnStart;
     
-    CouchDbConfig(String ip, int port, String user, String password, String dbName, AsyncHttpClient httpClient, boolean buildViewsOnStart) {
+    private final boolean selfDiscovering;
+    
+    CouchDbConfig(String ip, int port, String user, String password, String dbName, AsyncHttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
         this.ip = ip;
         this.port = port;
         this.user = user;
@@ -25,6 +27,7 @@ public class CouchDbConfig {
         this.dbName = dbName;
         this.httpClient = httpClient;
         this.buildViewsOnStart = buildViewsOnStart;
+        this.selfDiscovering = selfDiscovering;
     }
 
     public static class Builder {
@@ -41,6 +44,8 @@ public class CouchDbConfig {
         AsyncHttpClient httpClient;
         
         boolean buildViewsOnStart = true;
+        
+        boolean selfDiscovering = true;
         
         public Builder setIp(String ip) {
             this.ip = ip;
@@ -83,9 +88,15 @@ public class CouchDbConfig {
 
             return this;
         }
+        
+        public Builder setSelfDiscovering(boolean selfDiscovering) {
+            this.selfDiscovering = selfDiscovering;
+            
+            return this;
+        }
 
         public CouchDbConfig build() {
-            return new CouchDbConfig(ip, port, user, password, dbName, httpClient, buildViewsOnStart);
+            return new CouchDbConfig(ip, port, user, password, dbName, httpClient, buildViewsOnStart, selfDiscovering);
         }
     }
     
@@ -115,5 +126,9 @@ public class CouchDbConfig {
 
     public boolean isBuildViewsOnStart() {
         return buildViewsOnStart;
+    }
+    
+    public boolean isSelfDiscovering() {
+        return selfDiscovering;
     }
 }
