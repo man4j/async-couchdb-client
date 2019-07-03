@@ -460,6 +460,7 @@ public class CouchDb {
                     while (!complete) {
                         try {
                             view.createQuery().byKey("123").asKey();
+                            complete = true;
                         } catch (CouchDbResponseException e) {
                             logger.warn("Not critical exception: " + e.getMessage());
                         }
@@ -483,6 +484,7 @@ public class CouchDb {
                     while (!complete) {
                         try {
                             view.createMapQuery().byKey("123").asKey();
+                            complete = true;
                         } catch (CouchDbResponseException e) {
                             logger.warn("Not critical exception: " + e.getMessage());
                         }
