@@ -10,16 +10,19 @@ public class CouchDbConfig {
     private final String user;
 
     private final String password;
+    
+    private final String dbName;
 
     private final AsyncHttpClient httpClient;
     
     private final boolean buildViewsOnStart;
     
-    CouchDbConfig(String ip, int port, String user, String password, AsyncHttpClient httpClient, boolean buildViewsOnStart) {
+    CouchDbConfig(String ip, int port, String user, String password, String dbName, AsyncHttpClient httpClient, boolean buildViewsOnStart) {
         this.ip = ip;
         this.port = port;
         this.user = user;
         this.password = password;
+        this.dbName = dbName;
         this.httpClient = httpClient;
         this.buildViewsOnStart = buildViewsOnStart;
     }
@@ -82,7 +85,7 @@ public class CouchDbConfig {
         }
 
         public CouchDbConfig build() {
-            return new CouchDbConfig(ip, port, user, password, httpClient, buildViewsOnStart);
+            return new CouchDbConfig(ip, port, user, password, dbName, httpClient, buildViewsOnStart);
         }
     }
     
@@ -100,6 +103,10 @@ public class CouchDbConfig {
 
     public String getPassword() {
         return password;
+    }
+    
+    public String getDbName() {
+        return dbName;
     }
 
     public AsyncHttpClient getHttpClient() {

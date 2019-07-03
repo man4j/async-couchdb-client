@@ -37,6 +37,7 @@ import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
 import com.equiron.acc.database.ReplicatorDb;
+import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocRev;
@@ -383,7 +384,7 @@ public class CouchDb {
         String port = config.getPort() + "";
         String user = config.getUser();
         String password = config.getPassword();
-        String dbName = NamedStrategy.addUnderscores(getClass().getSimpleName());
+        String dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
@@ -429,7 +430,18 @@ public class CouchDb {
                 if (config.isBuildViewsOnStart()) {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    view.createQuery().byKey("123").asKey();
+                    
+                    boolean complete = false;
+                    
+                    while (!complete) {
+                        try {
+                            view.createQuery().byKey("123").asKey();
+                            complete = true;
+                        } catch (CouchDbResponseException e) {
+                            logger.warn("Not critical exception: " + e.getMessage());
+                        }
+                    }
+                    
                     logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
                 }
 
@@ -442,7 +454,17 @@ public class CouchDb {
                 if (config.isBuildViewsOnStart()) {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    view.createQuery().byKey("123").asKey();
+                    
+                    boolean complete = false;
+                    
+                    while (!complete) {
+                        try {
+                            view.createQuery().byKey("123").asKey();
+                        } catch (CouchDbResponseException e) {
+                            logger.warn("Not critical exception: " + e.getMessage());
+                        }
+                    }
+                    
                     logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
                 }
 
@@ -455,7 +477,17 @@ public class CouchDb {
                 if (config.isBuildViewsOnStart()) {
                     long t = System.currentTimeMillis();
                     logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    view.createMapQuery().byKey("123").asKey();
+                    
+                    boolean complete = false;
+                    
+                    while (!complete) {
+                        try {
+                            view.createMapQuery().byKey("123").asKey();
+                        } catch (CouchDbResponseException e) {
+                            logger.warn("Not critical exception: " + e.getMessage());
+                        }
+                    }
+                    
                     logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");                        
                 }
 
