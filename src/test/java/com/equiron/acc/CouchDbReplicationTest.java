@@ -1,38 +1,53 @@
 package com.equiron.acc;
 
 import java.io.IOException;
+import java.util.Collections;
 
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.asynchttpclient.DefaultAsyncHttpClientConfig;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.fixture.RemoteTestDb;
+import com.equiron.acc.database.UsersDb;
 import com.equiron.acc.fixture.ReplicatedTestDb;
-import com.equiron.acc.fixture.TestDoc;
+import com.equiron.acc.json.security.CouchDbUser;
 
 public class CouchDbReplicationTest {
     @Test
-    public void shouldReplicate() throws InterruptedException, IOException {
+    public void shouldCreateUser() throws IOException {
         try (AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build())) {
-            RemoteTestDb remoteDb = new RemoteTestDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
-                                                                                .setPort(15984)
-                                                                                .setHttpClient(httpClient)
-                                                                                .build());
+            UsersDb db = new UsersDb(new CouchDbConfig.Builder().setIp("139.162.145.223")
+                                                                .setPort(5984)
+                                                                .setUser("admin")
+                                                                .setPassword("PassWord123")
+                                                                .setHttpClient(httpClient)
+                                                                .build());
+            
+            db.saveOrUpdate(new CouchDbUser("oms", "123456", Collections.singleton("oms")));
+        }
+    }
     
-            ReplicatedTestDb db = new ReplicatedTestDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
+    @Test
+    public void shouldCreateRemote() throws IOException {
+        try (AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build())) {
+            ReplicatedTestDb db = new ReplicatedTestDb(new CouchDbConfig.Builder().setIp("139.162.145.223")
                                                                                   .setPort(5984)
+                                                                                  .setUser("admin")
+                                                                                  .setPassword("PassWord123")
                                                                                   .setHttpClient(httpClient)
                                                                                   .build());
-            
-            TestDoc doc = new TestDoc("ok");
-            
-            String docId = db.saveOrUpdate(doc).get(0).getDocId();
-            
-            Thread.sleep(5_000);
-            
-            Assertions.assertNotNull(remoteDb.get(docId));
+        }
+    }
+    
+    @Test
+    public void shouldReplicate() throws IOException {
+        try (AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build())) {
+            ReplicatedTestDb db = new ReplicatedTestDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
+                                                                                  .setPort(15984)
+                                                                                  .setUser("admin")
+                                                                                  .setPassword("PassWord123")
+                                                                                  .setHttpClient(httpClient)
+                                                                                  .build());
         }
     }
 }

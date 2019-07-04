@@ -8,5 +8,7 @@ import com.equiron.acc.annotation.CouchDbConfig;
 @Component
 @CouchDbConfig(dbName = "_users", selfDiscovering = false)
 public class UsersDb extends CouchDb {
-    //empty
+    public UsersDb(com.equiron.acc.CouchDbConfig config) {
+        super(config);
+    }
 }
