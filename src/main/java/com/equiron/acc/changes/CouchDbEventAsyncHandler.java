@@ -44,6 +44,8 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     
     @Override
     public void onThrowable(Throwable t) {
+        logger.error("Error processing event " + url, t);
+        
         if (t instanceof CancellationException) {
             for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
                 try {
@@ -60,16 +62,16 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                     logger.error("Error in " + url, e);
                 }
             }
-            
-            eventListener.stopListening();
 
             try {
+                eventListener.stopListening();
+                
                 Thread.sleep(5_000);
+                
+                eventListener.startListening(lastSuccessSeq);             
             } catch (@SuppressWarnings("unused") InterruptedException e1) {
                 //ignore
             }
-
-            eventListener.startListening(lastSuccessSeq);
         }
     }
 
@@ -106,28 +108,24 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
         return State.CONTINUE;
     }
 
-    private void processEvent(byte[] eventArray) {
+    private void processEvent(byte[] eventArray) throws Exception {
         for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
-            try {
-                JsonNode node = mapper.readTree(eventArray);
-                
-                CouchDbEvent<D> event;
-                
-                if (node.path("deleted").asBoolean()) {
-                    event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);
-                    eventHandler.onEvent(event);
-                } else {
-                    event = mapper.readValue(eventArray, new TypeReference<CouchDbEvent<CouchDbDocument>>() { /* empty */});
+            JsonNode node = mapper.readTree(eventArray);
+            
+            CouchDbEvent<D> event;
+            
+            if (node.path("deleted").asBoolean()) {
+                event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);
+                eventHandler.onEvent(event);
+            } else {
+                event = mapper.readValue(eventArray, new TypeReference<CouchDbEvent<CouchDbDocument>>() { /* empty */});
 
-                    if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
-                        eventHandler.onEvent(event);
-                    }
+                if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
+                    eventHandler.onEvent(event);
                 }
-                
-                lastSuccessSeq = event.getSeq();
-            } catch (Exception e) {
-                logger.error("Error in " + url, e);
             }
+            
+            lastSuccessSeq = event.getSeq();
         }
     }
 
