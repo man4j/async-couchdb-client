@@ -44,8 +44,6 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     
     @Override
     public void onThrowable(Throwable t) {
-        logger.error("Error processing event " + url, t);
-        
         if (t instanceof CancellationException) {
             for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
                 try {
@@ -55,6 +53,8 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                 }
             }
         } else {
+            logger.error("Error processing event " + url, t);
+
             for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
                 try {
                     eventHandler.onError(t);
