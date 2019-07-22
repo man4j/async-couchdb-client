@@ -6,6 +6,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
 
 import org.asynchttpclient.AsyncHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.json.CouchDbDocument;
@@ -16,6 +18,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public abstract class CouchDbEventListener<D extends CouchDbDocument> implements AutoCloseable {
+    private final Logger logger = LoggerFactory.getLogger(getClass().getName());
+    
     private CopyOnWriteArrayList<CouchDbEventHandler<D>> handlers = new CopyOnWriteArrayList<>();
 
     private Future<Void> messagingFuture;
@@ -50,7 +54,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     }
 
     public synchronized Future<Void> startListening(String seq, Map<String, Object> selector) {
-        if (messagingFuture == null) {
+        if (messagingFuture == null) {            
             TypeFactory typeFactory = TypeFactory.defaultInstance();
             
             JavaType docType = typeFactory.findTypeParameters(typeFactory.constructType(getClass()), CouchDbEventListener.class)[0];
@@ -75,6 +79,8 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                         .setBody(selector == null ? null : new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)))
                                         .setUrl(url)
                                         .execute(new CouchDbEventAsyncHandler<>(this, db.getMapper(), eventType, url, seq));
+                
+                logger.info("CouchDB listener started: " + url);
     
                 return messagingFuture;
             } catch (Exception e) {
@@ -92,6 +98,8 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
             } finally {
                 messagingFuture = null;
             }
+            
+            logger.info("CouchDB listener stopped: " + db.getDbUrl());
         }
     }
 
