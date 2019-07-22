@@ -22,7 +22,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     
     private CopyOnWriteArrayList<CouchDbEventHandler<D>> handlers = new CopyOnWriteArrayList<>();
 
-    private Future<Void> messagingFuture;
+    private volatile Future<Void> messagingFuture = null;
 
     private final CouchDb db;
     
@@ -89,6 +89,10 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         }
 
         return null;
+    }
+    
+    public boolean isStopped() {
+        return messagingFuture == null;
     }
 
     public synchronized void stopListening() {

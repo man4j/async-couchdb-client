@@ -63,16 +63,20 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                 }
             }
 
-            try {
-                eventListener.stopListening();
-                
-                Thread.sleep(5_000);
-                
-                eventListener.startListening(lastSuccessSeq);             
-            } catch (@SuppressWarnings("unused") InterruptedException e1) {
-                //ignore
-            }
+            restart();             
         }
+    }
+
+    private void restart() {
+        try {
+            eventListener.stopListening();
+            
+            Thread.sleep(5_000);
+        } catch (Exception e) {
+            logger.error("", e);
+        }
+        
+        eventListener.startListening(lastSuccessSeq);
     }
 
     @Override
@@ -156,6 +160,10 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     @Override
     public Void onCompleted() throws Exception {
         logger.debug("Stop listening " + url);
+        
+        if (!eventListener.isStopped()) {//не было остановки, просто клиент решил сам что соединение закрылось
+            restart();
+        }
         
         return null;
     }

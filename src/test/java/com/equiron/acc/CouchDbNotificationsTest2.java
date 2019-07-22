@@ -28,7 +28,6 @@ public class CouchDbNotificationsTest2 extends CouchDbAbstractTest {
                 @Override
                 public void onEvent(CouchDbEvent<TestDoc> event) {
                     System.out.println(event.getDocId());
-                    throw new RuntimeException("qwe");
                 }
 
                 @Override
