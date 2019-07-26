@@ -10,15 +10,17 @@ public class ExceptionHandler {
         try {
             return future.get();
         } catch (ExecutionException e) {
-            if (e.getCause() != null && e.getCause().getCause() != null) {
-                Throwable originalException = e.getCause().getCause();
-    
-                if (originalException instanceof CouchDbResponseException) {
-                    originalException.fillInStackTrace();//for correct line number
-    
-                    throw (CouchDbResponseException) originalException;
-                } 
+            Throwable originalException = e;
+            
+            while (originalException.getCause() != null) {
+                originalException = originalException.getCause();
             }
+
+            if (originalException instanceof CouchDbResponseException) {
+                originalException.fillInStackTrace();
+
+                throw (CouchDbResponseException) originalException;
+            } 
 
             throw new RuntimeException(e);
         } catch (InterruptedException e) {

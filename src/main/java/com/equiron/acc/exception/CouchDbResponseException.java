@@ -4,6 +4,10 @@ import com.equiron.acc.CouchDbHttpResponse;
 
 public class CouchDbResponseException extends RuntimeException {
     private CouchDbHttpResponse response;
+    
+    public CouchDbResponseException(String message) {
+        super(message);
+    }
 
     public CouchDbResponseException(CouchDbHttpResponse response) {
         super(response.toString() + "\n" + response.getResponseBody());

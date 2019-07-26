@@ -20,6 +20,14 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         TestDoc testDoc = new TestDoc();
 
         db.saveOrUpdate(testDoc);
+        
+        String oldRev = testDoc.getRev();
+        
+        db.saveOrUpdate(testDoc);
+        
+        testDoc.setRev(oldRev);
+        
+        db.saveOrUpdate(testDoc);
 
         Assertions.assertFalse(testDoc.getDocId().isEmpty());
         Assertions.assertFalse(testDoc.getRev().isEmpty());

@@ -15,6 +15,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Response;
 
+import com.equiron.acc.exception.http.CouchDbConflictException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
@@ -103,7 +104,6 @@ public class CouchDbAsyncOperations {
         try {
             CouchDbDocument[] allDocs = docs.toArray(new CouchDbDocument[] {});
             
-            @SuppressWarnings("unchecked")
             Function<List<CouchDbBulkResponse>, List<T>> transformer = responses -> {
                 for (int i = 0; i < allDocs.length; i++) {
                     allDocs[i].setDocId(responses.get(i).getDocId());
@@ -114,8 +114,12 @@ public class CouchDbAsyncOperations {
                                                            .setForbidden(responses.get(i).isForbidden())
                                                            .setConflictReason(responses.get(i).getConflictReason());
                 }
+                
+                if (docs.stream().filter(CouchDbDocument::isInConflict).findAny().isPresent()) {
+                    throw new CouchDbConflictException("One of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                }
 
-                return (List<T>) Arrays.asList(allDocs);
+                return docs;
             };
 
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
