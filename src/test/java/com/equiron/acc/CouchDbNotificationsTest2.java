@@ -15,10 +15,10 @@ import com.equiron.acc.json.CouchDbEvent;
 public class CouchDbNotificationsTest2 extends CouchDbAbstractTest {
     @Test
     public void shouldWork() throws Exception {
-        TestDoc testDoc = new TestDoc("qwe");
-        
-        db.saveOrUpdate(testDoc);
-        db.delete(testDoc.getDocIdAndRev());
+//        TestDoc testDoc = new TestDoc("qwe");
+//        
+//        db.saveOrUpdate(testDoc);
+//        db.delete(testDoc.getDocIdAndRev());
         
         try(AsyncHttpClient listenerClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
             CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db, listenerClient) {/*empty*/};) {

@@ -41,7 +41,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
         this.url = url;
         this.lastSuccessSeq = lastSuccessSeq;
     }
-    
+
     @Override
     public void onThrowable(Throwable t) {
         if (t instanceof CancellationException) {
@@ -63,10 +63,40 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
                 }
             }
 
-            restart();             
+            restart();
         }
     }
+    
+    @Override
+    public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
+        if (responseStatus.getStatusCode() == 200) {
+            logger.debug("Start listening " + url);
+            
+            for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
+                try {
+                    eventHandler.onStart();
+                } catch (Exception e) {
+                    logger.error("Error in " + url, e);
+                }
+            }
 
+            return State.CONTINUE;
+        }
+
+        throw new RuntimeException(responseStatus.getStatusCode() + " / " + responseStatus.getStatusText());
+    }
+
+    @Override
+    public Void onCompleted() throws Exception {
+        logger.info("Stop listening " + url);
+        
+        if (!eventListener.isStopped()) {//не было остановки, просто клиент решил сам что соединение закрылось
+            throw new RuntimeException("Unexpected listener stop (Connection closed by proxy?)");
+        }
+        
+        return null;
+    }
+    
     private void restart() {
         try {
             eventListener.stopListening();
@@ -134,37 +164,7 @@ public class CouchDbEventAsyncHandler<D extends CouchDbDocument> implements Asyn
     }
 
     @Override
-    public State onStatusReceived(HttpResponseStatus responseStatus) throws Exception {
-        if (responseStatus.getStatusCode() == 200) {
-            logger.debug("Start listening " + url);
-            
-            for (CouchDbEventHandler<D> eventHandler : eventListener.getHandlers()) {
-                try {
-                    eventHandler.onStart();
-                } catch (Exception e) {
-                    logger.error("Error in " + url, e);
-                }
-            }
-
-            return State.CONTINUE;
-        }
-
-        throw new RuntimeException(responseStatus.getStatusCode() + " / " + responseStatus.getStatusText());
-    }
-
-    @Override
     public State onHeadersReceived(HttpHeaders headers) throws Exception {
         return State.CONTINUE;
-    }
-
-    @Override
-    public Void onCompleted() throws Exception {
-        logger.debug("Stop listening " + url);
-        
-        if (!eventListener.isStopped()) {//не было остановки, просто клиент решил сам что соединение закрылось
-            restart();
-        }
-        
-        return null;
     }
 }

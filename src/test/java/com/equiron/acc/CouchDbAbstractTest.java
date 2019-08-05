@@ -24,6 +24,7 @@ public class CouchDbAbstractTest {
                                                    .setUser("admin")
                                                    .setPassword("PassWord123")
                                                    .setHttpClient(httpClient)
+                                                   .setSelfDiscovering(false)
                                                    .build());
     }
 

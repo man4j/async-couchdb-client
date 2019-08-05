@@ -2,13 +2,15 @@ package com.equiron.acc.util;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import com.equiron.acc.exception.CouchDbResponseException;
 
 public class ExceptionHandler {
     public static <T> T handleFutureResult(Future<T> future) {
         try {
-            return future.get();
+            return future.get(1, TimeUnit.MINUTES);
         } catch (ExecutionException e) {
             Throwable originalException = e;
             
@@ -25,6 +27,8 @@ public class ExceptionHandler {
             throw new RuntimeException(e);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } catch (@SuppressWarnings("unused") TimeoutException e) {
+            throw new RuntimeException("Unexpected future timeout");
         }
     }
 }
