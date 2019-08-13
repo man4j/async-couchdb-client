@@ -232,8 +232,7 @@ public class CouchDb {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    @SafeVarargs
-    public final <T extends CouchDbDocument> List<T> saveOrUpdate(T doc, T... docs) {
+    public <T extends CouchDbDocument> List<T> saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc, docs));
     }
 
@@ -247,23 +246,21 @@ public class CouchDb {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    @SafeVarargs
-    public final List<CouchDbBulkResponse> saveOrUpdate(Map<String, Object>... docs) {
+    public List<CouchDbBulkResponse> saveOrUpdate(@SuppressWarnings("unchecked") Map<String, Object>... docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
     }
     
     /**
      * Delete multiple documents from the database in a single request.
      */
-    @SafeVarargs
-    public final List<CouchDbBulkResponse> delete(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public List<CouchDbBulkResponse> delete(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.delete(docRev, docRevs));
     }
     
     /**
      * Delete multiple documents from the database in a single request.
      */
-    public final List<CouchDbBulkResponse> delete(final List<CouchDbDocIdAndRev> docRevs) {
+    public List<CouchDbBulkResponse> delete(List<CouchDbDocIdAndRev> docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.delete(docRevs));
     }
     
@@ -273,8 +270,7 @@ public class CouchDb {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    @SafeVarargs
-    public final Map<String, Boolean> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public Map<String, Boolean> purge(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.purge(docRev, docRevs));
     }
     
@@ -284,7 +280,7 @@ public class CouchDb {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    public Map<String, Boolean> purge(final List<CouchDbDocIdAndRev> docRevs) {
+    public Map<String, Boolean> purge(List<CouchDbDocIdAndRev> docRevs) {
         return ExceptionHandler.handleFutureResult(asyncOps.purge(docRevs));
     }
 

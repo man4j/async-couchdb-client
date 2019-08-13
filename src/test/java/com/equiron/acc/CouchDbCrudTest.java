@@ -17,7 +17,7 @@ import com.equiron.acc.json.CouchDbDocument;
 public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDoc() {
-        TestDoc testDoc = new TestDoc();
+        TestDoc testDoc = new TestDoc("1");
 
         db.saveOrUpdate(testDoc);
         
@@ -26,6 +26,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         db.saveOrUpdate(testDoc);
         
         testDoc.setRev(oldRev);
+        testDoc.setName("2");
         
         db.saveOrUpdate(testDoc);
 
