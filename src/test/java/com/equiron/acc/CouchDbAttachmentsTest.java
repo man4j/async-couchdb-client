@@ -2,6 +2,9 @@ package com.equiron.acc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.asynchttpclient.Response;
 import org.junit.jupiter.api.Assertions;
@@ -54,12 +57,34 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
             Assertions.assertEquals(9559, r.getResponseBodyAsBytes().length);
         }
     }
+    
+    @Test
+    public void shouldCreateDocumentAndAddAttachmentAndGetAsBytes() throws IOException {
+        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+            String attachmentName = "the/rabbit/pic";
+
+            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+
+            byte[] data = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName + "1");
+
+            Assertions.assertEquals(9559, data.length);
+            
+            Files.write(Paths.get("test123.gif"), data);
+        }
+    }
 
     @Test
     public void tryFetchNonExistingAttachment() {
         Response r = db.getAttachment("123", "Non-existing attachment");
 
         Assertions.assertEquals(404, r.getStatusCode());
+    }
+    
+    @Test
+    public void tryFetchNonExistingAttachmentAsString() {
+        String attachment = db.getAttachmentAsString("123", "Non-existing attachment");
+        
+        Assertions.assertNull(attachment);
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.equiron.acc;
 
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -274,7 +275,7 @@ public class CouchDbAsyncOperations {
     }
 
     /**
-     * Gets an attachment of the document.
+     * Gets an attachment of the document as Response.
      */
     public CompletableFuture<Response> getAttachment(String docId, String name) {
         if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
@@ -283,6 +284,44 @@ public class CouchDbAsyncOperations {
                                                    .setMethod("GET")
                                                    .setUrl(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build())
                                                    .execute());
+    }
+    
+    /**
+     * Gets an attachment of the document as String.
+     */
+    public CompletableFuture<String> getAttachmentAsString(String docId, String name) {
+        return getAttachment(docId, name).thenApply(r -> {
+           if (r.getStatusCode() == 200) {
+               return r.getResponseBody();
+           }
+           
+           if (r.getStatusCode() == 404) {
+               return null;
+           }
+           
+           CouchDbHttpResponse response = new CouchDbHttpResponse(r.getStatusCode(), r.getStatusText(), r.getResponseBody(StandardCharsets.UTF_8), r.getUri().toString(), r.getHeaders());
+           
+           throw CouchDbAsyncHandler.responseCode2Exception(response);
+        });
+    }
+    
+    /**
+     * Gets an attachment of the document as bytes.
+     */
+    public CompletableFuture<byte[]> getAttachmentAsBytes(String docId, String name) {
+        return getAttachment(docId, name).thenApply(r -> {
+           if (r.getStatusCode() == 200) {
+               return r.getResponseBodyAsBytes();
+           }
+           
+           if (r.getStatusCode() == 404) {
+               return null;
+           }
+           
+           CouchDbHttpResponse response = new CouchDbHttpResponse(r.getStatusCode(), r.getStatusText(), r.getResponseBody(StandardCharsets.UTF_8), r.getUri().toString(), r.getHeaders());
+           
+           throw CouchDbAsyncHandler.responseCode2Exception(response);
+        });
     }
 
     /**

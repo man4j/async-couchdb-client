@@ -305,11 +305,26 @@ public class CouchDb {
     }
 
     /**
-     * Gets an attachment of the document.
+     * Gets an attachment of the document as Response.
      */
     public Response getAttachment(String docId, String name) {
         return ExceptionHandler.handleFutureResult(asyncOps.getAttachment(docId, name));
     }
+    
+    /**
+     * Gets an attachment of the document as String.
+     */
+    public String getAttachmentAsString(String docId, String name) {
+        return ExceptionHandler.handleFutureResult(asyncOps.getAttachmentAsString(docId, name));
+    }
+    
+    /**
+     * Gets an attachment of the document as bytes.
+     */
+    public byte[] getAttachmentAsBytes(String docId, String name) {
+        return ExceptionHandler.handleFutureResult(asyncOps.getAttachmentAsBytes(docId, name));
+    }
+
 
     /**
      * Deletes an attachment from the document.

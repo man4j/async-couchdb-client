@@ -55,14 +55,13 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
     
     @Override
     public T onCompleted(Response response) {
-        CouchDbHttpResponse couchDbHttpResponse = null;
+        CouchDbHttpResponse couchDbHttpResponse;
 
         String path = response.getUri().getPath();
         String statusText = response.getStatusText();
         int statusCode = response.getStatusCode();
         String uri = response.getUri().toString();
         HttpHeaders headers = response.getHeaders();
-
         String body = response.getResponseBody(StandardCharsets.UTF_8);
         
         couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, uri, headers);
@@ -98,7 +97,7 @@ public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
         }
     }
 
-    private static CouchDbResponseException responseCode2Exception(CouchDbHttpResponse response) {
+    public static CouchDbResponseException responseCode2Exception(CouchDbHttpResponse response) {
         switch (response.getStatusCode()) {
             case 400: return new CouchDbBadRequestException(response);
             case 401: return new CouchDbUnauthorizedException(response);
