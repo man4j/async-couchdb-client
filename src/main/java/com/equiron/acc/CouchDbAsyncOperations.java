@@ -91,8 +91,7 @@ public class CouchDbAsyncOperations {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    @SafeVarargs
-    public final <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(final T doc, final T... docs) {
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
         T[] allDocs = ArrayUtils.insert(0, docs, doc);
 
         return saveOrUpdate(Arrays.asList(allDocs));
@@ -101,7 +100,7 @@ public class CouchDbAsyncOperations {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(final List<T> docs) {
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(List<T> docs) {
         try {
             CouchDbDocument[] allDocs = docs.toArray(new CouchDbDocument[] {});
             
@@ -136,8 +135,7 @@ public class CouchDbAsyncOperations {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    @SafeVarargs
-    public final CompletableFuture<List<CouchDbBulkResponse>> saveOrUpdate(final Map<String, Object>... docs) {
+    public CompletableFuture<List<CouchDbBulkResponse>> saveOrUpdate(@SuppressWarnings("unchecked") Map<String, Object>... docs) {
         try {
             Function<List<CouchDbBulkResponse>, List<CouchDbBulkResponse>> transformer = responses -> {
                 for (int i = 0; i < docs.length; i++) {
@@ -163,8 +161,7 @@ public class CouchDbAsyncOperations {
     /**
      * Delete multiple documents from the database in a single request.
      */
-    @SafeVarargs
-    public final CompletableFuture<List<CouchDbBulkResponse>> delete(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public CompletableFuture<List<CouchDbBulkResponse>> delete(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
         CouchDbDocIdAndRev[] allDocs = ArrayUtils.insert(0, docRevs, docRev);
         
         return delete(Arrays.asList(allDocs));
@@ -173,7 +170,7 @@ public class CouchDbAsyncOperations {
     /**
      * Delete multiple documents from the database in a single request.
      */
-    public final CompletableFuture<List<CouchDbBulkResponse>> delete(final List<CouchDbDocIdAndRev> docRevs) {
+    public CompletableFuture<List<CouchDbBulkResponse>> delete(List<CouchDbDocIdAndRev> docRevs) {
         try {
             List<CouchDbDocument> docsWithoutBody = docRevs.stream().map(dr -> {
                 CouchDbDocument dummyDoc = new CouchDbDocument();
@@ -201,8 +198,7 @@ public class CouchDbAsyncOperations {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    @SafeVarargs
-    public final CompletableFuture<Map<String, Boolean>> purge(final CouchDbDocIdAndRev docRev, final CouchDbDocIdAndRev... docRevs) {
+    public CompletableFuture<Map<String, Boolean>> purge(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
         CouchDbDocIdAndRev[] allDocs = ArrayUtils.insert(0, docRevs, docRev);
         
         return purge(Arrays.asList(allDocs));
@@ -214,7 +210,7 @@ public class CouchDbAsyncOperations {
      * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
      * and update_seq will be increased.
      */
-    public CompletableFuture<Map<String, Boolean>> purge(final List<CouchDbDocIdAndRev> docRevs) {
+    public CompletableFuture<Map<String, Boolean>> purge(List<CouchDbDocIdAndRev> docRevs) {
         try {
             Map<String, List<String>> purgedMap = new LinkedHashMap<>();
             
