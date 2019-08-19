@@ -21,6 +21,6 @@ public class CouchDbReduceView<K, V> extends CouchDbAbstractView {
     
     @Override
     public void update() {
-        createQuery().byKeys(Collections.emptyList()).asKey();
+        createQuery().group().byKeys(Collections.emptyList()).asKey();
     }
 }

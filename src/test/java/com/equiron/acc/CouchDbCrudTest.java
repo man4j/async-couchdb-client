@@ -21,17 +21,16 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
 
         db.saveOrUpdate(testDoc);
         
-        String oldRev = testDoc.getRev();
+        CouchDbBulkResponse resp = db.delete(testDoc.getDocIdAndRev()).get(0);
         
-        db.saveOrUpdate(testDoc);
-        
-        testDoc.setRev(oldRev);
-        testDoc.setName("2");
-        
-        db.saveOrUpdate(testDoc);
+        Map<String, Boolean> result = db.purge(resp.getDocIdAndRev());
 
-        Assertions.assertFalse(testDoc.getDocId().isEmpty());
-        Assertions.assertFalse(testDoc.getRev().isEmpty());
+        int a = 5;
+        
+//        CouchDbBulkResponse resp = db.delete(testDoc.getDocIdAndRev()).get(0);
+        
+        
+        
     }
 
     @Test
