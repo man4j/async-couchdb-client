@@ -1,5 +1,6 @@
 package com.equiron.acc.view;
 
+import java.util.Collections;
 import java.util.Map;
 
 import com.equiron.acc.CouchDb;
@@ -16,26 +17,26 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 /**
  * Represents a built-in view of all documents in the database.
  */
-public final class CouchDbBuiltInView {
-    private String viewUrl;
+public final class CouchDbBuiltInView implements CouchDbView {
+    private final String viewUrl;
 
-    private CouchDb couchDb;
+    private final CouchDb couchDb;
 
-    private JavaType keyType;
+    private final JavaType keyType;
 
-    private JavaType valueType;
+    private final JavaType valueType;
 
-    private JavaType resultSetType;
+    private final JavaType resultSetType;
 
     public CouchDbBuiltInView(CouchDb couchDb) {
         this.couchDb = couchDb;
 
         TypeFactory tf = TypeFactory.defaultInstance();
 
-        keyType = tf.constructType(String.class);
-        valueType = tf.constructType(CouchDbDocRev.class);
+        this.keyType = tf.constructType(String.class);
+        this.valueType = tf.constructType(CouchDbDocRev.class);
 
-        resultSetType = tf.constructParametricType(CouchDbMapResultSet.class, keyType, valueType);
+        this.resultSetType = tf.constructParametricType(CouchDbMapResultSet.class, keyType, valueType);
 
         this.viewUrl = new UrlBuilder(couchDb.getDbUrl()).addPathSegment("_all_docs").build();
     }
@@ -80,5 +81,20 @@ public final class CouchDbBuiltInView {
 
     public CouchDbMapQuery<String, CouchDbDocRev> createQuery() {
         return new CouchDbMapQuery<>(couchDb, viewUrl, resultSetType);
+    }
+
+    @Override
+    public void update() {
+        createQuery().byKeys(Collections.emptyList()).asKey();
+    }
+
+    @Override
+    public String getDesignName() {
+        return "builtIn";
+    }
+
+    @Override
+    public String getViewName() {
+        return "builtIn";
     }
 }

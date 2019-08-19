@@ -1,5 +1,6 @@
 package com.equiron.acc.view;
 
+import java.util.Collections;
 import java.util.Map;
 
 import com.equiron.acc.CouchDb;
@@ -9,10 +10,10 @@ import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.query.CouchDbReduceQuery;
 import com.fasterxml.jackson.databind.JavaType;
 
-public class CouchDbMapReduceView<MapK, MapV, ReduceK, ReduceV> {
-    private CouchDbMapView<MapK, MapV> mapView;
+public class CouchDbMapReduceView<MapK, MapV, ReduceK, ReduceV> implements CouchDbView {
+    private final CouchDbMapView<MapK, MapV> mapView;
 
-    private CouchDbReduceView<ReduceK, ReduceV> reducedView;
+    private final CouchDbReduceView<ReduceK, ReduceV> reducedView;
 
     public CouchDbMapReduceView(CouchDb couchDb, String designName, String viewName, JavaType[] jts) {
         mapView = new CouchDbMapView<>(couchDb, designName, viewName, new JavaType[] {jts[0], jts[1]});
@@ -34,5 +35,20 @@ public class CouchDbMapReduceView<MapK, MapV, ReduceK, ReduceV> {
 
     public CouchDbMapQueryWithDocs<MapK, MapV, Map<String, Object>> createRawDocQuery() {
         return mapView.createRawDocQuery();
+    }
+
+    @Override
+    public void update() {
+        createMapQuery().byKeys(Collections.emptyList()).asId();
+    }
+
+    @Override
+    public String getDesignName() {
+        return mapView.getDesignName();
+    }
+
+    @Override
+    public String getViewName() {
+        return mapView.getViewName();
     }
 }

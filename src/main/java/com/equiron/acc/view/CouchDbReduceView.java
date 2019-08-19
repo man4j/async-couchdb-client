@@ -1,5 +1,7 @@
 package com.equiron.acc.view;
 
+import java.util.Collections;
+
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.json.resultset.CouchDbReduceResultSet;
 import com.equiron.acc.query.CouchDbReduceQuery;
@@ -15,5 +17,10 @@ public class CouchDbReduceView<K, V> extends CouchDbAbstractView {
         TypeFactory tf = TypeFactory.defaultInstance();
 
         return new CouchDbReduceQuery<>(couchDb, viewUrl, tf.constructParametricType(CouchDbReduceResultSet.class, keyType, valueType));
+    }
+    
+    @Override
+    public void update() {
+        createQuery().byKeys(Collections.emptyList()).asKey();
     }
 }
