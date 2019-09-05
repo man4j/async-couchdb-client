@@ -13,20 +13,26 @@ import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 
-public abstract class CouchDbAbstractView {
-    private CouchDbViewAsyncOperations asyncOps = new CouchDbViewAsyncOperations();
+public abstract class CouchDbAbstractView implements CouchDbView {
+    private final CouchDbViewAsyncOperations asyncOps = new CouchDbViewAsyncOperations();
 
-    String designUrl;
+    private final String designUrl;
 
-    String viewUrl;
+    final String viewUrl;
 
-    CouchDb couchDb;
+    final CouchDb couchDb;
 
-    JavaType keyType;
+    final JavaType keyType;
 
-    JavaType valueType;
+    final JavaType valueType;
+    
+    final String viewName;
+    
+    final String designName;
 
     public CouchDbAbstractView(CouchDb couchDb, String designName, String viewName, JavaType[] jts) {
+        this.viewName = viewName;
+        this.designName = designName;
         this.couchDb = couchDb;
 
         this.designUrl = new UrlBuilder(couchDb.getDbUrl()).addPathSegment("_design")
@@ -37,8 +43,8 @@ public abstract class CouchDbAbstractView {
                                                  .addPathSegment(viewName)
                                                  .build();
 
-        keyType = jts[0];
-        valueType = jts[1];
+        this.keyType = jts[0];
+        this.valueType = jts[1];
     }
 
     public class CouchDbViewAsyncOperations {
@@ -62,5 +68,15 @@ public abstract class CouchDbAbstractView {
 
     public CouchDbDesignInfo getInfo() {
         return ExceptionHandler.handleFutureResult(async().getInfo());
+    }
+    
+    @Override
+    public String getDesignName() {
+        return designName;
+    }
+    
+    @Override
+    public String getViewName() {
+        return viewName;
     }
 }

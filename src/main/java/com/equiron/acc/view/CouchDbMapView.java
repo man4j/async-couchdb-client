@@ -1,5 +1,6 @@
 package com.equiron.acc.view;
 
+import java.util.Collections;
 import java.util.Map;
 
 import com.equiron.acc.CouchDb;
@@ -58,5 +59,10 @@ public class CouchDbMapView<K, V> extends CouchDbAbstractView {
         TypeFactory tf = TypeFactory.defaultInstance();
 
         return new CouchDbMapQuery<>(couchDb, viewUrl, tf.constructParametricType(CouchDbMapResultSet.class, keyType, valueType));
+    }
+
+    @Override
+    public void update() {
+        createQuery().byKeys(Collections.emptyList()).asId();
     }
 }

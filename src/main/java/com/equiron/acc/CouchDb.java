@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -56,6 +57,7 @@ import com.equiron.acc.view.CouchDbBuiltInView;
 import com.equiron.acc.view.CouchDbMapReduceView;
 import com.equiron.acc.view.CouchDbMapView;
 import com.equiron.acc.view.CouchDbReduceView;
+import com.equiron.acc.view.CouchDbView;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -67,29 +69,31 @@ public class CouchDb {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
     @Autowired
-    private CouchDbConfig config;
+    private volatile CouchDbConfig config;
 
-    ObjectMapper mapper = new ObjectMapper();
+    final ObjectMapper mapper = new ObjectMapper();
 
-    Request prototype;
+    volatile Request prototype;
     
-    private String ip;
+    private volatile String ip;
     
-    private int port;
+    private volatile int port;
     
-    private String user;
+    private volatile String user;
     
-    private String password;
+    private volatile String password;
     
-    private String dbName;
+    private volatile String dbName;
     
-    private CouchDbBuiltInView builtInView;
+    private volatile CouchDbBuiltInView builtInView;
 
-    private CouchDbAsyncOperations asyncOps;
+    private volatile CouchDbAsyncOperations asyncOps;
     
-    private boolean selfDiscovering = true;
+    private volatile boolean selfDiscovering = true;
     
-    private boolean initialized;
+    private volatile boolean initialized;
+    
+    private volatile List<CouchDbView> viewList = new CopyOnWriteArrayList<>();
     
     @PostConstruct
     public void init() {
@@ -115,6 +119,8 @@ public class CouchDb {
             asyncOps = new CouchDbAsyncOperations(this);
             
             builtInView = new CouchDbBuiltInView(this);
+            
+            viewList.add(builtInView);
             
             testConnection();
     
@@ -184,6 +190,12 @@ public class CouchDb {
 
     public CouchDbAsyncOperations async() {
         return asyncOps;
+    }
+    
+    public void updateAllViews() {
+        for (CouchDbView view : viewList) {
+            updateView(view);
+        }
     }
 
     //------------------ Fetch API -------------------------
@@ -435,84 +447,47 @@ public class CouchDb {
 
             JavaType[] jts = tf.findTypeParameters(tf.constructType(field.getGenericType()), viewClass);
 
-            Object injectedView = null;
+            CouchDbView injectedView = null;
 
             if (viewClass == CouchDbMapView.class) {
-                CouchDbMapView<String, Object> view = new CouchDbMapView<>(this, designName, viewName, jts);
-
-                if (config.isBuildViewsOnStart()) {
-                    long t = System.currentTimeMillis();
-                    logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    
-                    boolean complete = false;
-                    
-                    while (!complete) {
-                        try {
-                            view.createQuery().byKey("123").asKey();
-                            complete = true;
-                        } catch (CouchDbResponseException e) {
-                            logger.warn("Not critical exception: " + e.getMessage());
-                        }
-                    }
-                    
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
-                }
-
-                injectedView = view;
+                injectedView = new CouchDbMapView<>(this, designName, viewName, jts);
             }
 
             if (viewClass == CouchDbReduceView.class) {
-                CouchDbReduceView<String, Object> view = new CouchDbReduceView<>(this, designName, viewName, jts);
-
-                if (config.isBuildViewsOnStart()) {
-                    long t = System.currentTimeMillis();
-                    logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    
-                    boolean complete = false;
-                    
-                    while (!complete) {
-                        try {
-                            view.createQuery().byKey("123").asKey();
-                            complete = true;
-                        } catch (CouchDbResponseException e) {
-                            logger.warn("Not critical exception: " + e.getMessage());
-                        }
-                    }
-                    
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");
-                }
-
-                injectedView = view;
+                injectedView = new CouchDbReduceView<>(this, designName, viewName, jts);
             }
 
             if (viewClass == CouchDbMapReduceView.class) {
-                CouchDbMapReduceView<String, Object, Object, Object> view = new CouchDbMapReduceView<>(this, designName, viewName, jts);
-
-                if (config.isBuildViewsOnStart()) {
-                    long t = System.currentTimeMillis();
-                    logger.info("Building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName + "...");
-                    
-                    boolean complete = false;
-                    
-                    while (!complete) {
-                        try {
-                            view.createMapQuery().byKey("123").asKey();
-                            complete = true;
-                        } catch (CouchDbResponseException e) {
-                            logger.warn("Not critical exception: " + e.getMessage());
-                        }
-                    }
-                    
-                    logger.info("Complete building view in database: " + getDbName() + ". View name: " + designName + "/" + viewName  + " in " + (System.currentTimeMillis() - t) + " ms");                        
-                }
-
-                injectedView = view;
+                injectedView = new CouchDbMapReduceView<>(this, designName, viewName, jts);
             }
 
             if (injectedView != null) {
+                if (config.isBuildViewsOnStart()) {
+                    updateView(injectedView);
+                }
+                
                 setValue(field, injectedView);
+                viewList.add(injectedView);
             }
         }
+    }
+
+    private void updateView(CouchDbView view) {
+        long t = System.currentTimeMillis();
+        logger.info("Updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName() + "...");
+        
+        boolean complete = false;
+        
+        while (!complete) {
+            try {
+                view.update();
+                complete = true;
+            } catch (CouchDbResponseException e) {
+                logger.warn("Not critical exception: " + e.getMessage());
+            }
+        }
+        
+        logger.info("Complete updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName()  + " in " + (System.currentTimeMillis() - t) + " ms");
     }
 
     private void injectValidators() {
