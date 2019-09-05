@@ -1,12 +1,14 @@
 package com.equiron.acc.annotation;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
+@Repeatable(Replications.class)
 public @interface Replicated {
     String targetIp();
     
@@ -21,4 +23,10 @@ public @interface Replicated {
     String selector() default "";
     
     String enabled() default "true";
+    
+    Direction direction() default Direction.BOTH; 
+    
+    public static enum Direction {
+        BOTH, FROM, TO
+    }
 }

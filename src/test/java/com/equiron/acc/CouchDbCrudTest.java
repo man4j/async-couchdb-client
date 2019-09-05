@@ -17,21 +17,30 @@ import com.equiron.acc.json.CouchDbDocument;
 public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDoc() {
-        TestDoc testDoc = new TestDoc("1");
-
-        db.saveOrUpdate(testDoc);
         
-        String oldRev = testDoc.getRev();
+        TestDoc testDoc1 = new TestDoc("1");
+        db.saveOrUpdate(testDoc1);
+        db.saveOrUpdate(testDoc1);
+        db.saveOrUpdate(testDoc1);
         
-        db.saveOrUpdate(testDoc);
+        TestDoc testDoc2 = new TestDoc("2");
+        db.saveOrUpdate(testDoc2);
+        db.saveOrUpdate(testDoc2);
+        db.saveOrUpdate(testDoc2);
         
-        testDoc.setRev(oldRev);
-        testDoc.setName("2");
+        db.purge(testDoc1.getDocIdAndRev(), testDoc2.getDocIdAndRev());
         
-        db.saveOrUpdate(testDoc);
-
-        Assertions.assertFalse(testDoc.getDocId().isEmpty());
-        Assertions.assertFalse(testDoc.getRev().isEmpty());
+//        String oldRev = testDoc.getRev();
+//        
+//        db.saveOrUpdate(testDoc);
+//        
+//        testDoc.setRev(oldRev);
+//        testDoc.setName("2");
+//        
+//        db.saveOrUpdate(testDoc);
+//
+//        Assertions.assertFalse(testDoc.getDocId().isEmpty());
+//        Assertions.assertFalse(testDoc.getRev().isEmpty());
     }
 
     @Test

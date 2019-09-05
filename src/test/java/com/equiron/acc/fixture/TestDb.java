@@ -12,7 +12,7 @@ import com.equiron.acc.view.CouchDbReduceView;
 
 @Security(admins = @SecurityPattern(names = "admin"))
 public class TestDb extends CouchDb {
-    @JsView(map = "emit(doc._id, doc.name)")
+    @JsView(map = "if (doc.name) emit(doc._id, doc.name)")
     private CouchDbMapView<String, String> testView;
 
     @JsView(map = "emit(doc._id, 1)", reduce = "return sum(values)")

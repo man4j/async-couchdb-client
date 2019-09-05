@@ -36,6 +36,7 @@ import com.equiron.acc.annotation.Replicated;
 import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
+import com.equiron.acc.annotation.Replicated.Direction;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.json.CouchDbBulkResponse;
@@ -559,17 +560,17 @@ public class CouchDb {
     private void synchronizeReplicationDocs() {
         Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
         
-        if (getClass().isAnnotationPresent(Replicated.class)) {
-            String enabled = getClass().getAnnotation(Replicated.class).enabled();
+        for (Replicated replicated : getClass().getAnnotationsByType(Replicated.class)) {            
+            String enabled = replicated.enabled();
             
             enabled = resolve(enabled, true);
             
-            String ip = getClass().getAnnotation(Replicated.class).targetIp();
-            String port = getClass().getAnnotation(Replicated.class).targetPort();
-            String user = getClass().getAnnotation(Replicated.class).targetUser();
-            String password = getClass().getAnnotation(Replicated.class).targetPassword();
-            String remoteDb = getClass().getAnnotation(Replicated.class).targetDbName();
-            String selector = getClass().getAnnotation(Replicated.class).selector();
+            String ip = replicated.targetIp();
+            String port = replicated.targetPort();
+            String user = replicated.targetUser();
+            String password = replicated.targetPassword();
+            String remoteDb = replicated.targetDbName();
+            String selector = replicated.selector();
             
             if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
                 ip = resolve(ip, false);
@@ -611,11 +612,15 @@ public class CouchDb {
                     }
                 }
 
-                CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", localServer, remoteServer, selectorMap);
-                CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, localServer, selectorMap);
-
-                newReplicationDocs.put(toRemote.getDocId(), toRemote);
-                newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
+                if (replicated.direction() == Direction.TO || replicated.direction() == Direction.BOTH) {                
+                    CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", localServer, remoteServer, selectorMap);
+                    newReplicationDocs.put(toRemote.getDocId(), toRemote);
+                }
+                
+                if (replicated.direction() == Direction.FROM || replicated.direction() == Direction.BOTH) {
+                    CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, localServer, selectorMap);
+                    newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
+                }
             } else {
                 logger.warn("Replication disabled");
             }
