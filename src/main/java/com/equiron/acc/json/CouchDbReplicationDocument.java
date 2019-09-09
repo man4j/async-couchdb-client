@@ -3,6 +3,8 @@ package com.equiron.acc.json;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class CouchDbReplicationDocument extends CouchDbDocument {
     private String source;
     
@@ -11,6 +13,9 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
     private Map<String, Object> selector;
     
     private boolean continuous = true;
+    
+    @JsonProperty("create_target")
+    private boolean createTarget = false;
 
     public CouchDbReplicationDocument() {
         /* empty */
@@ -60,6 +65,14 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
         return selector;
     }
     
+    public boolean isCreateTarget() {
+        return createTarget;
+    }
+
+    public void setCreateTarget(boolean createTarget) {
+        this.createTarget = createTarget;
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == null) return false;
@@ -68,13 +81,13 @@ public class CouchDbReplicationDocument extends CouchDbDocument {
 
         CouchDbReplicationDocument other = (CouchDbReplicationDocument)obj;
 
-        if (getDocId().equals(other.getDocId()) && source.equals(other.source) && target.equals(other.target) && Objects.equals(selector, other.selector)) return true;
+        if (getDocId().equals(other.getDocId()) && source.equals(other.source) && target.equals(other.target) && Objects.equals(selector, other.selector) && (createTarget == other.createTarget)) return true;
 
         return false;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getDocId(), source, target, selector);
+        return Objects.hash(getDocId(), source, target, selector, createTarget);
     }
 }

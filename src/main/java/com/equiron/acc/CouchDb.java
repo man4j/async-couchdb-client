@@ -546,6 +546,7 @@ public class CouchDb {
             String password = replicated.targetPassword();
             String remoteDb = replicated.targetDbName();
             String selector = replicated.selector();
+            String createTarget = replicated.createTarget();
             
             if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
                 ip = resolve(ip, false);
@@ -554,6 +555,7 @@ public class CouchDb {
                 password = resolve(password, true);
                 remoteDb = resolve(remoteDb, true);
                 selector = resolve(selector, true);
+                createTarget = resolve(createTarget, true);
                 
                 if (remoteDb.isBlank()) {
                     remoteDb = getDbName();
@@ -589,11 +591,21 @@ public class CouchDb {
 
                 if (replicated.direction() == Direction.TO || replicated.direction() == Direction.BOTH) {                
                     CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", localServer, remoteServer, selectorMap);
+                    
+                    if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
+                        toRemote.setCreateTarget(true);
+                    }
+                    
                     newReplicationDocs.put(toRemote.getDocId(), toRemote);
                 }
                 
                 if (replicated.direction() == Direction.FROM || replicated.direction() == Direction.BOTH) {
                     CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, localServer, selectorMap);
+                    
+                    if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
+                        fromRemote.setCreateTarget(true);
+                    }
+                    
                     newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
                 }
             } else {

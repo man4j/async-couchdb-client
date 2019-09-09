@@ -24,6 +24,8 @@ public @interface Replicated {
     
     String enabled() default "true";
     
+    String createTarget() default "false";
+    
     Direction direction() default Direction.BOTH; 
     
     public static enum Direction {
