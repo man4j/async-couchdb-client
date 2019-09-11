@@ -402,6 +402,21 @@ public class CouchDb {
                 }
                 
                 break;
+            } catch (ExecutionException e) {
+                if (e.getCause() != null && e.getCause() instanceof IOException) {
+                    logger.warn(e.getMessage(), e);
+                    logger.warn("Waiting for database...");
+                        
+                    try {
+                        Thread.sleep(1000);
+                    } catch (@SuppressWarnings("unused") Exception e1) {
+                        System.exit(1);
+                    }                        
+                } else {
+                    logger.error("", e);
+                        
+                    System.exit(1);
+                }
             } catch (IOException e) {
                 logger.warn(e.getMessage(), e);
                 logger.warn("Waiting for database...");
@@ -411,8 +426,6 @@ public class CouchDb {
                 } catch (@SuppressWarnings("unused") Exception e1) {
                     System.exit(1);
                 }
-                
-                continue;
             } catch (Exception e) {
                 logger.error("", e);
                 
