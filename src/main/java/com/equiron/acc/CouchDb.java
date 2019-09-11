@@ -400,6 +400,8 @@ public class CouchDb {
                                           .execute().get().getStatusCode() != 200) {
                     throw new ConnectException("Could not connect to " + getServerUrl());
                 }
+                
+                break;
             } catch (IOException e) {
                 logger.warn(e.getMessage(), e);
                 logger.warn("Waiting for database...");
