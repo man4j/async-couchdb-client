@@ -19,7 +19,7 @@ public class CouchDbAbstractTest {
     public void before() {
         httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
 
-        db = new TestDb(new CouchDbConfig.Builder().setIp("10.0.64.21")
+        db = new TestDb(new CouchDbConfig.Builder().setIp("a.com")
                                                    .setPort(5984)
                                                    .setUser("admin")
                                                    .setPassword("PassWord123")

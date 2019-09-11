@@ -150,6 +150,7 @@ public class CouchDb {
     
     public CouchDb(CouchDbConfig config) {
         this.config = config;
+        
         init();
     }
     
@@ -391,15 +392,30 @@ public class CouchDb {
     //------------------ Discovering methods -------------------------
 
     private void testConnection() {
-        try {
-            if (config.getHttpClient().prepareRequest(prototype)
-                                      .setMethod("GET")
-                                      .setUrl(getServerUrl())
-                                      .execute().get().getStatusCode() != 200) {
-                throw new ConnectException("Could not connect to " + getServerUrl());
+        while (true) {
+            try {
+                if (config.getHttpClient().prepareRequest(prototype)
+                                          .setMethod("GET")
+                                          .setUrl(getServerUrl())
+                                          .execute().get().getStatusCode() != 200) {
+                    throw new ConnectException("Could not connect to " + getServerUrl());
+                }
+            } catch (IOException e) {
+                logger.warn(e.getMessage(), e);
+                logger.warn("Waiting for database...");
+                
+                try {
+                    Thread.sleep(1000);
+                } catch (@SuppressWarnings("unused") Exception e1) {
+                    System.exit(1);
+                }
+                
+                continue;
+            } catch (Exception e) {
+                logger.error("", e);
+                
+                System.exit(1);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
