@@ -570,7 +570,7 @@ public class CouchDb {
         }
     }
     
-    private void synchronizeReplicationDocs() {
+    protected void synchronizeReplicationDocs() {
         Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
         
         for (Replicated replicated : getClass().getAnnotationsByType(Replicated.class)) {            
