@@ -469,8 +469,9 @@ public class CouchDb {
             this.port = Integer.parseInt(resolve(port, false));
             this.user = resolve(user, true);
             this.password = resolve(password, true);
-            this.dbName = resolve(dbName, true);
         }
+        
+        this.dbName = resolve(dbName, true);//need for logging
     }
 
     private void createDbIfNotExist() {
