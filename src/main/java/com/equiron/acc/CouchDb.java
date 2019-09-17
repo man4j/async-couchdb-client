@@ -458,14 +458,19 @@ public class CouchDb {
             dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
             
             selfDiscovering = annotationConfig.selfDiscovering();
-            enabled = annotationConfig.enabled().equalsIgnoreCase("true");
-        }
             
-        this.ip = resolve(ip, false);
-        this.port = Integer.parseInt(resolve(port, false));
-        this.user = resolve(user, true);
-        this.password = resolve(password, true);
-        this.dbName = resolve(dbName, true);
+            String enabledReplication = resolve(annotationConfig.enabled(), true);
+            
+            enabled = !enabledReplication.isBlank() && enabledReplication.equalsIgnoreCase("true");
+        }
+        
+        if (enabled) {
+            this.ip = resolve(ip, false);
+            this.port = Integer.parseInt(resolve(port, false));
+            this.user = resolve(user, true);
+            this.password = resolve(password, true);
+            this.dbName = resolve(dbName, true);
+        }
     }
 
     private void createDbIfNotExist() {
@@ -578,22 +583,14 @@ public class CouchDb {
             
             enabled = resolve(enabled, true);
             
-            String ip = replicated.targetIp();
-            String port = replicated.targetPort();
-            String user = replicated.targetUser();
-            String password = replicated.targetPassword();
-            String remoteDb = replicated.targetDbName();
-            String selector = replicated.selector();
-            String createTarget = replicated.createTarget();
-            
             if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
-                ip = resolve(ip, false);
-                port = resolve(port, false);
-                user = resolve(user, true);
-                password = resolve(password, true);
-                remoteDb = resolve(remoteDb, true);
-                selector = resolve(selector, true);
-                createTarget = resolve(createTarget, true);
+                String ip = resolve(replicated.targetIp(), false);
+                String port = resolve(replicated.targetPort(), false);
+                String user = resolve(replicated.targetUser(), true);
+                String password = resolve(replicated.targetPassword(), true);
+                String remoteDb = resolve(replicated.targetDbName(), true);
+                String selector = resolve(replicated.selector(), true);
+                String createTarget = resolve(replicated.createTarget(), true);
                 
                 if (remoteDb.isBlank()) {
                     remoteDb = getDbName();
