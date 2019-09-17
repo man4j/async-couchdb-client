@@ -85,6 +85,8 @@ public class CouchDb {
     
     private volatile String dbName;
     
+    private volatile boolean enabled = true;
+    
     private volatile CouchDbBuiltInView builtInView;
 
     private volatile CouchDbAsyncOperations asyncOps;
@@ -101,46 +103,50 @@ public class CouchDb {
             mapper.registerModule(new JavaTimeModule());
             
             applyConfig();
-
-            RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
-                                                         .setCharset(StandardCharsets.UTF_8);
-    
-            if (this.user != null && this.password != null) {
-                Realm realm = new Realm.Builder(this.user, this.password)
-                                       .setUsePreemptiveAuth(true)
-                                       .setScheme(AuthScheme.BASIC)
-                                       .build();
-    
-                builder.setRealm(realm);
-            }
-    
-            prototype = builder.build();
             
-            asyncOps = new CouchDbAsyncOperations(this);
-            
-            builtInView = new CouchDbBuiltInView(this);
-            
-            viewList.add(builtInView);
-            
-            testConnection();
-    
-            createDbIfNotExist();
-            
-            if (selfDiscovering) {            
-                synchronizeDesignDocs();
-
-                injectViews();
-    
-                injectValidators();
-
-                addSecurity();
-    
-                cleanupViews();
+            if (enabled) {
+                RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
+                                                             .setCharset(StandardCharsets.UTF_8);
+        
+                if (this.user != null && this.password != null) {
+                    Realm realm = new Realm.Builder(this.user, this.password)
+                                           .setUsePreemptiveAuth(true)
+                                           .setScheme(AuthScheme.BASIC)
+                                           .build();
+        
+                    builder.setRealm(realm);
+                }
+        
+                prototype = builder.build();
                 
-                synchronizeReplicationDocs();
+                asyncOps = new CouchDbAsyncOperations(this);
+                
+                builtInView = new CouchDbBuiltInView(this);
+                
+                viewList.add(builtInView);
+                
+                testConnection();
+        
+                createDbIfNotExist();
+                
+                if (selfDiscovering) {            
+                    synchronizeDesignDocs();
+    
+                    injectViews();
+        
+                    injectValidators();
+    
+                    addSecurity();
+        
+                    cleanupViews();
+                    
+                    synchronizeReplicationDocs();
+                }
+                
+                initialized = true;
+            } else {
+                logger.warn("Database " + getDbName() + " was disabled!");
             }
-            
-            initialized = true;
         }
     }
     
@@ -452,6 +458,7 @@ public class CouchDb {
             dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
             
             selfDiscovering = annotationConfig.selfDiscovering();
+            enabled = annotationConfig.enabled().equalsIgnoreCase("true");
         }
             
         this.ip = resolve(ip, false);

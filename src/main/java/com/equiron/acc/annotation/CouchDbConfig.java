@@ -18,5 +18,7 @@ public @interface CouchDbConfig {
     
     String dbName() default "";
     
+    String enabled() default "true";
+    
     boolean selfDiscovering() default true;
 }
