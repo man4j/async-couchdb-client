@@ -613,8 +613,6 @@ public class CouchDb {
                     localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
                 }
                 
-                logger.info("Starting replication to remote server: " + remoteServer);
-                
                 Map<String, Object> selectorMap = null;
                 
                 if (!selector.isBlank()) {
@@ -644,8 +642,15 @@ public class CouchDb {
                     
                     newReplicationDocs.put(fromRemote.getDocId(), fromRemote);
                 }
+                
+                switch (replicated.direction()) {
+                    case TO:   logger.info("Prepare one way replication: %s -> %s ",   localServer,  remoteServer); break;
+                    case FROM: logger.info("Prepare one way replication: %s -> %s ",   remoteServer, localServer);  break;
+                    case BOTH: logger.info("Prepare two ways replication: %s <-> %s ", localServer,  remoteServer); break;
+                    default: throw new IllegalStateException();
+                }
             } else {
-                logger.warn("Replication disabled");
+                logger.warn("Replication for " + getDbName() + " disabled");
             }
         }
         
@@ -695,9 +700,9 @@ public class CouchDb {
             
             for (var d : newReplicationDocs.values()) {
                 if (d.isOk()) {
-                    logger.info("Replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
+                    logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
                 } else {
-                    logger.info("Replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
+                    logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
                 }
             }
         }
