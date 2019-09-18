@@ -644,9 +644,9 @@ public class CouchDb {
                 }
                 
                 switch (replicated.direction()) {
-                    case TO:   logger.info("Prepare one way replication: %s -> %s ",   localServer,  remoteServer); break;
-                    case FROM: logger.info("Prepare one way replication: %s -> %s ",   remoteServer, localServer);  break;
-                    case BOTH: logger.info("Prepare two ways replication: %s <-> %s ", localServer,  remoteServer); break;
+                    case TO:   logger.info("Prepare one way replication: {} -> {} ",   localServer,  remoteServer); break;
+                    case FROM: logger.info("Prepare one way replication: {} -> {} ",   remoteServer, localServer);  break;
+                    case BOTH: logger.info("Prepare two ways replication: {} <-> {} ", localServer,  remoteServer); break;
                     default: throw new IllegalStateException();
                 }
             } else {
