@@ -17,6 +17,7 @@ import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Response;
 
 import com.equiron.acc.exception.http.CouchDbConflictException;
+import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
@@ -105,19 +106,29 @@ public class CouchDbAsyncOperations {
             CouchDbDocument[] allDocs = docs.toArray(new CouchDbDocument[] {});
             
             Function<List<CouchDbBulkResponse>, List<T>> transformer = responses -> {
+                RuntimeException e = null;
+                
                 for (int i = 0; i < allDocs.length; i++) {
-                    allDocs[i].setDocId(responses.get(i).getDocId());
-                    allDocs[i].setRev(responses.get(i).getRev());
+                    CouchDbBulkResponse response = responses.get(i);
+                    
+                    if (response.isInConflict()) {
+                        e = new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                    }
+                    
+                    if (response.isForbidden()) {
+                        e = new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
+                    }
+                    
+                    allDocs[i].setDocId(response.getDocId());
+                    allDocs[i].setRev(response.getRev());
 
                     new CouchDbDocumentAccessor(allDocs[i]).setCurrentDb(couchDb)
-                                                           .setInConflict(responses.get(i).isInConflict())
-                                                           .setForbidden(responses.get(i).isForbidden())
-                                                           .setConflictReason(responses.get(i).getConflictReason());
+                                                           .setInConflict(response.isInConflict())
+                                                           .setForbidden(response.isForbidden())
+                                                           .setConflictReason(response.getConflictReason());
                 }
                 
-                if (docs.stream().filter(CouchDbDocument::isInConflict).findAny().isPresent()) {
-                    throw new CouchDbConflictException("One of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
-                }
+                if (e != null) throw e;
 
                 return docs;
             };
@@ -138,12 +149,27 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<List<CouchDbBulkResponse>> saveOrUpdate(@SuppressWarnings("unchecked") Map<String, Object>... docs) {
         try {
             Function<List<CouchDbBulkResponse>, List<CouchDbBulkResponse>> transformer = responses -> {
+                RuntimeException e = null;
+                
                 for (int i = 0; i < docs.length; i++) {
-                    docs[i].put("_id", responses.get(i).getDocId());
-                    docs[i].put("_rev", responses.get(i).getRev());
-                    docs[i].put("conflictReason", responses.get(i).getConflictReason());
-                    docs[i].put("error", responses.get(i).getError());
+                    CouchDbBulkResponse response = responses.get(i);
+                    
+                    if (response.isInConflict()) {
+                        e = new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                    }
+                    
+                    if (response.isForbidden()) {
+                        e = new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
+                    }
+                    
+                    docs[i].put("_id", response.getDocId());
+                    docs[i].put("_rev", response.getRev());
+                    docs[i].put("conflictReason", response.getConflictReason());
+                    docs[i].put("reason", response.getConflictReason());
+                    docs[i].put("error", response.getError());
                 }
+                
+                if (e != null) throw e;
 
                 return responses;
             };
@@ -182,11 +208,27 @@ public class CouchDbAsyncOperations {
                 return dummyDoc;
             }).collect(Collectors.toList());
             
+            Function<List<CouchDbBulkResponse>, List<CouchDbBulkResponse>> transformer = responses -> {
+                for (int i = 0; i < docRevs.size(); i++) {
+                    CouchDbBulkResponse response = responses.get(i);
+                    
+                    if (response.isInConflict()) {
+                        throw new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                    }
+                    
+                    if (response.isForbidden()) {
+                        throw new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
+                    }
+                }
+
+                return responses;
+            };
+            
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
                                                        .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docsWithoutBody)))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, Function.identity(), couchDb.mapper)));
+                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -254,7 +296,7 @@ public class CouchDbAsyncOperations {
         if (docIdAndRev.getRev() != null && !docIdAndRev.getRev().isEmpty()) {
             urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
         }
-
+        
         return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                    .setMethod("PUT")
                                                    .setHeader("Content-Type", contentType)
