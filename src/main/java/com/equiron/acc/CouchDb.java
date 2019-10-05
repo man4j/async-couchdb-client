@@ -145,7 +145,7 @@ public class CouchDb implements AutoCloseable {
                     
                     synchronizeReplicationDocs();
 
-                    updateViewThread = new Thread() {
+                    updateViewThread = new Thread("CouchDB view updater for: " + getDbName()) {
                         @Override
                         public void run() {
                             while (!Thread.interrupted()) {
