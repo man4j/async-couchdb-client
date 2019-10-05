@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import org.asynchttpclient.AsyncHttpClient;
 import org.asynchttpclient.Realm;
@@ -34,10 +35,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.equiron.acc.annotation.JsView;
 import com.equiron.acc.annotation.Replicated;
+import com.equiron.acc.annotation.Replicated.Direction;
 import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
-import com.equiron.acc.annotation.Replicated.Direction;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.json.CouchDbBulkResponse;
@@ -65,7 +66,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
-public class CouchDb {
+public class CouchDb implements AutoCloseable {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
 
     @Autowired
@@ -96,6 +97,8 @@ public class CouchDb {
     private volatile boolean initialized;
     
     private volatile List<CouchDbView> viewList = new CopyOnWriteArrayList<>();
+    
+    private volatile Thread updateViewThread;
     
     @PostConstruct
     public void init() {
@@ -141,6 +144,26 @@ public class CouchDb {
                     cleanupViews();
                     
                     synchronizeReplicationDocs();
+
+                    updateViewThread = new Thread() {
+                        @Override
+                        public void run() {
+                            while (!Thread.interrupted()) {
+                                try {
+                                    updateAllViews();
+                                } catch (Exception e) {
+                                    logger.error("Can't update views: " + e.getMessage());
+                                }
+                                try {
+                                    Thread.sleep(60_000);
+                                } catch (@SuppressWarnings("unused") InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                }
+                            }
+                        }
+                    };
+                    
+                    updateViewThread.start();
                 }
                 
                 initialized = true;
@@ -201,7 +224,7 @@ public class CouchDb {
     
     public void updateAllViews() {
         for (CouchDbView view : viewList) {
-            updateView(view);
+            updateView(view, false);
         }
     }
 
@@ -459,9 +482,9 @@ public class CouchDb {
             
             selfDiscovering = annotationConfig.selfDiscovering();
             
-            String enabledReplication = resolve(annotationConfig.enabled(), true);
+            String enabledParam = resolve(annotationConfig.enabled(), true);
             
-            enabled = !enabledReplication.isBlank() && enabledReplication.equalsIgnoreCase("true");
+            enabled = !enabledParam.isBlank() && enabledParam.equalsIgnoreCase("true");
         }
         
         if (enabled) {
@@ -507,7 +530,7 @@ public class CouchDb {
 
             if (injectedView != null) {
                 if (config.isBuildViewsOnStart()) {
-                    updateView(injectedView);
+                    updateView(injectedView, true);
                 }
                 
                 setValue(field, injectedView);
@@ -516,9 +539,12 @@ public class CouchDb {
         }
     }
 
-    private void updateView(CouchDbView view) {
+    private void updateView(CouchDbView view, boolean debugEnable) {
         long t = System.currentTimeMillis();
-        logger.info("Updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName() + "...");
+        
+        if (debugEnable) {
+            logger.info("Updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName() + "...");
+        }
         
         boolean complete = false;
         
@@ -531,7 +557,9 @@ public class CouchDb {
             }
         }
         
-        logger.info("Complete updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName()  + " in " + (System.currentTimeMillis() - t) + " ms");
+        if (debugEnable) {
+            logger.info("Complete updating view in database: " + getDbName() + ". View: " + view.getDesignName() + "/" + view.getViewName()  + " in " + (System.currentTimeMillis() - t) + " ms");
+        }
     }
 
     private void injectValidators() {
@@ -661,50 +689,52 @@ public class CouchDb {
                                                           .setPassword(password)
                                                           .build();
         
-        ReplicatorDb replicatorDb = new ReplicatorDb(config);
-        
-        List<String> replicationsDocsIds = replicatorDb.getBuiltInView().createQuery()
-                                                                        .asIds()
-                                                                        .stream()
-                                                                        .filter(id -> !id.startsWith("_design/"))//exclude design docs
-                                                                        .collect(Collectors.toList());
-        
-        List<CouchDbReplicationDocument> replicationsDocs = replicatorDb.getBuiltInView().<CouchDbReplicationDocument>createDocQuery().byKeys(replicationsDocsIds).asDocs();
-        
-        for (var doc : replicationsDocs) {
-            if (doc.getDocId().startsWith(getDbName() + "$")) {//находим документы связанные с этой базой
-                if (newReplicationDocs.containsKey(doc.getDocId())) {//значит надо просто обновить
-                    CouchDbReplicationDocument updatedReplicationDoc = newReplicationDocs.get(doc.getDocId());
-                    
-                    if (!updatedReplicationDoc.equals(doc)) {
-                        updatedReplicationDoc.setRev(doc.getRev());
-                    
-                        replicatorDb.saveOrUpdate(updatedReplicationDoc);
-                 
-                        if (updatedReplicationDoc.isOk()) {
-                            logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
-                        } else {
-                            logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
-                        }
-                    }
-                    
-                    newReplicationDocs.remove(doc.getDocId());
-                } else {
-                    replicatorDb.delete(doc.getDocIdAndRev());
-                }
-            }
-        }
-        
-        if (!newReplicationDocs.isEmpty()) {
-            replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
+        try (ReplicatorDb replicatorDb = new ReplicatorDb(config)) {        
+            List<String> replicationsDocsIds = replicatorDb.getBuiltInView().createQuery()
+                                                                            .asIds()
+                                                                            .stream()
+                                                                            .filter(id -> !id.startsWith("_design/"))//exclude design docs
+                                                                            .collect(Collectors.toList());
             
-            for (var d : newReplicationDocs.values()) {
-                if (d.isOk()) {
-                    logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
-                } else {
-                    logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
+            List<CouchDbReplicationDocument> replicationsDocs = replicatorDb.getBuiltInView().<CouchDbReplicationDocument>createDocQuery().byKeys(replicationsDocsIds).asDocs();
+            
+            for (var doc : replicationsDocs) {
+                if (doc.getDocId().startsWith(getDbName() + "$")) {//находим документы связанные с этой базой
+                    if (newReplicationDocs.containsKey(doc.getDocId())) {//значит надо просто обновить
+                        CouchDbReplicationDocument updatedReplicationDoc = newReplicationDocs.get(doc.getDocId());
+                        
+                        if (!updatedReplicationDoc.equals(doc)) {
+                            updatedReplicationDoc.setRev(doc.getRev());
+                        
+                            replicatorDb.saveOrUpdate(updatedReplicationDoc);
+                     
+                            if (updatedReplicationDoc.isOk()) {
+                                logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
+                            } else {
+                                logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
+                            }
+                        }
+                        
+                        newReplicationDocs.remove(doc.getDocId());
+                    } else {
+                        replicatorDb.delete(doc.getDocIdAndRev());
+                    }
                 }
             }
+            
+            if (!newReplicationDocs.isEmpty()) {
+                replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
+                
+                for (var d : newReplicationDocs.values()) {
+                    if (d.isOk()) {
+                        logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
+                    } else {
+                        logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -838,6 +868,15 @@ public class CouchDb {
             field.set(this, value);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @PreDestroy
+    @Override
+    public void close() throws Exception {
+        if (updateViewThread != null) {
+            updateViewThread.interrupt();
+            updateViewThread.join();
         }
     }
 }
