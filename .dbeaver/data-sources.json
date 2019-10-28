@@ -1,0 +1,65 @@
+{
+	"folders": {},
+	"connections": {
+		"postgres-jdbc-16b2e2de123-1531bc0a598438d7": {
+			"provider": "postgresql",
+			"driver": "postgres-jdbc",
+			"name": "PostgreSQL - postgres",
+			"save-password": true,
+			"read-only": false,
+			"configuration": {
+				"host": "91.242.38.66",
+				"port": "20333",
+				"database": "postgres",
+				"url": "jdbc:postgresql://91.242.38.66:20333/postgres",
+				"type": "dev",
+				"provider-properties": {
+					"@dbeaver-show-non-default-db@": "false",
+					"@dbeaver-show-template-db@": "false"
+				}
+			}
+		},
+		"mysql8-16b2e481c3f-54a510b84c110e06": {
+			"provider": "mysql",
+			"driver": "mysql8",
+			"name": "MySQL 8+ - testdb",
+			"save-password": true,
+			"read-only": false,
+			"configuration": {
+				"host": "91.242.38.71",
+				"port": "13306",
+				"database": "testdb",
+				"url": "jdbc:mysql://91.242.38.71:13306/testdb",
+				"type": "dev"
+			}
+		},
+		"postgres-jdbc-16b30c77480-11ca0a6903f9a49a": {
+			"provider": "postgresql",
+			"driver": "postgres-jdbc",
+			"name": "PostgreSQL - postgres 1",
+			"save-password": true,
+			"read-only": false,
+			"configuration": {
+				"host": "91.242.38.70",
+				"port": "15432",
+				"database": "postgres",
+				"url": "jdbc:postgresql://91.242.38.70:15432/postgres",
+				"type": "dev",
+				"provider-properties": {
+					"@dbeaver-show-non-default-db@": "false",
+					"@dbeaver-show-template-db@": "false"
+				}
+			}
+		}
+	},
+	"connection-types": {
+		"dev": {
+			"name": "Разработка",
+			"color": "255,255,255",
+			"description": "База данных для разработки",
+			"auto-commit": true,
+			"confirm-execute": false,
+			"confirm-data-change": false
+		}
+	}
+}

@@ -133,7 +133,9 @@ public class CouchDb implements AutoCloseable {
                 createDbIfNotExist();
                 
                 if (selfDiscovering) {            
-                    synchronizeDesignDocs();
+                    if (!getDbName().equals("_users")) {//тк данная база содержит встроенный дизайн-документ
+                        synchronizeDesignDocs();
+                    }
     
                     injectViews();
         
