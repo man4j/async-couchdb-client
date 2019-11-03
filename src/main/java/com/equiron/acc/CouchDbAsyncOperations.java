@@ -21,15 +21,15 @@ import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
-import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAccessor;
 import com.equiron.acc.json.CouchDbInfo;
-import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.transformer.CouchDbBooleanResponseTransformer;
 import com.equiron.acc.util.FutureUtils;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public class CouchDbAsyncOperations {
     private CouchDb couchDb;
@@ -51,40 +51,54 @@ public class CouchDbAsyncOperations {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
-        return get(docId, false);
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
-        return getRaw(docId, false);
+        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), false);
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = couchDb.getBuiltInView().<T>createDocQuery();
-        
-        if (attachments) {
-            query.includeAttachments();
-        }
-        
-        return query.byKey(docId).async().asDoc();
+        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), attachments);
     }
 
     /**
      * Returns the latest revision of the document.
      */
+    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
+        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), false);
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
     public CompletableFuture<Map<String, Object>> getRaw(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = couchDb.getBuiltInView().createRawDocQuery();
+        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), attachments);
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    private <T> CompletableFuture<T> get(String docId, JavaType docType, boolean attachments) {
+        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+
+        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docId);
         
         if (attachments) {
-            query.includeAttachments();
+            urlBuilder.addQueryParam("attachments", "true");
         }
-        
-        return query.byKey(docId).async().asDoc();
+
+        Function<T, T> transformer = doc -> {
+            if (doc != null && doc instanceof CouchDbDocument) {
+                new CouchDbDocumentAccessor((CouchDbDocument) doc).setCurrentDb(couchDb);
+            }
+
+            return doc;
+        };
+
+        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setMethod("GET")
+                                                   .setUrl(urlBuilder.build())
+                                                   .execute(new CouchDbAsyncHandler<>(docType, transformer, couchDb.mapper)));
     }
     
     //------------------ Bulk API -------------------------

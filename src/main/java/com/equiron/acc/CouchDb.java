@@ -43,13 +43,11 @@ import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
-import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbInfo;
 import com.equiron.acc.json.CouchDbReplicationDocument;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
-import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.util.ExceptionHandler;
 import com.equiron.acc.util.NamedStrategy;
 import com.equiron.acc.util.ReflectionUtils;
@@ -236,40 +234,28 @@ public class CouchDb implements AutoCloseable {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> T get(String docId) {
-        return get(docId, false);
+        return ExceptionHandler.handleFutureResult(asyncOps.get(docId));
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public Map<String, Object> getRaw(String docId) {
-        return getRaw(docId, false);
+        return ExceptionHandler.handleFutureResult(asyncOps.getRaw(docId));
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> T get(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = builtInView.<T>createDocQuery();
-        
-        if (attachments) {
-            query.includeAttachments();
-        }
-        
-        return query.byKey(docId).asDoc();
+        return ExceptionHandler.handleFutureResult(asyncOps.get(docId, attachments));
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public Map<String, Object> getRaw(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = builtInView.createRawDocQuery();
-        
-        if (attachments) {
-            query.includeAttachments();
-        }
-        
-        return query.byKey(docId).asDoc();
+        return ExceptionHandler.handleFutureResult(asyncOps.getRaw(docId, attachments));
     }
     
     //------------------ Bulk API -------------------------
