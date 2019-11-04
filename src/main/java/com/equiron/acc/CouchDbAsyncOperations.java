@@ -96,6 +96,7 @@ public class CouchDbAsyncOperations {
         };
 
         return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
+                                                   .setHeader("Accept", attachments ? "application/json" : "*/*")
                                                    .setMethod("GET")
                                                    .setUrl(urlBuilder.build())
                                                    .execute(new CouchDbAsyncHandler<>(docType, transformer, couchDb.mapper)));

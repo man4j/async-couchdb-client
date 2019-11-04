@@ -13,24 +13,22 @@ import com.equiron.acc.fixture.TestDocDescendant;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.CouchDbDocumentAttachment;
 
 public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDoc() {
         TestDoc testDoc = new TestDoc();
+        
+        testDoc.addAttachment("doc", new CouchDbDocumentAttachment("application/json", "{\"age\":10}"));
 
         db.saveOrUpdate(testDoc);
         
-        String oldRev = testDoc.getRev();
+        testDoc = db.get(testDoc.getDocId(), false);
         
-        db.saveOrUpdate(testDoc);
+        Assertions.assertNotNull(testDoc);
         
-        testDoc.setRev(oldRev);
-        
-        db.saveOrUpdate(testDoc);
-
-        Assertions.assertFalse(testDoc.getDocId().isEmpty());
-        Assertions.assertFalse(testDoc.getRev().isEmpty());
+//        Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());
     }
 
     @Test
