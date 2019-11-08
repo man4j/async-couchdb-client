@@ -18,6 +18,8 @@ public class CouchDbInfo {
     private String updateSeq;
 
     private Size sizes;
+    
+    private CouchDbClusterInfo cluster;
 
     @JsonProperty("instance_start_time")
     private long instanceStartTime;
@@ -58,6 +60,10 @@ public class CouchDbInfo {
 
     public Size getSizes() {
         return sizes;
+    }
+    
+    public CouchDbClusterInfo getCluster() {
+        return cluster;
     }
 
     /**
@@ -100,6 +106,45 @@ public class CouchDbInfo {
 
         public void setFile(long file) {
             this.file = file;
+        }
+    }
+    
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class CouchDbClusterInfo {
+        private int q;
+        
+        private int n;
+        
+        private int w;
+        
+        private int r;
+
+        /**
+         * @return number of database shards to maintain.
+         */
+        public int getQ() {
+            return q;
+        }
+
+        /**
+         * @return number of copies of each document to distribute.
+         */
+        public int getN() {
+            return n;
+        }
+
+        /**
+         * @return size of a write quorum.
+         */
+        public int getW() {
+            return w;
+        }
+
+        /**
+         * @return size of a read quorum.
+         */
+        public int getR() {
+            return r;
         }
     }
 }

@@ -45,6 +45,7 @@ import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbInfo;
+import com.equiron.acc.json.CouchDbInfo.CouchDbClusterInfo;
 import com.equiron.acc.json.CouchDbReplicationDocument;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
@@ -97,6 +98,8 @@ public class CouchDb implements AutoCloseable {
     private volatile List<CouchDbView> viewList = new CopyOnWriteArrayList<>();
     
     private volatile Thread updateViewThread;
+    
+    private volatile CouchDbClusterInfo clusterInfo;
     
     @PostConstruct
     public void init() {
@@ -212,6 +215,10 @@ public class CouchDb implements AutoCloseable {
 
     public String getDbUrl() {
         return new UrlBuilder(getServerUrl()).addPathSegment(getDbName()).toString();
+    }
+    
+    public CouchDbClusterInfo getClusterInfo() {
+        return clusterInfo;
     }
     
     public CouchDbBuiltInView getBuiltInView() {
@@ -489,6 +496,8 @@ public class CouchDb implements AutoCloseable {
         if (!getDatabases().contains(getDbName())) {
             createDb();
         }
+        
+        clusterInfo = getInfo().getCluster();
     }
 
     private void injectViews() {
