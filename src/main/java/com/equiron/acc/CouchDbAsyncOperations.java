@@ -150,7 +150,7 @@ public class CouchDbAsyncOperations {
 
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", (couchDb.getClusterInfo().getW() + 1) + "").build())
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", allDocs)))
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
@@ -191,7 +191,7 @@ public class CouchDbAsyncOperations {
 
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", (couchDb.getClusterInfo().getW() + 1) + "").build())
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docs)))
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
@@ -241,7 +241,7 @@ public class CouchDbAsyncOperations {
             
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", (couchDb.getClusterInfo().getW() + 1) + "").build())
+                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docsWithoutBody)))
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
@@ -290,7 +290,7 @@ public class CouchDbAsyncOperations {
         
             return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
                                                        .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", (couchDb.getClusterInfo().getW() + 1) + "").build())
+                                                       .setUrl(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
                                                        .setBody(couchDb.mapper.writeValueAsString(purgedMap))
                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper)));
         } catch(Exception e) {
