@@ -10,16 +10,14 @@
 			"configuration": {
 				"host": "10.0.76.3",
 				"port": "15432",
-				"url": "jdbc:postgresql://10.0.76.3:15432/",
+				"database": "postgres",
+				"url": "jdbc:postgresql://10.0.76.3:15432/postgres",
 				"type": "dev",
 				"provider-properties": {
 					"@dbeaver-show-non-default-db@": "false",
 					"@dbeaver-show-template-db@": "false"
 				},
 				"handlers": {}
-			},
-			"custom-properties": {
-				"database.meta.separate.connection": "false"
 			}
 		}
 	},
