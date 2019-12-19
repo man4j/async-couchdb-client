@@ -623,19 +623,25 @@ public class CouchDb implements AutoCloseable {
                 }
                 
                 String remoteServer;
+                String remoteServerWithoutCreds;
                 
                 if (user.isBlank() && password.isBlank()) {
                     remoteServer = String.format("http://%s:%s/%s", ip, port, remoteDb);
+                    remoteServerWithoutCreds = String.format("http://%s:%s/%s", user, password, ip, port, remoteDb);
                 } else {
                     remoteServer = String.format("http://%s:%s@%s:%s/%s", user, password, ip, port, remoteDb);
+                    remoteServerWithoutCreds = String.format("http://***:***@%s:%s/%s", user, password, ip, port, remoteDb);
                 }
                 
                 String localServer;
+                String localServerWithoutCreds;
                 
                 if (this.user == null && this.password == null) {
                     localServer = String.format("http://%s:%s/%s", this.ip, this.port, getDbName());
+                    localServerWithoutCreds = String.format("http://%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
                 } else {
                     localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
+                    localServerWithoutCreds = String.format("http://***:***@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
                 }
                 
                 Map<String, Object> selectorMap = null;
@@ -669,9 +675,9 @@ public class CouchDb implements AutoCloseable {
                 }
                 
                 switch (replicated.direction()) {
-                    case TO:   logger.info("Prepare one way replication: {} -> {} ",   localServer,  remoteServer); break;
-                    case FROM: logger.info("Prepare one way replication: {} -> {} ",   remoteServer, localServer);  break;
-                    case BOTH: logger.info("Prepare two ways replication: {} <-> {} ", localServer,  remoteServer); break;
+                    case TO:   logger.info("Prepare one way replication: {} -> {} ",   localServerWithoutCreds,  remoteServerWithoutCreds); break;
+                    case FROM: logger.info("Prepare one way replication: {} -> {} ",   remoteServerWithoutCreds, localServerWithoutCreds);  break;
+                    case BOTH: logger.info("Prepare two ways replication: {} <-> {} ", localServerWithoutCreds,  remoteServerWithoutCreds); break;
                     default: throw new IllegalStateException();
                 }
             } else {
@@ -705,10 +711,8 @@ public class CouchDb implements AutoCloseable {
                         
                             replicatorDb.saveOrUpdate(updatedReplicationDoc);
                      
-                            if (updatedReplicationDoc.isOk()) {
-                                logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [OK]");
-                            } else {
-                                logger.info("Updated replication " + updatedReplicationDoc.getSource() + " -> " + updatedReplicationDoc.getTarget() + ": [" + updatedReplicationDoc.getConflictReason() + "]");
+                            if (!updatedReplicationDoc.isOk()) {
+                                logger.warn("Update replication failed: " + updatedReplicationDoc.getConflictReason());
                             }
                         }
                         
@@ -723,10 +727,8 @@ public class CouchDb implements AutoCloseable {
                 replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
                 
                 for (var d : newReplicationDocs.values()) {
-                    if (d.isOk()) {
-                        logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [OK]");
-                    } else {
-                        logger.info("Add replication " + d.getSource() + " -> " + d.getTarget() + ": [" + d.getConflictReason() + "]");
+                    if (!d.isOk()) {
+                        logger.warn("Add replication failed: " + d.getConflictReason());
                     }
                 }
             }
