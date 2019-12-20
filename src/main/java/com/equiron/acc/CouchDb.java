@@ -32,6 +32,10 @@ import org.asynchttpclient.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanExpressionContext;
+import org.springframework.beans.factory.config.BeanExpressionResolver;
+import org.springframework.beans.factory.support.DefaultListableBeanFactory;
+import org.springframework.context.ApplicationContext;
 
 import com.equiron.acc.annotation.JsView;
 import com.equiron.acc.annotation.Replicated;
@@ -70,6 +74,9 @@ public class CouchDb implements AutoCloseable {
 
     @Autowired
     private volatile CouchDbConfig config;
+    
+    @Autowired
+    private ApplicationContext ctx;
 
     final ObjectMapper mapper = new ObjectMapper();
 
@@ -759,10 +766,25 @@ public class CouchDb implements AutoCloseable {
                 }
                     
                 throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
+            } else if (ctx != null) {
+                try {
+                    return param = (String) resolveExpression(ctx, param);
+                } catch (@SuppressWarnings("unused") Exception e) {
+                    //empty
+                }
             }
         }
         
         return param;
+    }
+    
+    private Object resolveExpression(ApplicationContext ctx, String expression) {
+        DefaultListableBeanFactory bf = (DefaultListableBeanFactory) ctx.getAutowireCapableBeanFactory();
+
+        String placeholdersResolved = bf.resolveEmbeddedValue(expression);
+        BeanExpressionResolver expressionResolver = bf.getBeanExpressionResolver();
+        
+        return expressionResolver.evaluate(placeholdersResolved, new BeanExpressionContext(bf, null));
     }
 
     private Optional<String> findEnvValue(String propName) {

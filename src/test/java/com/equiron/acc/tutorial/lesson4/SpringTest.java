@@ -23,6 +23,10 @@ import com.equiron.acc.json.CouchDbDocument;
 @DirtiesContext(classMode=ClassMode.AFTER_EACH_TEST_METHOD)
 @ComponentScan(basePackageClasses=ExampleDb.class)
 public class SpringTest {
+    static {
+        System.setProperty("DB_NAME", "my_db");
+    }
+    
     @Autowired
     private ExampleDb exampleDb;
     
@@ -31,13 +35,15 @@ public class SpringTest {
         exampleDb.deleteDb();
     }
     
+    @SuppressWarnings("resource")
     @Bean
     public CouchDbConfig couchDbConfig() {
         AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
         
-        return new CouchDbConfig.Builder().setIp("91.242.38.71")
+        return new CouchDbConfig.Builder().setIp("10.0.76.3")
                                           .setUser("admin")
-                                          .setPassword("root")
+                                          .setPort(15984)
+                                          .setPassword("PassWord123")
                                           .setHttpClient(httpClient)
                                           .build();
     }
