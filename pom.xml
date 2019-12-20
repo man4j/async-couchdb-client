@@ -142,8 +142,8 @@
   
   <distributionManagement>
     <repository>
-      <id>internal</id>
-      <url>file://${user.dir}/maven</url>
+      <id>myMavenRepo</id>
+      <url>${myMavenRepoWriteUrl}</url>
     </repository>
   </distributionManagement>
 </project>
