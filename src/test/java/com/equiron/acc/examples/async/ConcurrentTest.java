@@ -8,9 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.CouchDb;
@@ -86,12 +83,9 @@ public class ConcurrentTest {
     }
 
     public static void shouldWorkWithClient() throws Exception {
-        AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
         CouchDb db = new CouchDb(new CouchDbConfig.Builder().setUser("admin")
                                                             .setPassword("root")
                                                             .setDbName("test1")
-                                                            .setHttpClient(httpClient)
                                                             .build());
 
         List<Future<List<CouchDbDocument>>> futures = new ArrayList<>(CONCURRENT_CONNECTIONS_COUNT);

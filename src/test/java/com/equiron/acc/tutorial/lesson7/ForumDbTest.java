@@ -1,8 +1,5 @@
 package com.equiron.acc.tutorial.lesson7;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,25 +11,16 @@ import com.equiron.acc.changes.CouchDbEventListener;
 public class ForumDbTest {
     private ForumDb db;
     
-    private AsyncHttpClient httpClient;
-    
     private CouchDbEventListener<ForumContent> listener;
     
-    private AsyncHttpClient listenerClient;
-
     @BeforeEach
     public void before() throws Exception {
-        listenerClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
-
-        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
         db = new ForumDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
                                                     .setUser("admin")
                                                     .setPassword("root")
-                                                    .setHttpClient(httpClient)
                                                     .build());
         
-        listener = new CouchDbEventListener<>(db, listenerClient) { /* empty */};
+        listener = new CouchDbEventListener<>(db) { /* empty */};
 
         indexer = new Indexer();
 
@@ -46,8 +34,6 @@ public class ForumDbTest {
     public void after() throws Exception {
         listener.close();
         db.deleteDb();
-        httpClient.close();
-        listenerClient.close();
     }
 
     private Indexer indexer;

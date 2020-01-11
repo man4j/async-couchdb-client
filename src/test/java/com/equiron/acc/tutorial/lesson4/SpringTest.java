@@ -1,8 +1,5 @@
 package com.equiron.acc.tutorial.lesson4;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -35,16 +32,12 @@ public class SpringTest {
         exampleDb.deleteDb();
     }
     
-    @SuppressWarnings("resource")
     @Bean
     public CouchDbConfig couchDbConfig() {
-        AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-        
         return new CouchDbConfig.Builder().setIp("10.0.76.3")
                                           .setUser("admin")
                                           .setPort(15984)
                                           .setPassword("PassWord123")
-                                          .setHttpClient(httpClient)
                                           .build();
     }
 

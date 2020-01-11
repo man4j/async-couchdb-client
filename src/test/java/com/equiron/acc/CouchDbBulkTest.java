@@ -3,6 +3,7 @@ package com.equiron.acc;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.equiron.acc.exception.http.CouchDbConflictException;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.CouchDbDocument;
 
@@ -24,13 +25,10 @@ public class CouchDbBulkTest extends CouchDbAbstractTest {
     }
     
     @Test
-    public void shouldSaveCOnflictingDocs() {
+    public void shouldThrowExceptionOnConflict() {
         CouchDbDocument d1 = new CouchDbDocument("1");
         CouchDbDocument d2 = new CouchDbDocument("1");
 
-        db.saveOrUpdate(d1, d2);
-
-        Assertions.assertFalse(d1.isInConflict());
-        Assertions.assertTrue(d2.isInConflict()); //not saved
+        Assertions.assertThrows(CouchDbConflictException.class, () -> db.saveOrUpdate(d1, d2));
     }
 }

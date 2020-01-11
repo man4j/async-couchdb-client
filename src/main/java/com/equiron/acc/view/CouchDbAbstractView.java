@@ -1,14 +1,14 @@
 package com.equiron.acc.view;
 
+import java.net.URI;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.CouchDbAsyncHandler;
-import com.equiron.acc.CouchDbFieldAccessor;
 import com.equiron.acc.json.CouchDbDesignInfo;
 import com.equiron.acc.util.ExceptionHandler;
-import com.equiron.acc.util.FutureUtils;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -50,12 +50,10 @@ public abstract class CouchDbAbstractView implements CouchDbView {
     public class CouchDbViewAsyncOperations {
         public CompletableFuture<CouchDbDesignInfo> getInfo() {
             try {
-                CouchDbFieldAccessor couchDbFieldAccessor = new CouchDbFieldAccessor(couchDb);
-
-                return FutureUtils.toCompletable(couchDb.getHttpClient().prepareRequest(couchDbFieldAccessor.getPrototype())
-                                                        .setMethod("GET")
-                                                        .setUrl(designUrl + "/_info")
-                                                        .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDbFieldAccessor.getMapper())));
+                return couchDb.getHttpClient().sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(designUrl + "/_info")).build(), BodyHandlers.ofString())
+                                              .thenApply(response -> {
+                                                  return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDb.getMapper(), null).transform();
+                                              });
             } catch(Exception e) {
                 throw new RuntimeException(e);
             }

@@ -2,11 +2,10 @@ package com.equiron.acc;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import org.asynchttpclient.Response;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -39,9 +38,9 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
             db.attach(doc.getDocIdAndRev(), in, attachmentName, "image/gif");
 
-            Response r = db.getAttachment(doc.getDocId(), attachmentName);
+            byte[] attachment = db.getAttachmentAsBytes(doc.getDocId(), attachmentName);
 
-            Assertions.assertEquals(9559, r.getResponseBodyAsBytes().length);
+            Assertions.assertEquals(9559, attachment.length);
         }
     }
 
@@ -52,9 +51,9 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
-            Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
+            byte[] attachment = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName);
 
-            Assertions.assertEquals(9559, r.getResponseBodyAsBytes().length);
+            Assertions.assertEquals(9559, attachment.length);
         }
     }
     
@@ -65,7 +64,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
-            byte[] data = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName + "1");
+            byte[] data = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName);
 
             Assertions.assertEquals(9559, data.length);
             
@@ -75,9 +74,9 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
     @Test
     public void tryFetchNonExistingAttachment() {
-        Response r = db.getAttachment("123", "Non-existing attachment");
+        String attachment = db.getAttachmentAsString("123", "Non-existing attachment");
 
-        Assertions.assertEquals(404, r.getStatusCode());
+        Assertions.assertNull(attachment);
     }
     
     @Test
@@ -105,15 +104,15 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
-            Response r = db.getAttachment(putResponse.getDocId(), attachmentName);
+            HttpResponse<byte[]> r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
-            Assertions.assertEquals(200, r.getStatusCode());
+            Assertions.assertEquals(200, r.statusCode());
 
             Assertions.assertTrue(db.deleteAttachment(putResponse.getDocIdAndRev(), attachmentName));
 
             r = db.getAttachment(putResponse.getDocId(), attachmentName);
 
-            Assertions.assertEquals(404, r.getStatusCode());
+            Assertions.assertEquals(404, r.statusCode());
         }
     }
 }

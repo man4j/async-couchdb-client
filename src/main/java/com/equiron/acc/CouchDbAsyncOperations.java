@@ -1,6 +1,11 @@
 package com.equiron.acc;
 
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -13,28 +18,25 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.Response;
 
 import com.equiron.acc.exception.http.CouchDbConflictException;
 import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAccessor;
 import com.equiron.acc.json.CouchDbInfo;
+import com.equiron.acc.query.CouchDbMapQueryWithDocs;
 import com.equiron.acc.transformer.CouchDbBooleanResponseTransformer;
-import com.equiron.acc.util.FutureUtils;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public class CouchDbAsyncOperations {
     private CouchDb couchDb;
 
-    private AsyncHttpClient httpClient;
+    private HttpClient httpClient;
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
@@ -51,55 +53,40 @@ public class CouchDbAsyncOperations {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
-        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), false);
-    }
-    
-    /**
-     * Returns the latest revision of the document.
-     */
-    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId, boolean attachments) {
-        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), attachments);
+        return get(docId, false);
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public CompletableFuture<Map<String, Object>> getRaw(String docId) {
-        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), false);
+        return getRaw(docId, false);
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     */
+    public <T extends CouchDbDocument> CompletableFuture<T> get(String docId, boolean attachments) {
+        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = couchDb.getBuiltInView().<T>createDocQuery();
+        
+        if (attachments) {
+            query.includeAttachments();
+        }
+        
+        return query.byKey(docId).async().asDoc();
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public CompletableFuture<Map<String, Object>> getRaw(String docId, boolean attachments) {
-        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), attachments);
-    }
-    
-    /**
-     * Returns the latest revision of the document.
-     */
-    private <T> CompletableFuture<T> get(String docId, JavaType docType, boolean attachments) {
-        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
-
-        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docId);
+        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = couchDb.getBuiltInView().createRawDocQuery();
         
         if (attachments) {
-            urlBuilder.addQueryParam("attachments", "true");
+            query.includeAttachments();
         }
-
-        Function<T, T> transformer = doc -> {
-            if (doc != null && doc instanceof CouchDbDocument) {
-                new CouchDbDocumentAccessor((CouchDbDocument) doc).setCurrentDb(couchDb);
-            }
-
-            return doc;
-        };
-
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setHeader("Accept", attachments ? "application/json" : "*/*")
-                                                   .setMethod("GET")
-                                                   .setUrl(urlBuilder.build())
-                                                   .execute(new CouchDbAsyncHandler<>(docType, transformer, couchDb.mapper)));
+        
+        return query.byKey(docId).async().asDoc();
     }
     
     //------------------ Bulk API -------------------------
@@ -127,7 +114,7 @@ public class CouchDbAsyncOperations {
                     CouchDbBulkResponse response = responses.get(i);
                     
                     if (response.isInConflict()) {
-                        e = new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                        e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
                     }
                     
                     if (response.isForbidden()) {
@@ -147,12 +134,15 @@ public class CouchDbAsyncOperations {
 
                 return docs;
             };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", allDocs)))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+            
+            String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", allDocs));
+            
+            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:SAVE_OR_UPDATE, d:" + allDocs.length + ", s:" + valueAsString.length() + "]");
+            
+            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                        });
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -170,7 +160,7 @@ public class CouchDbAsyncOperations {
                     CouchDbBulkResponse response = responses.get(i);
                     
                     if (response.isInConflict()) {
-                        e = new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                        e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
                     }
                     
                     if (response.isForbidden()) {
@@ -188,12 +178,15 @@ public class CouchDbAsyncOperations {
 
                 return responses;
             };
-
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docs)))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+            
+            String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docs));
+            
+            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:SAVE_OR_UPDATE, d:" + docs.length + ", s:" + valueAsString.length() + "]");
+            
+            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                        });
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -228,7 +221,7 @@ public class CouchDbAsyncOperations {
                     CouchDbBulkResponse response = responses.get(i);
                     
                     if (response.isInConflict()) {
-                        throw new CouchDbConflictException(response.getConflictReason() + ": one of documents in conflict state. Please use doc.isInConflict() to resolve this situation.");
+                        throw new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
                     }
                     
                     if (response.isForbidden()) {
@@ -239,11 +232,14 @@ public class CouchDbAsyncOperations {
                 return responses;
             };
             
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docsWithoutBody)))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper)));
+            String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docsWithoutBody));
+            
+            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:DELETE, d:" + docRevs.size() + ", s:" + valueAsString.length() + "]");
+            
+            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                        });
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -287,12 +283,15 @@ public class CouchDbAsyncOperations {
                 
                 return result;
             };
-        
-            return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                       .setMethod("POST")
-                                                       .setUrl(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())
-                                                       .setBody(couchDb.mapper.writeValueAsString(purgedMap))
-                                                       .execute(new CouchDbAsyncHandler<>(new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper)));
+            
+            String valueAsString = couchDb.mapper.writeValueAsString(purgedMap);
+            
+            OperationInfo opInfo = new OperationInfo(OperationType.PURGE, "[t:PURGE, d:" + docRevs.size() + ", s:" + valueAsString.length() + "]");
+            
+            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                        });
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -312,12 +311,12 @@ public class CouchDbAsyncOperations {
             urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
         }
         
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setMethod("PUT")
-                                                   .setHeader("Content-Type", contentType)
-                                                   .setBody(in)
-                                                   .setUrl(urlBuilder.build())
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper)));
+        OperationInfo opInfo = new OperationInfo(OperationType.ATTACH, "[t:ATTACH]");
+        
+        return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.ofInputStream(() -> in)).setHeader("Content-Type", contentType).uri(URI.create(urlBuilder.build())).build(), 
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper, opInfo).transform();
+                                    });
     }
 
     /**
@@ -330,29 +329,26 @@ public class CouchDbAsyncOperations {
     /**
      * Gets an attachment of the document as Response.
      */
-    public CompletableFuture<Response> getAttachment(String docId, String name) {
+    public CompletableFuture<HttpResponse<byte[]>> getAttachment(String docId, String name) {
         if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
-
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setMethod("GET")
-                                                   .setUrl(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build())
-                                                   .execute());
+        
+        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build())).build(), BodyHandlers.ofByteArray());
     }
-    
+        
     /**
      * Gets an attachment of the document as String.
      */
     public CompletableFuture<String> getAttachmentAsString(String docId, String name) {
         return getAttachment(docId, name).thenApply(r -> {
-           if (r.getStatusCode() == 200) {
-               return r.getResponseBody();
+           if (r.statusCode() == 200) {
+               return new String(r.body(), StandardCharsets.UTF_8);
            }
            
-           if (r.getStatusCode() == 404) {
+           if (r.statusCode() == 404) {
                return null;
            }
            
-           CouchDbHttpResponse response = new CouchDbHttpResponse(r.getStatusCode(), r.getStatusText(), r.getResponseBody(StandardCharsets.UTF_8), r.getUri().toString(), r.getHeaders());
+           CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
            
            throw CouchDbAsyncHandler.responseCode2Exception(response);
         });
@@ -363,15 +359,15 @@ public class CouchDbAsyncOperations {
      */
     public CompletableFuture<byte[]> getAttachmentAsBytes(String docId, String name) {
         return getAttachment(docId, name).thenApply(r -> {
-           if (r.getStatusCode() == 200) {
-               return r.getResponseBodyAsBytes();
+           if (r.statusCode() == 200) {
+               return r.body();
            }
            
-           if (r.getStatusCode() == 404) {
+           if (r.statusCode() == 404) {
                return null;
            }
            
-           CouchDbHttpResponse response = new CouchDbHttpResponse(r.getStatusCode(), r.getStatusText(), r.getResponseBody(StandardCharsets.UTF_8), r.getUri().toString(), r.getHeaders());
+           CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
            
            throw CouchDbAsyncHandler.responseCode2Exception(response);
         });
@@ -387,11 +383,13 @@ public class CouchDbAsyncOperations {
         UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docIdAndRev.getDocId())
                                                   .addPathSegment(name)
                                                   .addQueryParam("rev", docIdAndRev.getRev());
-
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setMethod("DELETE")
-                                                   .setUrl(urlBuilder.build())
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
+        
+        OperationInfo opInfo = new OperationInfo(OperationType.DELETE_ATTACHMENT, "[t:DELETE_ATTACHMENT]");
+        
+        return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(urlBuilder.build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, opInfo).transform();
+                                    });
     }
 
     //------------------ Admin API -------------------------
@@ -404,40 +402,40 @@ public class CouchDbAsyncOperations {
      * Returns a list of databases on this server.
      */
     public CompletableFuture<List<String>> getDatabases() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(new UrlBuilder(couchDb.getServerUrl()).addPathSegment("_all_dbs").build())
-                                                   .setMethod("GET")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<List<String>>() {/* empty */}, Function.identity(), couchDb.mapper)));
+        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(new UrlBuilder(couchDb.getServerUrl()).addPathSegment("_all_dbs").build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<List<String>>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                    });
     }
 
     /**
      * Create a new database.
      */
     public CompletableFuture<Boolean> createDb() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().build())
-                                                   .setMethod("PUT")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, resp -> resp.isOk(), couchDb.mapper)));
+        return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.noBody()).uri(URI.create(createUrlBuilder().build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, resp -> resp.isOk(), couchDb.mapper, null).transform();
+                                    });
     }
 
     /**
      * Delete an existing database.
      */
     public CompletableFuture<Boolean> deleteDb() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().build())
-                                                   .setMethod("DELETE")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
+        return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(createUrlBuilder().build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null).transform();
+                                    });
     }
 
     /**
      * Returns database information.
      */
     public CompletableFuture<CouchDbInfo> getInfo() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().build())
-                                                   .setMethod("GET")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbInfo>() {/* empty */}, Function.identity(), couchDb.mapper)));
+        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(createUrlBuilder().build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                    });
     }
 
     /**
@@ -449,9 +447,9 @@ public class CouchDbAsyncOperations {
      * trigger a view cleanup.
      */
     public CompletableFuture<Boolean> cleanupViews() {
-        return FutureUtils.toCompletable(httpClient.prepareRequest(couchDb.prototype)
-                                                   .setUrl(createUrlBuilder().addPathSegment("_view_cleanup").build())
-                                                   .setMethod("POST")
-                                                   .execute(new CouchDbAsyncHandler<>(new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper)));
+        return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.noBody()).uri(URI.create(createUrlBuilder().addPathSegment("_view_cleanup").build())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null).transform();
+                                    });
     }
 }

@@ -1,10 +1,5 @@
 package com.equiron.acc;
 
-import java.io.IOException;
-
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -13,25 +8,18 @@ import com.equiron.acc.fixture.TestDb;
 public class CouchDbAbstractTest {
     protected TestDb db;
 
-    protected AsyncHttpClient httpClient;
-
     @BeforeEach
     public void before() {
-        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
-        db = new TestDb(new CouchDbConfig.Builder().setIp("10.0.76.2")
-                                                   .setPort(15984)
+        db = new TestDb(new CouchDbConfig.Builder().setIp("167.71.63.9")
+                                                   .setPort(5984)
                                                    .setUser("admin")
-                                                   .setPassword("PassWord123")
-                                                   .setHttpClient(httpClient)
+                                                   .setPassword("password")
                                                    .setSelfDiscovering(true)
                                                    .build());
     }
 
     @AfterEach
-    public void after() throws IOException {
+    public void after() {
         db.deleteDb();
-
-        httpClient.close();
     }
 }

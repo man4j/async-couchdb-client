@@ -13,3 +13,4 @@ public class ReplicatedTestDb extends CouchDb {
         super(config);
     }
 }
+ 

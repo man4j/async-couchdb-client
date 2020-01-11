@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.CouchDb;
@@ -140,19 +138,14 @@ public class BigDb extends CouchDb {
     public static void main(String[] args) throws Exception {
         loggerOff();
 
-        AsyncHttpClient httpClient = new DefaultAsyncHttpClient();
-
         BigDb db = new BigDb(new CouchDbConfig.Builder().setUser("admin")
                                                         .setPassword("root")
-                                                        .setHttpClient(httpClient)
                                                         .build());
 
         //insert(db);
             insert2(db);
 
 //        read(db);
-
-        httpClient.close();
     }
 
     private static void loggerOff() {

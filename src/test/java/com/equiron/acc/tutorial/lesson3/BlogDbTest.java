@@ -1,15 +1,11 @@
 package com.equiron.acc.tutorial.lesson3;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,24 +17,17 @@ import com.equiron.acc.json.CouchDbDocument;
 public class BlogDbTest {
     private BlogDb db;
 
-    private AsyncHttpClient httpClient;
-
     @BeforeEach
     public void before() {
-        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
         db = new BlogDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
                                                    .setUser("admin")
                                                    .setPassword("root")
-                                                   .setHttpClient(httpClient)
                                                    .build());
     }
     
     @AfterEach
-    public void after() throws IOException {
+    public void after() {
         db.deleteDb();
-
-        httpClient.close();
     }
 
     @Test

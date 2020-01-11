@@ -1,21 +1,23 @@
 package com.equiron.acc.query;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
-import org.asynchttpclient.BoundRequestBuilder;
-
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.CouchDbAsyncHandler;
-import com.equiron.acc.CouchDbFieldAccessor;
+import com.equiron.acc.OperationInfo;
+import com.equiron.acc.OperationType;
 import com.equiron.acc.json.resultset.CouchDbAbstractResultSet;
 import com.equiron.acc.json.resultset.CouchDbAbstractRow;
 import com.equiron.acc.util.ExceptionHandler;
-import com.equiron.acc.util.FutureUtils;
 import com.fasterxml.jackson.databind.JavaType;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
@@ -27,8 +29,6 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
 
     CouchDb couchDb;
 
-    CouchDbFieldAccessor couchDbFieldAccessor;
-
     Class<T> derived;
 
     @SuppressWarnings("unchecked")
@@ -38,9 +38,7 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
         this.resultSetType = resultSetType;
         this.derived = (Class<T>) this.getClass();
 
-        couchDbFieldAccessor = new CouchDbFieldAccessor(couchDb);
-
-        queryObject = new CouchDbQueryObject<>(couchDbFieldAccessor.getMapper());
+        queryObject = new CouchDbQueryObject<>(couchDb.getMapper());
     }
 
     /**
@@ -191,17 +189,19 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
 
         protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
             try {
-                BoundRequestBuilder builder = couchDb.getHttpClient()
-                                                     .prepareRequest(couchDbFieldAccessor.getPrototype())
-                                                     .setUrl(viewUrl + queryObject.toQuery())
-                                                     .setMethod("GET");
-
+                HttpRequest.Builder builder = couchDb.getRequestPrototype().uri(URI.create(viewUrl + queryObject.toQuery()));
+                
                 if (queryObject.getKeys() != null) {
-                    builder.setMethod("POST")
-                           .setBody(queryObject.jsonKeys());
+                    builder.POST(BodyPublishers.ofString(queryObject.jsonKeys()));
+                } else {
+                    builder.GET();
                 }
-
-                return FutureUtils.toCompletable(builder.execute(new CouchDbAsyncHandler<>(resultSetType, transformer, couchDbFieldAccessor.getMapper())));
+                
+                OperationInfo opInfo = new OperationInfo(OperationType.QUERY, viewUrl);
+                
+                return couchDb.getHttpClient().sendAsync(builder.build(), BodyHandlers.ofString()).thenApply(response -> {
+                    return new CouchDbAsyncHandler<>(response, resultSetType, transformer, couchDb.getMapper(), opInfo).transform();
+                });
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }

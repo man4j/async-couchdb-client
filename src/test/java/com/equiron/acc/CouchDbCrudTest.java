@@ -24,11 +24,10 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
 
         db.saveOrUpdate(testDoc);
         
-        testDoc = db.get(testDoc.getDocId(), false);
+        testDoc = db.get(testDoc.getDocId(), true);
         
         Assertions.assertNotNull(testDoc);
-        
-//        Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());
+        Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());
     }
 
     @Test

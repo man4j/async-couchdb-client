@@ -3,14 +3,11 @@ package com.equiron.acc.tutorial.lesson1;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.http.HttpResponse;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
-import org.asynchttpclient.Response;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,24 +22,17 @@ import com.equiron.acc.json.CouchDbDocumentAttachment;
 public class UserDbTest {
     private UserDb db;
 
-    private AsyncHttpClient httpClient;
-
     @BeforeEach
     public void before() {
-        httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).build());
-
         db = new UserDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
                                                    .setUser("admin")
                                                    .setPassword("root")
-                                                   .setHttpClient(httpClient)
                                                    .build());
     }
 
     @AfterEach
-    public void after() throws IOException {
+    public void after() {
         db.deleteDb();
-
-        httpClient.close();
     }
 
     @Test
@@ -80,9 +70,9 @@ public class UserDbTest {
             db.attach(userJohn.getDocIdAndRev(), in, "avatar", "image/gif");
         }
 
-        Response r = db.getAttachment(userJohn.getDocId(), "avatar");
+        HttpResponse<byte[]> r = db.getAttachment(userJohn.getDocId(), "avatar");
 
-        Assertions.assertEquals(200, r.getStatusCode());
+        Assertions.assertEquals(200, r.statusCode());
     }
 
     @Test
@@ -99,8 +89,8 @@ public class UserDbTest {
 
         db.saveOrUpdate(userJohn);
 
-        Response r = db.getAttachment(userJohn.getDocId(), "avatar");
+        HttpResponse<byte[]> r = db.getAttachment(userJohn.getDocId(), "avatar");
 
-        Assertions.assertEquals(200, r.getStatusCode());
+        Assertions.assertEquals(200, r.statusCode());
     }
 }

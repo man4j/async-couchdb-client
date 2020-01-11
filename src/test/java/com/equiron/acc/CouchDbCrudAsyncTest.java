@@ -12,18 +12,19 @@ import com.equiron.acc.fixture.TestDoc;
 public class CouchDbCrudAsyncTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDocAsync() throws InterruptedException, ExecutionException {
-        TestDoc testDoc1 = new TestDoc();
-        TestDoc testDoc2 = new TestDoc();
-        TestDoc testDoc3 = new TestDoc();
+        TestDoc testDoc1 = new TestDoc("1");
+        TestDoc testDoc2 = new TestDoc("2");
+        TestDoc testDoc3 = new TestDoc("3");
         
         long t1 = System.currentTimeMillis();
         
-        Future<List<TestDoc>> docs = db.async().saveOrUpdate(testDoc1)
-                                               .thenCompose(res -> db.async().saveOrUpdate(testDoc2))
-                                               .thenCompose(res -> db.async().saveOrUpdate(testDoc3))
-                                               .thenCompose(res -> db.getTestView().<TestDoc>createDocQuery().async().asDocs());
+        Future<List<TestDoc>> res = db.async().saveOrUpdate(testDoc1, testDoc2, testDoc3);
         
         System.out.println("Request time: " + (System.currentTimeMillis() - t1));//Request time: 0
+        
+        res.get();
+        
+        Future<List<TestDoc>> docs = db.getTestView().<TestDoc>createDocQuery().async().asDocs(); 
         
         Assertions.assertEquals(3, docs.get().size());
     }

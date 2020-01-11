@@ -2,12 +2,8 @@ package com.equiron.acc.tutorial.lesson6;
 
 import java.util.Collections;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClientConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,13 +42,6 @@ public class SyncTest {
     
     private CouchDbEventListener<OmsDocument> remoteListener;
     
-    private AsyncHttpClient listenerClient;
-    
-    @BeforeEach
-    public void before() {
-        listenerClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
-    }
-    
     @AfterEach
     public void after() throws Exception {
         localListener.close();
@@ -68,18 +57,13 @@ public class SyncTest {
         CouchDbReplicationDocument fromRemote = replicatorDb.get("from_remote");
         
         replicatorDb.delete(toRemote.getDocIdAndRev(), fromRemote.getDocIdAndRev());
-        
-        listenerClient.close();
     }
     
     @Bean
     public CouchDbConfig couchDbConfig() {
-        AsyncHttpClient httpClient = new DefaultAsyncHttpClient(new DefaultAsyncHttpClientConfig.Builder().setRequestTimeout(-1).setReadTimeout(-1).build());
-        
         return new CouchDbConfig.Builder().setIp("91.242.38.71")
                                           .setUser("admin")
                                           .setPassword("root")
-                                          .setHttpClient(httpClient)
                                           .build();
     }
 
@@ -101,7 +85,7 @@ public class SyncTest {
     }
 
     private void startLocalListener() {
-        localListener = new CouchDbEventListener<>(localDb, listenerClient) {};
+        localListener = new CouchDbEventListener<>(localDb) {};
 
         localListener.addEventHandler(e -> {
             if (!e.isDeleted()) {
@@ -126,7 +110,7 @@ public class SyncTest {
     }
 
     private void startRemoteListener() {
-        remoteListener = new CouchDbEventListener<>(remoteDb, listenerClient) {};
+        remoteListener = new CouchDbEventListener<>(remoteDb) {};
         
         remoteListener.addEventHandler(e -> {
             if (!e.isDeleted()) {

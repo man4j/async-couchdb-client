@@ -4,9 +4,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.ConnectException;
-import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpRequest.BodyPublishers;
+import java.net.http.HttpResponse;
+import java.net.http.HttpResponse.BodyHandlers;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,7 +21,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ExecutionException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -23,12 +29,6 @@ import java.util.stream.Stream;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.Realm;
-import org.asynchttpclient.Realm.AuthScheme;
-import org.asynchttpclient.Request;
-import org.asynchttpclient.RequestBuilder;
-import org.asynchttpclient.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,7 +80,7 @@ public class CouchDb implements AutoCloseable {
 
     final ObjectMapper mapper = new ObjectMapper();
 
-    volatile Request prototype;
+    private volatile HttpRequest.Builder prototype;
     
     private volatile String ip;
     
@@ -116,20 +116,13 @@ public class CouchDb implements AutoCloseable {
             applyConfig();
             
             if (enabled) {
-                RequestBuilder builder = new RequestBuilder().setHeader("Content-Type", "application/json; charset=utf-8")
-                                                             .setCharset(StandardCharsets.UTF_8);
-        
-                if (this.user != null && this.password != null) {
-                    Realm realm = new Realm.Builder(this.user, this.password)
-                                           .setUsePreemptiveAuth(true)
-                                           .setScheme(AuthScheme.BASIC)
-                                           .build();
-        
-                    builder.setRealm(realm);
-                }
-        
-                prototype = builder.build();
+                prototype = HttpRequest.newBuilder().timeout(Duration.ofSeconds(60))
+                                                    .setHeader("Content-Type", "application/json; charset=utf-8");
                 
+                if (config.getUser() != null && config.getPassword() != null) {
+                    prototype.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((config.getUser() + ":" + config.getPassword()).getBytes()));
+                }
+                                                                      
                 asyncOps = new CouchDbAsyncOperations(this);
                 
                 builtInView = new CouchDbBuiltInView(this);
@@ -193,11 +186,11 @@ public class CouchDb implements AutoCloseable {
         init();
     }
     
-    public Request getPrototype() {
-        return prototype;
+    public HttpRequest.Builder getRequestPrototype() {
+        return prototype.copy();
     }
     
-    public AsyncHttpClient getHttpClient() {
+    public HttpClient getHttpClient() {
         return config.getHttpClient();
     }
     
@@ -348,7 +341,7 @@ public class CouchDb implements AutoCloseable {
     /**
      * Gets an attachment of the document as Response.
      */
-    public Response getAttachment(String docId, String name) {
+    public HttpResponse<byte[]> getAttachment(String docId, String name) {
         return ExceptionHandler.handleFutureResult(asyncOps.getAttachment(docId, name));
     }
     
@@ -425,29 +418,11 @@ public class CouchDb implements AutoCloseable {
     private void testConnection() {
         while (true) {
             try {
-                if (config.getHttpClient().prepareRequest(prototype)
-                                          .setMethod("GET")
-                                          .setUrl(getServerUrl())
-                                          .execute().get().getStatusCode() != 200) {
+                if (config.getHttpClient().send(prototype.copy().GET().uri(URI.create(getServerUrl())).build(), BodyHandlers.ofString()).statusCode() != 200) {
                     throw new ConnectException("Could not connect to " + getServerUrl());
                 }
                 
                 break;
-            } catch (ExecutionException e) {
-                if (e.getCause() != null && e.getCause() instanceof IOException) {
-                    logger.warn(e.getMessage(), e);
-                    logger.warn("Waiting for database...");
-                        
-                    try {
-                        Thread.sleep(1000);
-                    } catch (@SuppressWarnings("unused") Exception e1) {
-                        System.exit(1);
-                    }                        
-                } else {
-                    logger.error("", e);
-                        
-                    System.exit(1);
-                }
             } catch (IOException e) {
                 logger.warn(e.getMessage(), e);
                 logger.warn("Waiting for database...");
@@ -578,8 +553,7 @@ public class CouchDb implements AutoCloseable {
         
     private void addSecurity() {
         try {
-            @SuppressWarnings("resource")
-            AsyncHttpClient client = config.getHttpClient();
+            HttpClient client = config.getHttpClient();
             
             CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
             
@@ -692,8 +666,7 @@ public class CouchDb implements AutoCloseable {
             }
         }
         
-        CouchDbConfig config = new CouchDbConfig.Builder().setHttpClient(getHttpClient())
-                                                          .setIp(ip)
+        CouchDbConfig config = new CouchDbConfig.Builder().setIp(ip)
                                                           .setPort(port)
                                                           .setUser(user)
                                                           .setPassword(password)
@@ -798,25 +771,18 @@ public class CouchDb implements AutoCloseable {
         return value;
     }
 
-    private void putSecurityObject(AsyncHttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, ExecutionException, JsonProcessingException {
-        Response r = client.prepareRequest(prototype).setMethod("PUT")
-                                                     .setUrl(new UrlBuilder(getDbUrl())
-                                                     .addPathSegment("_security").build())
-                                                     .setBody(mapper.writeValueAsString(securityObject))
-                                                     .execute()
-                                                     .get();
-        
-        if (r.getStatusCode() != 200) throw new RuntimeException("Can't apply security");
+    private void putSecurityObject(HttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, IOException, JsonProcessingException {
+        if (client.send(prototype.copy()
+                                 .PUT(BodyPublishers.ofString(mapper.writeValueAsString(securityObject)))
+                                 .uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(), 
+                                 BodyHandlers.ofString()).statusCode() != 200) {
+            throw new RuntimeException("Can't apply security");
+        }
     }
 
-    private CouchDbSecurityObject getSecurityObject(AsyncHttpClient client) throws IOException, InterruptedException, ExecutionException {
-        return mapper.readValue(client.prepareRequest(prototype).setMethod("GET")
-                                                                .setUrl(new UrlBuilder(getDbUrl())
-                                                                .addPathSegment("_security")
-                                                                .build())
-                                                                .execute()
-                                                                .get()
-                                                                .getResponseBody(StandardCharsets.UTF_8), CouchDbSecurityObject.class);
+    private CouchDbSecurityObject getSecurityObject(HttpClient client) throws IOException, InterruptedException {
+        return mapper.readValue(client.send(prototype.copy().GET().uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(),
+                                            BodyHandlers.ofString()).body(), CouchDbSecurityObject.class);
     }
     
     private void synchronizeDesignDocs() {

@@ -1,6 +1,8 @@
 package com.equiron.acc;
 
-import org.asynchttpclient.AsyncHttpClient;
+import java.net.http.HttpClient;
+import java.net.http.HttpClient.Version;
+import java.time.Duration;
 
 public class CouchDbConfig {
     private final String ip;
@@ -13,13 +15,13 @@ public class CouchDbConfig {
     
     private final String dbName;
 
-    private final AsyncHttpClient httpClient;
+    private final HttpClient httpClient;
     
     private final boolean buildViewsOnStart;
     
     private final boolean selfDiscovering;
     
-    CouchDbConfig(String ip, int port, String user, String password, String dbName, AsyncHttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
+    CouchDbConfig(String ip, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
         this.ip = ip;
         this.port = port;
         this.user = user;
@@ -41,8 +43,6 @@ public class CouchDbConfig {
 
         String dbName;
 
-        AsyncHttpClient httpClient;
-        
         boolean buildViewsOnStart = true;
         
         boolean selfDiscovering = true;
@@ -77,12 +77,6 @@ public class CouchDbConfig {
             return this;
         }
 
-        public Builder setHttpClient(AsyncHttpClient httpClient) {
-            this.httpClient = httpClient;
-
-            return this;
-        }
-
         public Builder setBuildViewsOnStart(boolean buildViewsOnStart) {
             this.buildViewsOnStart = buildViewsOnStart;
 
@@ -96,7 +90,10 @@ public class CouchDbConfig {
         }
 
         public CouchDbConfig build() {
-            return new CouchDbConfig(ip, port, user, password, dbName, httpClient, buildViewsOnStart, selfDiscovering);
+            HttpClient.Builder builder = HttpClient.newBuilder().version(Version.HTTP_1_1)
+                                                   .connectTimeout(Duration.ofSeconds(30));
+            
+            return new CouchDbConfig(ip, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering);
         }
     }
     
@@ -120,7 +117,7 @@ public class CouchDbConfig {
         return dbName;
     }
 
-    public AsyncHttpClient getHttpClient() {
+    public HttpClient getHttpClient() {
         return httpClient;
     }
 

@@ -1,12 +1,7 @@
 package com.equiron.acc;
 
-import java.nio.charset.StandardCharsets;
+import java.net.http.HttpResponse;
 import java.util.function.Function;
-
-import org.asynchttpclient.AsyncCompletionHandler;
-import org.asynchttpclient.Response;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.exception.CouchDbTransformResultException;
@@ -28,57 +23,55 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
-import io.netty.handler.codec.http.HttpHeaders;
-
-public class CouchDbAsyncHandler<F, T> extends AsyncCompletionHandler<T> {
-    private Logger logger = LoggerFactory.getLogger(getClass().getName());
-
+public class CouchDbAsyncHandler<F, T> {
     private JavaType javaType;
 
     private Function<F, T> transformer;
     
     private ObjectMapper mapper;
 
-    private long startTime;
+    private HttpResponse<String> response;
+    
+    private OperationInfo opInfo;
 
-    public CouchDbAsyncHandler(TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper) {
-        this(TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper);
+    public CouchDbAsyncHandler(HttpResponse<String> response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo) {
+        this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo);
     }
 
-    public CouchDbAsyncHandler(JavaType javaType, Function<F, T> transformer, ObjectMapper mapper) {
+    public CouchDbAsyncHandler(HttpResponse<String> response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo) {
+        this.response = response;
         this.javaType = javaType;
         this.transformer = transformer;
         this.mapper = mapper;
-
-        startTime = System.currentTimeMillis();
+        this.opInfo = opInfo;
     }
     
-    @Override
-    public T onCompleted(Response response) {
-        CouchDbHttpResponse couchDbHttpResponse;
-
-        String path = response.getUri().getPath();
-        String statusText = response.getStatusText();
-        int statusCode = response.getStatusCode();
-        String uri = response.getUri().toString();
-        HttpHeaders headers = response.getHeaders();
-        String body = response.getResponseBody(StandardCharsets.UTF_8);
-        
-        couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, uri, headers);
-        
-        logger.debug((System.currentTimeMillis() - startTime) + " ms, " + couchDbHttpResponse.toString() + "\n");
- 
-        if (response.getStatusCode() == 404 && !path.contains("_view")) {//this is not query request.
-            return transformResult(null, couchDbHttpResponse);
+    public T transform() {
+        try {
+            CouchDbHttpResponse couchDbHttpResponse;
+    
+            String statusText = response.statusCode() + "";
+            int statusCode = response.statusCode();
+            String body = response.body();
+            
+            couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, response.uri().toString());
+            
+            if (statusCode == 404 && !response.uri().getPath().contains("_view")) {//this is not query request.
+                return transformResult(null, couchDbHttpResponse);
+            }
+    
+            if (statusCode >= 400) {
+                throw responseCode2Exception(couchDbHttpResponse);
+            }
+    
+            F couchDbResult = parseHttpResponse(couchDbHttpResponse, javaType);
+            
+            return transformResult(couchDbResult, couchDbHttpResponse);
+        } finally {
+            if (opInfo != null) {
+                CouchDbOperationStats.addOperation(opInfo);
+            }
         }
-
-        if (response.getStatusCode() >= 400) {
-            throw responseCode2Exception(couchDbHttpResponse);
-        }
-
-        F couchDbResult = parseHttpResponse(couchDbHttpResponse, javaType);
-
-        return transformResult(couchDbResult, couchDbHttpResponse);
     }
 
     private <R> R parseHttpResponse(CouchDbHttpResponse couchDbHttpResponse, JavaType javaType) {
