@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.equiron</groupId>
   <artifactId>async-couchdb-client</artifactId>
-  <version>3.0-2.3.1</version>
+  <version>3.1-2.3.1</version>
   <name>async-couchdb-client</name>
   
   <properties>
@@ -41,6 +41,18 @@
       <groupId>ch.qos.logback</groupId>
       <artifactId>logback-classic</artifactId>
       <version>1.2.3</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+      <version>28.2-jre</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>com.rainerhahnekamp</groupId>
+      <artifactId>sneakythrow</artifactId>
+      <version>1.2.0</version>
     </dependency>
     
     <dependency>

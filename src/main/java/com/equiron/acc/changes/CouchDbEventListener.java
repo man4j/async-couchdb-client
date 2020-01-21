@@ -5,13 +5,13 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpRequest.Builder;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Future;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.rainerhahnekamp.sneakythrow.Sneaky;
 
 public abstract class CouchDbEventListener<D extends CouchDbDocument> implements AutoCloseable {
     private final Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -34,11 +35,11 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
 
     private CopyOnWriteArrayList<CouchDbEventHandler<D>> handlers = new CopyOnWriteArrayList<>();
 
-    private volatile Future<Void> messagingFuture = null;
-    
     private volatile String lastSuccessSeq;
     
     private volatile byte[] eventBuf = new byte[0];
+    
+    private volatile Thread listenerThread = null;
     
     public CouchDbEventListener(CouchDb db) {
         this.db = db;
@@ -58,125 +59,139 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         return handlers;
     }
     
-    public synchronized Future<Void> startListening(String seq) {
-        return startListening(seq, null);
+    public synchronized void startListening(String seq) {
+        startListening(seq, null);
     }
 
-    public synchronized Future<Void> startListening(String seq, Map<String, Object> selector) {
-        if (messagingFuture == null) {            
+    public synchronized void startListening(String seq, Map<String, Object> selector) {
+        if (listenerThread == null) {
+            lastSuccessSeq = seq;
+            
             TypeFactory typeFactory = TypeFactory.defaultInstance();
             
             JavaType docType = typeFactory.findTypeParameters(typeFactory.constructType(getClass()), CouchDbEventListener.class)[0];
-
+            
             JavaType eventType = typeFactory.constructParametricType(CouchDbEvent.class, docType);
 
-            UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
-                                                                 .addQueryParam("feed", "continuous")
-                                                                 .addQueryParam("heartbeat", "15000")
-                                                                 .addQueryParam("since", seq)
-                                                                 .addQueryParam("include_docs", Boolean.toString(true));
-            
-            if (selector != null) {
-                urlBuilder.addQueryParam("filter", "_selector");
-            }
-            
-            String url = urlBuilder.build();
-
-            try {
-                Builder builder = db.getRequestPrototype();
+            listenerThread = new Thread() {
                 
-                if (selector == null) {
-                    builder.GET();
-                } else {
-                    builder.POST(BodyPublishers.ofString(new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector))));
-                }
                 
-                messagingFuture = db.getHttpClient().sendAsync(builder.uri(URI.create(url)).timeout(Duration.ofDays(Integer.MAX_VALUE)).build(), BodyHandlers.ofInputStream()).thenAccept(wrapper -> {
-                    if (wrapper.statusCode() == 200) {
-                        logger.debug("Start listening " + url);
+                @Override
+                public void run() {
+                    while (!Thread.interrupted()) {
+                        UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
+                                                                             .addQueryParam("feed", "continuous")
+                                                                             .addQueryParam("heartbeat", "15000")
+                                                                             .addQueryParam("since", lastSuccessSeq)
+                                                                             .addQueryParam("include_docs", Boolean.toString(true));
                         
-                        for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
-                            try {
-                                eventHandler.onStart();
-                            } catch (Exception e) {
-                                logger.error("Error in " + url, e);
-                            }
+                        if (selector != null) {
+                            urlBuilder.addQueryParam("filter", "_selector");
                         }
-                    } else {
-                        throw new RuntimeException("Can't connect to server. Status code: " + wrapper.statusCode() + "");
-                    }
-                    
-                    try (InputStream in = wrapper.body()) {
-                        byte[] buffer = new byte[8192];
-                        int bytesRead = in.read(buffer);
+                        
+                        String url = urlBuilder.build();
     
-                        while (bytesRead != -1) {
-                            eventBuf = BufUtils.concat(buffer, eventBuf, bytesRead);
-
-                            int startPos = 0;
-
-                            for (int curPos = (eventBuf.length - bytesRead); curPos < eventBuf.length; curPos++) {
-                                if (eventBuf[curPos] == '\n') {
-                                    if (curPos == 0 || eventBuf[curPos - 1] == '\n') {
-                                        logger.debug("Received heartbeat from " + url);
-                                    } else {
-                                        int eventLength = curPos - startPos;
-
-                                        byte[] eventArray = new byte[eventLength];
-
-                                        System.arraycopy(eventBuf, startPos, eventArray, 0, eventLength);
-
-                                        processEvent(eventArray, eventType);
+                        Builder builder = db.getRequestPrototype();
+                        
+                        if (selector == null) {
+                            builder.GET();
+                        } else {
+                            builder.POST(BodyPublishers.ofString(Sneaky.sneak(() -> new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)))));
+                        }
+                        
+                        try {
+                            HttpResponse<InputStream> response = db.getHttpClient().send(builder.uri(URI.create(url)).timeout(Duration.ofDays(Integer.MAX_VALUE)).build(), BodyHandlers.ofInputStream());
+                            
+                            if (response.statusCode() == 200) {
+                                logger.debug("Start listening " + url);
+                                
+                                for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
+                                    try {
+                                        eventHandler.onStart();
+                                    } catch (Exception e) {
+                                        logger.error("Error in " + url, e);
                                     }
-
-                                    startPos = curPos + 1;
                                 }
-                            }
-
-                            if (startPos > 0) {
-                                eventBuf = Arrays.copyOfRange(eventBuf, startPos, eventBuf.length);
-                            }
-    
-                            bytesRead = in.read(buffer);
-                        }
-                        
-                        if (bytesRead == -1) {
-                            if (!isStopped()) {//не было остановки, просто клиент решил сам что соединение закрылось
-                                throw new IOException("Unexpected listener stop (Connection closed by proxy?)");
+                            } else {
+                                throw new IOException("Can't connect to server. Status code: " + response.statusCode() + "");
                             }
                             
-                            for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
-                                try {
-                                    eventHandler.onCancel();
-                                } catch (Exception e) {
-                                    logger.error("Error in " + url, e);
+                            try (InputStream in = response.body()) {
+                                byte[] buffer = new byte[8192];
+                                int bytesRead = in.read(buffer);
+            
+                                while (bytesRead != -1) {
+                                    eventBuf = BufUtils.concat(buffer, eventBuf, bytesRead);
+    
+                                    int startPos = 0;
+    
+                                    for (int curPos = (eventBuf.length - bytesRead); curPos < eventBuf.length; curPos++) {
+                                        if (eventBuf[curPos] == '\n') {
+                                            if (curPos == 0 || eventBuf[curPos - 1] == '\n') {
+                                                logger.debug("Received heartbeat from " + url);
+                                            } else {
+                                                int eventLength = curPos - startPos;
+    
+                                                byte[] eventArray = new byte[eventLength];
+    
+                                                System.arraycopy(eventBuf, startPos, eventArray, 0, eventLength);
+    
+                                                processEvent(eventArray, eventType);
+                                            }
+    
+                                            startPos = curPos + 1;
+                                        }
+                                    }
+    
+                                    if (startPos > 0) {
+                                        eventBuf = Arrays.copyOfRange(eventBuf, startPos, eventBuf.length);
+                                    }
+            
+                                    bytesRead = in.read(buffer);
+                                }
+                                
+                                if (bytesRead == -1) {
+                                    if (!isStopped()) {//не было остановки, просто клиент решил сам что соединение закрылось
+                                        throw new IOException("Unexpected listener stop (Connection closed by proxy?)");
+                                    }
+                                    
+                                    for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
+                                        try {
+                                            eventHandler.onCancel();
+                                        } catch (Exception e) {
+                                            logger.error("Error in " + url, e);
+                                        }
+                                    }
                                 }
                             }
-                        }
-                    } catch (Exception e) {
-                        logger.error("Error processing event " + url, e);
-
-                        for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
+                        } catch (@SuppressWarnings("unused") InterruptedException e) {
+                            logger.info("CouchDB listener interrupted: " + url);
+                            Thread.currentThread().interrupt();
+                        } catch (Exception e) {
+                            logger.error("Error processing event " + url, e);
+    
+                            for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
+                                try {
+                                    eventHandler.onError(e);
+                                } catch (Exception ex) {
+                                    logger.error("Error in " + url, ex);
+                                }
+                            }
+                            
                             try {
-                                eventHandler.onError(e);
-                            } catch (Exception ex) {
-                                logger.error("Error in " + url, ex);
+                                Thread.sleep(5_000);
+                            } catch (@SuppressWarnings("unused") InterruptedException ex) {
+                                logger.info("CouchDB listener interrupted: " + url);
+                                Thread.currentThread().interrupt();
                             }
                         }
-
-                        restart();
                     }
-                });
-                
-                logger.info("CouchDB listener started: " + url);
-    
-                return messagingFuture;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
+                }
+            };
+            
+            listenerThread.setName("CouchDB listener for: " + db.getDbName());
+            listenerThread.start();
         }
-
-        return null;
     }
     
     private void processEvent(byte[] eventArray, JavaType eventType) throws Exception {
@@ -201,15 +216,19 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     }
     
     public boolean isStopped() {
-        return messagingFuture == null;
+        return listenerThread == null;
     }
 
     public synchronized void stopListening() {
-        if (messagingFuture != null) {
+        if (listenerThread != null) {
             try {
-                messagingFuture.cancel(true);
+                listenerThread.interrupt();
+                
+                listenerThread.join();
+            } catch (@SuppressWarnings("unused") InterruptedException e) {
+                //empty
             } finally {
-                messagingFuture = null;
+                listenerThread = null;
             }
             
             logger.info("CouchDB listener stopped: " + db.getDbUrl());
@@ -219,17 +238,5 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     @Override
     public void close() throws Exception {
         stopListening();
-    }
-    
-    private void restart() {
-        try {
-            stopListening();
-            
-            Thread.sleep(5_000);
-        } catch (Exception e) {
-            logger.error("", e);
-        }
-        
-        startListening(lastSuccessSeq);
     }
 }
