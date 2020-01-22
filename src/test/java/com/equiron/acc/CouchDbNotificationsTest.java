@@ -48,6 +48,8 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
             latch.await();
             
             listener.stopListening();
+            
+            System.out.println("OK");
         }
     }
 }

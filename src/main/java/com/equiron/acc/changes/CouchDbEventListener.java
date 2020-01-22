@@ -41,6 +41,8 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     
     private volatile Thread listenerThread = null;
     
+    private volatile boolean interrupted;
+    
     public CouchDbEventListener(CouchDb db) {
         this.db = db;
     }
@@ -73,31 +75,27 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
             
             JavaType eventType = typeFactory.constructParametricType(CouchDbEvent.class, docType);
 
+            interrupted = false;
+
             listenerThread = new Thread() {
-                
-                
                 @Override
                 public void run() {
-                    while (!Thread.interrupted()) {
+                    while (!interrupted) {
                         UrlBuilder urlBuilder = new UrlBuilder(db.getDbUrl()).addPathSegment("_changes")
                                                                              .addQueryParam("feed", "continuous")
                                                                              .addQueryParam("heartbeat", "15000")
                                                                              .addQueryParam("since", lastSuccessSeq)
                                                                              .addQueryParam("include_docs", Boolean.toString(true));
-                        
-                        if (selector != null) {
-                            urlBuilder.addQueryParam("filter", "_selector");
-                        }
-                        
-                        String url = urlBuilder.build();
-    
                         Builder builder = db.getRequestPrototype();
                         
                         if (selector == null) {
                             builder.GET();
                         } else {
+                            urlBuilder.addQueryParam("filter", "_selector");
                             builder.POST(BodyPublishers.ofString(Sneaky.sneak(() -> new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)))));
                         }
+                        
+                        String url = urlBuilder.build();
                         
                         try {
                             HttpResponse<InputStream> response = db.getHttpClient().send(builder.uri(URI.create(url)).timeout(Duration.ofDays(Integer.MAX_VALUE)).build(), BodyHandlers.ofInputStream());
@@ -120,7 +118,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                 byte[] buffer = new byte[8192];
                                 int bytesRead = in.read(buffer);
             
-                                while (bytesRead != -1) {
+                                while (bytesRead != -1 && !interrupted) {
                                     eventBuf = BufUtils.concat(buffer, eventBuf, bytesRead);
     
                                     int startPos = 0;
@@ -146,7 +144,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                     if (startPos > 0) {
                                         eventBuf = Arrays.copyOfRange(eventBuf, startPos, eventBuf.length);
                                     }
-            
+                                    
                                     bytesRead = in.read(buffer);
                                 }
                                 
@@ -166,7 +164,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                             }
                         } catch (@SuppressWarnings("unused") InterruptedException e) {
                             logger.info("CouchDB listener interrupted: " + url);
-                            Thread.currentThread().interrupt();
+                            interrupted = true;
                         } catch (Exception e) {
                             logger.error("Error processing event " + url, e);
     
@@ -182,7 +180,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                 Thread.sleep(5_000);
                             } catch (@SuppressWarnings("unused") InterruptedException ex) {
                                 logger.info("CouchDB listener interrupted: " + url);
-                                Thread.currentThread().interrupt();
+                                interrupted = true;
                             }
                         }
                     }
@@ -222,7 +220,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     public synchronized void stopListening() {
         if (listenerThread != null) {
             try {
-                listenerThread.interrupt();
+                interrupted = true;
                 
                 listenerThread.join();
             } catch (@SuppressWarnings("unused") InterruptedException e) {
