@@ -100,6 +100,8 @@ public class CouchDb implements AutoCloseable {
     
     private volatile boolean selfDiscovering = true;
     
+    private boolean leaveStaleReplications = false;
+    
     private volatile boolean initialized;
     
     private volatile List<CouchDbView> viewList = new CopyOnWriteArrayList<>();
@@ -458,6 +460,7 @@ public class CouchDb implements AutoCloseable {
             dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
             
             selfDiscovering = annotationConfig.selfDiscovering();
+            leaveStaleReplications = annotationConfig.leaveStaleReplications();
             
             String enabledParam = resolve(annotationConfig.enabled(), true);
             
@@ -584,8 +587,8 @@ public class CouchDb implements AutoCloseable {
     
     protected void synchronizeReplicationDocs() {
         Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
-        
-        for (Replicated replicated : getClass().getAnnotationsByType(Replicated.class)) {            
+
+        for (Replicated replicated : getClass().getAnnotationsByType(Replicated.class)) {
             String enabled = replicated.enabled();
             
             enabled = resolve(enabled, true);
@@ -698,7 +701,9 @@ public class CouchDb implements AutoCloseable {
                         
                         newReplicationDocs.remove(doc.getDocId());
                     } else {
-                        replicatorDb.delete(doc.getDocIdAndRev());
+                        if (!leaveStaleReplications) {
+                            replicatorDb.delete(doc.getDocIdAndRev());
+                        }                        
                     }
                 }
             }
