@@ -37,8 +37,6 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
 
     private volatile String lastSuccessSeq;
     
-    private volatile byte[] eventBuf = new byte[0];
-    
     private volatile Thread listenerThread = null;
     
     private volatile boolean interrupted;
@@ -117,6 +115,8 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                             try (InputStream in = response.body()) {
                                 byte[] buffer = new byte[8192];
                                 int bytesRead = in.read(buffer);
+                                
+                                byte[] eventBuf = new byte[0];
             
                                 while (bytesRead != -1 && !interrupted) {
                                     eventBuf = BufUtils.concat(buffer, eventBuf, bytesRead);
@@ -209,12 +209,12 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         }
         
         if (processEvent) {
-            for (CouchDbEventHandler<D> eventHandler : getHandlers()) {            
+            for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
                 eventHandler.onEvent(event);
             }
         }
-            
-        lastSuccessSeq = event.getSeq();        
+        
+        lastSuccessSeq = event.getSeq();
     }
     
     public boolean isStopped() {

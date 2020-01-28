@@ -21,4 +21,6 @@ public @interface CouchDbConfig {
     String enabled() default "true";
     
     boolean selfDiscovering() default true;
+    
+    boolean leaveStaleReplications() default false;
 }
