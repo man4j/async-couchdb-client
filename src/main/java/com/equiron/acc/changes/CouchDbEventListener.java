@@ -193,24 +193,28 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     }
     
     private void processEvent(byte[] eventArray, JavaType eventType) throws Exception {
-        for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
-            JsonNode node = db.getMapper().readTree(eventArray);
+        JsonNode node = db.getMapper().readTree(eventArray);
+        
+        CouchDbEvent<D> event;
+        boolean processEvent = true;
+        
+        if (node.path("deleted").asBoolean()) {
+            event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);                
+        } else {
+            event = db.getMapper().readValue(eventArray, new TypeReference<CouchDbEvent<D>>() { /* empty */});
             
-            CouchDbEvent<D> event;
-            
-            if (node.path("deleted").asBoolean()) {
-                event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);
-                eventHandler.onEvent(event);
-            } else {
-                event = db.getMapper().readValue(eventArray, new TypeReference<CouchDbEvent<D>>() { /* empty */});
-
-                if (eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
-                    eventHandler.onEvent(event);
-                }
+            if (!eventType.containedType(0).getRawClass().isInstance(event.getDoc())) {
+                processEvent = false;
             }
-            
-            lastSuccessSeq = event.getSeq();
         }
+        
+        if (processEvent) {
+            for (CouchDbEventHandler<D> eventHandler : getHandlers()) {            
+                eventHandler.onEvent(event);
+            }
+        }
+            
+        lastSuccessSeq = event.getSeq();        
     }
     
     public boolean isStopped() {

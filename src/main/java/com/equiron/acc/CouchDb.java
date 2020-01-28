@@ -44,7 +44,7 @@ import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
 import com.equiron.acc.database.ReplicatorDb;
-import com.equiron.acc.exception.CouchDbResponseException;
+import com.equiron.acc.exception.CouchDbTimeoutException;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
@@ -531,7 +531,7 @@ public class CouchDb implements AutoCloseable {
             try {
                 view.update();
                 complete = true;
-            } catch (CouchDbResponseException e) {
+            } catch (CouchDbTimeoutException e) {
                 logger.warn("Not critical exception: " + e.getMessage());
             }
         }
