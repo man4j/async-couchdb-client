@@ -28,7 +28,7 @@ public class CouchDbBulkTest extends CouchDbAbstractTest {
     public void shouldThrowExceptionOnConflict() {
         CouchDbDocument d1 = new CouchDbDocument("1");
         CouchDbDocument d2 = new CouchDbDocument("1");
-
+        
         Assertions.assertThrows(CouchDbConflictException.class, () -> db.saveOrUpdate(d1, d2));
     }
 }

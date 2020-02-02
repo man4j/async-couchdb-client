@@ -85,6 +85,8 @@ public class CouchDbAsyncHandler<F, T> {
     private T transformResult(F couchDbResult, CouchDbHttpResponse couchDbHttpResponse) {
         try {
             return transformer.apply(couchDbResult);
+        } catch (CouchDbResponseException e) {
+            throw e;
         } catch (Exception e) {
             throw new CouchDbTransformResultException(couchDbHttpResponse, e);
         }
