@@ -282,6 +282,13 @@ public class CouchDb implements AutoCloseable {
     public <T extends CouchDbDocument> List<T> saveOrUpdate(List<T> docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
     }
+    
+    /**
+     * Insert or update multiple documents in to the database in a single request.
+     */
+    public <T extends CouchDbDocument> List<T> saveOrUpdate(List<T> docs, boolean ignoreConflicts) {
+        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs, ignoreConflicts));
+    }
 
     /**
      * Insert or update multiple documents in to the database in a single request.

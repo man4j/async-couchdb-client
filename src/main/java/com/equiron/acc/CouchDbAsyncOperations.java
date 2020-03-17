@@ -99,11 +99,18 @@ public class CouchDbAsyncOperations {
 
         return saveOrUpdate(Arrays.asList(allDocs));
     }
-
+    
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
     public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(List<T> docs) {
+        return saveOrUpdate(docs, false);
+    }
+
+    /**
+     * Insert or update multiple documents in to the database in a single request.
+     */
+    public <T extends CouchDbDocument> CompletableFuture<List<T>> saveOrUpdate(List<T> docs, boolean ignoreConflicts) {
         try {
             CouchDbDocument[] allDocs = docs.toArray(new CouchDbDocument[] {});
             
@@ -113,8 +120,10 @@ public class CouchDbAsyncOperations {
                 for (int i = 0; i < allDocs.length; i++) {
                     CouchDbBulkResponse response = responses.get(i);
                     
-                    if (response.isInConflict()) {
-                        e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
+                    if (!ignoreConflicts) {
+                        if (response.isInConflict()) {
+                            e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
+                        }
                     }
                     
                     if (response.isForbidden()) {
