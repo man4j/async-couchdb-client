@@ -157,8 +157,13 @@ public class CouchDb implements AutoCloseable {
                                 try {
                                     updateAllViews();
                                 } catch (Exception e) {
-                                    logger.error("Can't update views: " + e.getMessage());
+                                    if (e instanceof InterruptedException) {
+                                        Thread.currentThread().interrupt();
+                                    } else {
+                                        logger.error("Can't update views: " + e.getMessage());
+                                    }
                                 }
+                                
                                 try {
                                     Thread.sleep(60_000);
                                 } catch (@SuppressWarnings("unused") InterruptedException e) {
