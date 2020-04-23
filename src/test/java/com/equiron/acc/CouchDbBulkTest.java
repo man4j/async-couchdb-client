@@ -1,5 +1,7 @@
 package com.equiron.acc;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -30,5 +32,16 @@ public class CouchDbBulkTest extends CouchDbAbstractTest {
         CouchDbDocument d2 = new CouchDbDocument("1");
         
         Assertions.assertThrows(CouchDbConflictException.class, () -> db.saveOrUpdate(d1, d2));
+    }
+    
+    @Test
+    public void shouldNotThrowExceptionOnConflict() {
+        CouchDbDocument d1 = new CouchDbDocument("1");
+        CouchDbDocument d2 = new CouchDbDocument("1");
+        
+        db.saveOrUpdate(List.of(d1, d2), true);
+        
+        Assertions.assertFalse(d1.isInConflict());
+        Assertions.assertTrue(d2.isInConflict());
     }
 }

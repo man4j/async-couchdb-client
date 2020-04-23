@@ -19,9 +19,10 @@ public class BlogDbTest {
 
     @BeforeEach
     public void before() {
-        db = new BlogDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
+        db = new BlogDb(new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                                   .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                                   .setUser(System.getProperty("USER"))
+                                                   .setPassword(System.getProperty("PASSWORD"))
                                                    .build());
     }
     

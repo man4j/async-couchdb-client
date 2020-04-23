@@ -3,7 +3,7 @@ package com.equiron.acc.tutorial.lesson7;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Message extends ForumContent implements Comparable<Message> {
+public class Message extends ForumContent {
     private String text;
 
     private String topicId;
@@ -26,10 +26,5 @@ public class Message extends ForumContent implements Comparable<Message> {
 
     public long getCreatedAt() {
         return createdAt;
-    }
-
-    @Override
-    public int compareTo(Message o) {
-        return Long.valueOf(createdAt).compareTo(o.getCreatedAt());
     }
 }

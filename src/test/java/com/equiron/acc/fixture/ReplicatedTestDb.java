@@ -1,16 +1,13 @@
 package com.equiron.acc.fixture;
 
-import com.equiron.acc.CouchDb;
-import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.annotation.Replicated;
-import com.equiron.acc.annotation.Security;
-import com.equiron.acc.annotation.SecurityPattern;
+import org.springframework.stereotype.Component;
 
-@Replicated(targetIp = "139.162.145.223", targetPort = "5984", targetUser = "oms", targetPassword = "123456")
-@Security(admins = @SecurityPattern(names = "admin"), members = @SecurityPattern(roles = "oms"))
+import com.equiron.acc.CouchDb;
+import com.equiron.acc.annotation.Replicated;
+
+@Component
+@Replicated(targetHost = "${HOST}", targetPort = "${PORT}", targetUser = "oms", targetPassword = "123456", targetDbName = "remote_test_db")
 public class ReplicatedTestDb extends CouchDb {
-    public ReplicatedTestDb(CouchDbConfig config) {
-        super(config);
-    }
+    //empty
 }
  

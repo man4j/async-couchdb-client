@@ -15,9 +15,10 @@ public class ForumDbTest {
     
     @BeforeEach
     public void before() throws Exception {
-        db = new ForumDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
-                                                    .setUser("admin")
-                                                    .setPassword("root")
+        db = new ForumDb(new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                                    .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                                    .setUser(System.getProperty("USER"))
+                                                    .setPassword(System.getProperty("PASSWORD"))
                                                     .build());
         
         listener = new CouchDbEventListener<>(db) { /* empty */};

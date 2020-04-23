@@ -42,7 +42,7 @@ public class CouchDbSecurityPattern {
         if (obj instanceof CouchDbSecurityPattern) {
             CouchDbSecurityPattern other = (CouchDbSecurityPattern) obj;
             
-            return names.equals(other.names) && roles.equals(other.roles);
+            return Objects.equals(names, other.names) && Objects.equals(roles, other.roles);
         }
         
         return false;

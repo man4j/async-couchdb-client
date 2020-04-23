@@ -10,7 +10,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(Replications.class)
 public @interface Replicated {
-    String targetIp();
+    String targetHost();
     
     String targetPort() default "5984";
     

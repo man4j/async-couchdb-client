@@ -6,4 +6,5 @@ public enum OperationType {
     BULK,
     PURGE,
     QUERY,
+    GET
 }

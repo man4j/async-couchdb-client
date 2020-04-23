@@ -24,9 +24,10 @@ public class UserDbTest {
 
     @BeforeEach
     public void before() {
-        db = new UserDb(new CouchDbConfig.Builder().setIp("91.242.38.71")
-                                                   .setUser("admin")
-                                                   .setPassword("root")
+        db = new UserDb(new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                                   .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                                   .setUser(System.getProperty("USER"))
+                                                   .setPassword(System.getProperty("PASSWORD"))
                                                    .build());
     }
 

@@ -85,16 +85,14 @@ public class CouchDbInfo {
         private long active;
 
         private long file;
+        
+        private long external;
 
         /**
          * @return size of live data inside the database, in bytes.
          */
         public long getActive() {
             return active;
-        }
-
-        public void setActive(long active) {
-            this.active = active;
         }
 
         /**
@@ -104,8 +102,11 @@ public class CouchDbInfo {
             return file;
         }
 
-        public void setFile(long file) {
-            this.file = file;
+        /**
+         * @return uncompressed size of database contents in bytes.
+         */
+        public long getExternal() {
+            return external;
         }
     }
     

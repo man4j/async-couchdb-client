@@ -5,7 +5,7 @@ import java.net.http.HttpClient.Version;
 import java.time.Duration;
 
 public class CouchDbConfig {
-    private final String ip;
+    private final String host;
     
     private final int port;
 
@@ -21,8 +21,8 @@ public class CouchDbConfig {
     
     private final boolean selfDiscovering;
     
-    CouchDbConfig(String ip, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
-        this.ip = ip;
+    CouchDbConfig(String host, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
+        this.host = host;
         this.port = port;
         this.user = user;
         this.password = password;
@@ -33,7 +33,7 @@ public class CouchDbConfig {
     }
 
     public static class Builder {
-        String ip;
+        String host;
         
         int port = 5984;
 
@@ -47,8 +47,15 @@ public class CouchDbConfig {
         
         boolean selfDiscovering = true;
         
-        public Builder setIp(String ip) {
-            this.ip = ip;
+        @Deprecated
+        public Builder setIp(String host) {
+            this.host = host;
+
+            return this;
+        }
+        
+        public Builder setHost(String host) {
+            this.host = host;
 
             return this;
         }
@@ -93,12 +100,17 @@ public class CouchDbConfig {
             HttpClient.Builder builder = HttpClient.newBuilder().version(Version.HTTP_1_1)
                                                    .connectTimeout(Duration.ofSeconds(30));
             
-            return new CouchDbConfig(ip, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering);
+            return new CouchDbConfig(host, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering);
         }
     }
     
+    @Deprecated
     public String getIp() {
-        return ip;
+        return host;
+    }
+    
+    public String getHost() {
+        return host;
     }
 
     public int getPort() {

@@ -10,10 +10,10 @@ public class CouchDbAbstractTest {
 
     @BeforeEach
     public void before() {
-        db = new TestDb(new CouchDbConfig.Builder().setIp("104.248.26.204")
-                                                   .setPort(5984)
-                                                   .setUser("admin")
-                                                   .setPassword("PassWord123")
+        db = new TestDb(new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                                   .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                                   .setUser(System.getProperty("USER"))
+                                                   .setPassword(System.getProperty("PASSWORD"))
                                                    .setSelfDiscovering(true)
                                                    .build());
     }

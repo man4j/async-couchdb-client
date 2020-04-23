@@ -18,8 +18,6 @@ import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.database.UsersDb;
-import com.equiron.acc.json.CouchDbReplicationDocument;
-import com.equiron.acc.json.security.CouchDbUser;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes=SyncTest.class)
@@ -44,26 +42,26 @@ public class SyncTest {
     
     @AfterEach
     public void after() throws Exception {
-        localListener.close();
-        remoteListener.close();
+        if (localListener != null) {
+            localListener.close();
+        }
+        
+        if (remoteListener != null) {
+            remoteListener.close();
+        }
         
         localDb.deleteDb();
         remoteDb.deleteDb();
-        
-        CouchDbUser oms = usersDb.get(CouchDbUser.COUCHDB_USER_PREFIX + "oms1");
-        usersDb.delete(oms.getDocIdAndRev());
-        
-        CouchDbReplicationDocument toRemote = replicatorDb.get("to_remote");
-        CouchDbReplicationDocument fromRemote = replicatorDb.get("from_remote");
-        
-        replicatorDb.delete(toRemote.getDocIdAndRev(), fromRemote.getDocIdAndRev());
+        usersDb.deleteDb();
+        replicatorDb.deleteDb();
     }
     
     @Bean
     public CouchDbConfig couchDbConfig() {
-        return new CouchDbConfig.Builder().setIp("91.242.38.71")
-                                          .setUser("admin")
-                                          .setPassword("root")
+        return new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                          .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                          .setUser(System.getProperty("USER"))
+                                          .setPassword(System.getProperty("PASSWORD"))
                                           .build();
     }
 
@@ -74,14 +72,13 @@ public class SyncTest {
         startRemoteListener();
         
         //Клиентская сторона
-        connectToRemote();
         startLocalListener();
         
-        Assertions.assertTrue(localDb.saveOrUpdate(new OmsDocument("oms1")).get(0).isOk());
+        Assertions.assertTrue(localDb.saveOrUpdate(new OmsDocument("doc1", "oms1")).get(0).isOk());
         
-        Thread.sleep(5_000);
+        Thread.sleep(10_000);
         
-        Assertions.assertEquals(0, localDb.getInfo().getDocCount());//документы в локальной базе полностью удалены
+        Assertions.assertNull(localDb.get("doc1"));//документы в локальной базе полностью удалены
     }
 
     private void startLocalListener() {
@@ -98,15 +95,6 @@ public class SyncTest {
         });
         
         localListener.startListening("0");
-    }
-
-    private void connectToRemote() {
-        CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument("to_remote", "http://91.242.38.71:5984/" + localDb.getDbName(), "http://oms1:123456@91.242.38.71:5984/" + remoteDb.getDbName(), Collections.singletonMap("omsId", "oms1"));
-        CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument("from_remote", "http://oms1:123456@91.242.38.71:5984/" + remoteDb.getDbName(), "http://91.242.38.71:5984/" + localDb.getDbName(), Collections.singletonMap("omsId", "oms1"));
-
-        replicatorDb.saveOrUpdate(toRemote, fromRemote);
-        Assertions.assertTrue(toRemote.isOk());  //Проверка, что все ок
-        Assertions.assertTrue(fromRemote.isOk());//Проверка, что все ок
     }
 
     private void startRemoteListener() {
@@ -127,7 +115,7 @@ public class SyncTest {
     }
 
     private void registerNewClient() {
-        CustomUser client = new CustomUser("oms1", "123456", Collections.singleton("OMS"));
+        CustomUser client = new CustomUser("oms1", "123456", Collections.singleton("oms"));
         
         client.setFirstName("first name");
         client.setLastName("last name");

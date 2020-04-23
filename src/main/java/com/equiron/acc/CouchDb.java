@@ -50,6 +50,7 @@ import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbInfo;
 import com.equiron.acc.json.CouchDbInfo.CouchDbClusterInfo;
+import com.equiron.acc.json.CouchDbInstanceInfo;
 import com.equiron.acc.json.CouchDbReplicationDocument;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
@@ -82,7 +83,7 @@ public class CouchDb implements AutoCloseable {
 
     private volatile HttpRequest.Builder prototype;
     
-    private volatile String ip;
+    private volatile String host;
     
     private volatile int port;
     
@@ -149,31 +150,35 @@ public class CouchDb implements AutoCloseable {
                     cleanupViews();
                     
                     synchronizeReplicationDocs();
+                    
+                    if (getInstanceInfo().getVersion().startsWith("2")) {
+                        updateViewThread = new Thread("CouchDB view updater for: " + getDbName()) {
+                            @Override
+                            public void run() {
+                                logger.info("Start CouchDB view updater thread");
 
-                    updateViewThread = new Thread("CouchDB view updater for: " + getDbName()) {
-                        @Override
-                        public void run() {
-                            while (!Thread.interrupted()) {
-                                try {
-                                    updateAllViews();
-                                } catch (Exception e) {
-                                    if (e instanceof InterruptedException) {
+                                while (!Thread.interrupted()) {
+                                    try {
+                                        updateAllViews();
+                                    } catch (Exception e) {
+                                        if (e instanceof InterruptedException) {
+                                            Thread.currentThread().interrupt();
+                                        } else {
+                                            logger.error("Can't update views: " + e.getMessage());
+                                        }
+                                    }
+                                    
+                                    try {
+                                        Thread.sleep(60_000);
+                                    } catch (@SuppressWarnings("unused") InterruptedException e) {
                                         Thread.currentThread().interrupt();
-                                    } else {
-                                        logger.error("Can't update views: " + e.getMessage());
                                     }
                                 }
-                                
-                                try {
-                                    Thread.sleep(60_000);
-                                } catch (@SuppressWarnings("unused") InterruptedException e) {
-                                    Thread.currentThread().interrupt();
-                                }
                             }
-                        }
-                    };
-                    
-                    updateViewThread.start();
+                        };
+                        
+                        updateViewThread.start();
+                    }
                 }
                 
                 initialized = true;
@@ -217,7 +222,7 @@ public class CouchDb implements AutoCloseable {
     }
     
     public String getServerUrl() {
-        return String.format("http://%s:%s", ip, port);
+        return String.format("http://%s:%s", host, port);
     }
 
     public String getDbUrl() {
@@ -298,7 +303,8 @@ public class CouchDb implements AutoCloseable {
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
-    public List<CouchDbBulkResponse> saveOrUpdate(@SuppressWarnings("unchecked") Map<String, Object>... docs) {
+    @SafeVarargs
+    public final List<CouchDbBulkResponse> saveOrUpdate(Map<String, Object>... docs) {
         return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
     }
     
@@ -414,6 +420,15 @@ public class CouchDb implements AutoCloseable {
     public CouchDbInfo getInfo() {
         return ExceptionHandler.handleFutureResult(asyncOps.getInfo());
     }
+    
+    /**
+     * Accessing the root of a CouchDB instance returns meta information about the instance. 
+     * The response is a JSON structure containing information about the server, including a 
+     * welcome message and the version of the server.     
+     */
+    public CouchDbInstanceInfo getInstanceInfo() {
+        return ExceptionHandler.handleFutureResult(asyncOps.getInstanceInfo());
+    }
 
     /**
      * Removes view files that are not used by any design document, requires admin privileges.
@@ -455,7 +470,7 @@ public class CouchDb implements AutoCloseable {
     }
 
     private void applyConfig() {
-        String ip = config.getIp();
+        String host = config.getHost();
         String port = config.getPort() + "";
         String user = config.getUser();
         String password = config.getPassword();
@@ -465,7 +480,7 @@ public class CouchDb implements AutoCloseable {
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
 
-            ip = annotationConfig.ip().isBlank() ? ip : annotationConfig.ip();
+            host = annotationConfig.host().isBlank() ? host : annotationConfig.host();
             port = annotationConfig.port().isBlank() ? port : annotationConfig.port();
             user = annotationConfig.user().isBlank() ? user : annotationConfig.user();
             password = annotationConfig.password().isBlank() ? password : annotationConfig.password();
@@ -480,7 +495,7 @@ public class CouchDb implements AutoCloseable {
         }
         
         if (enabled) {
-            this.ip = resolve(ip, false);
+            this.host = resolve(host, false);
             this.port = Integer.parseInt(resolve(port, false));
             this.user = resolve(user, true);
             this.password = resolve(password, true);
@@ -585,11 +600,10 @@ public class CouchDb implements AutoCloseable {
                     putSecurityObject(client, securityObject);
                 }
             } else {
-                if (!oldSecurityObject.getAdmins().getNames().isEmpty()
-                 || !oldSecurityObject.getAdmins().getRoles().isEmpty()
-                 || !oldSecurityObject.getMembers().getNames().isEmpty()
-                 || !oldSecurityObject.getMembers().getRoles().isEmpty()) {
-                    putSecurityObject(client, new CouchDbSecurityObject());//clean security object
+                CouchDbSecurityObject defaultSecurityObject = new CouchDbSecurityObject();
+                
+                if (!oldSecurityObject.equals(defaultSecurityObject)) {
+                    putSecurityObject(client, defaultSecurityObject);//clean security object
                 }
             }
         } catch (Exception e) {
@@ -606,7 +620,7 @@ public class CouchDb implements AutoCloseable {
             enabled = resolve(enabled, true);
             
             if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
-                String ip = resolve(replicated.targetIp(), false);
+                String ip = resolve(replicated.targetHost(), false);
                 String port = resolve(replicated.targetPort(), false);
                 String user = resolve(replicated.targetUser(), true);
                 String password = resolve(replicated.targetPassword(), true);
@@ -633,11 +647,11 @@ public class CouchDb implements AutoCloseable {
                 String localServerWithoutCreds;
                 
                 if (this.user == null && this.password == null) {
-                    localServer = String.format("http://%s:%s/%s", this.ip, this.port, getDbName());
-                    localServerWithoutCreds = String.format("http://%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
+                    localServer = String.format("http://%s:%s/%s", this.host, this.port, getDbName());
+                    localServerWithoutCreds = String.format("http://%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
                 } else {
-                    localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
-                    localServerWithoutCreds = String.format("http://***:***@%s:%s/%s", this.user, this.password, this.ip, this.port, getDbName());
+                    localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
+                    localServerWithoutCreds = String.format("http://***:***@%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
                 }
                 
                 Map<String, Object> selectorMap = null;
@@ -681,7 +695,7 @@ public class CouchDb implements AutoCloseable {
             }
         }
         
-        CouchDbConfig config = new CouchDbConfig.Builder().setIp(ip)
+        CouchDbConfig config = new CouchDbConfig.Builder().setHost(host)
                                                           .setPort(port)
                                                           .setUser(user)
                                                           .setPassword(password)

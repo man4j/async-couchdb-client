@@ -34,10 +34,10 @@ public class SpringTest {
     
     @Bean
     public CouchDbConfig couchDbConfig() {
-        return new CouchDbConfig.Builder().setIp("10.0.76.3")
-                                          .setUser("admin")
-                                          .setPort(15984)
-                                          .setPassword("PassWord123")
+        return new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                          .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                          .setUser(System.getProperty("USER"))
+                                          .setPassword(System.getProperty("PASSWORD"))
                                           .build();
     }
 

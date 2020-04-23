@@ -1,12 +1,12 @@
 package com.equiron.acc.json.security;
 
-import java.util.Collections;
 import java.util.Objects;
+import java.util.Set;
 
 public class CouchDbSecurityObject {
-    private CouchDbSecurityPattern admins = new CouchDbSecurityPattern(Collections.emptySet(), Collections.emptySet());
+    private CouchDbSecurityPattern admins = new CouchDbSecurityPattern(null, Set.of("_admin"));
     
-    private CouchDbSecurityPattern members = new CouchDbSecurityPattern(Collections.emptySet(), Collections.emptySet());
+    private CouchDbSecurityPattern members = new CouchDbSecurityPattern(null, Set.of("_admin"));
 
     public CouchDbSecurityPattern getAdmins() {
         return admins;

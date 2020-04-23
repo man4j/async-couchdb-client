@@ -24,14 +24,15 @@ import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
-import com.equiron.acc.json.CouchDbDocRev;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAccessor;
 import com.equiron.acc.json.CouchDbInfo;
-import com.equiron.acc.query.CouchDbMapQueryWithDocs;
+import com.equiron.acc.json.CouchDbInstanceInfo;
 import com.equiron.acc.transformer.CouchDbBooleanResponseTransformer;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public class CouchDbAsyncOperations {
     private CouchDb couchDb;
@@ -53,40 +54,51 @@ public class CouchDbAsyncOperations {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId) {
-        return get(docId, false);
-    }
-
-    /**
-     * Returns the latest revision of the document.
-     */
-    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
-        return getRaw(docId, false);
+        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), false);
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> CompletableFuture<T> get(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String, CouchDbDocRev, T> query = couchDb.getBuiltInView().<T>createDocQuery();
-        
-        if (attachments) {
-            query.includeAttachments();
-        }
-        
-        return query.byKey(docId).async().asDoc();
+        return get(docId, TypeFactory.defaultInstance().constructType(CouchDbDocument.class), attachments);
+    }
+
+    /**
+     * Returns the latest revision of the document.
+     */
+    public CompletableFuture<Map<String, Object>> getRaw(String docId) {
+        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), false);
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public CompletableFuture<Map<String, Object>> getRaw(String docId, boolean attachments) {
-        CouchDbMapQueryWithDocs<String,CouchDbDocRev,Map<String,Object>> query = couchDb.getBuiltInView().createRawDocQuery();
+        return get(docId, TypeFactory.defaultInstance().constructMapType(Map.class, String.class, Object.class), attachments);
+    }
+    
+    private <T> CompletableFuture<T> get(String docId, JavaType docType, boolean attachments) {
+        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+
+        UrlBuilder urlBuilder = createUrlBuilder().addPathSegment(docId);
         
         if (attachments) {
-            query.includeAttachments();
+            urlBuilder.addQueryParam("attachments", "true");
         }
+
+        Function<T, T> transformer = doc -> {
+            if (doc != null && doc instanceof CouchDbDocument) {
+                new CouchDbDocumentAccessor((CouchDbDocument) doc).setCurrentDb(couchDb);
+            }
+
+            return doc;
+        };
         
-        return query.byKey(docId).async().asDoc();
+        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().header("Accept", attachments ? "application/json" : "*/*").uri(URI.create(urlBuilder.build())).build(), 
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, docType, transformer, couchDb.mapper, new OperationInfo(OperationType.GET, "[t:GET]")).transform();
+                                    });
     }
     
     //------------------ Bulk API -------------------------
@@ -446,6 +458,19 @@ public class CouchDbAsyncOperations {
                                         return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
                                     });
     }
+    
+    /**
+     * Accessing the root of a CouchDB instance returns meta information about the instance. 
+     * The response is a JSON structure containing information about the server, including a 
+     * welcome message and the version of the server.     
+     */
+    public CompletableFuture<CouchDbInstanceInfo> getInstanceInfo() {
+        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(couchDb.getServerUrl())).build(),
+                                    BodyHandlers.ofString()).thenApply(response -> {
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInstanceInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                    });
+    }
+
 
     /**
      * Removes view files that are not used by any design document, requires admin privileges.
