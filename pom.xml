@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.equiron</groupId>
   <artifactId>async-couchdb-client</artifactId>
-  <version>3.12-2.3.1</version>
+  <version>3.13-3.0.0</version>
   <name>async-couchdb-client</name>
 
   <properties>
@@ -59,22 +59,12 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
       <version>5.2.1.RELEASE</version>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
       <version>5.2.1.RELEASE</version>
-      <exclusions>
-        <exclusion>
-          <groupId>*</groupId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- For testing -->
