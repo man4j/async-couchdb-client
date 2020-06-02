@@ -20,6 +20,8 @@ public @interface Replicated {
     
     String targetDbName() default "";
     
+    String targetProtocol() default "http";
+    
     String selector() default "";
     
     String enabled() default "true";

@@ -583,9 +583,7 @@ public class CouchDb implements AutoCloseable {
         
     private void addSecurity() {
         try {
-            HttpClient client = config.getHttpClient();
-            
-            CouchDbSecurityObject oldSecurityObject = getSecurityObject(client);
+            CouchDbSecurityObject oldSecurityObject = getSecurityObject();
             
             if (getClass().isAnnotationPresent(Security.class)) {
                 SecurityPattern adminsPattern = getClass().getAnnotation(Security.class).admins();
@@ -597,13 +595,13 @@ public class CouchDb implements AutoCloseable {
                 securityObject.setMembers(new CouchDbSecurityPattern(new HashSet<>(Arrays.asList(membersPattern.names())), new HashSet<>(Arrays.asList(membersPattern.roles()))));
                 
                 if (!oldSecurityObject.equals(securityObject)) {
-                    putSecurityObject(client, securityObject);
+                    putSecurityObject(securityObject);
                 }
             } else {
                 CouchDbSecurityObject defaultSecurityObject = new CouchDbSecurityObject();
                 
                 if (!oldSecurityObject.equals(defaultSecurityObject)) {
-                    putSecurityObject(client, defaultSecurityObject);//clean security object
+                    putSecurityObject(defaultSecurityObject);//clean security object
                 }
             }
         } catch (Exception e) {
@@ -620,7 +618,8 @@ public class CouchDb implements AutoCloseable {
             enabled = resolve(enabled, true);
             
             if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
-                String ip = resolve(replicated.targetHost(), false);
+                String protocol = resolve(replicated.targetProtocol(), false);
+                String host = resolve(replicated.targetHost(), false);
                 String port = resolve(replicated.targetPort(), false);
                 String user = resolve(replicated.targetUser(), true);
                 String password = resolve(replicated.targetPassword(), true);
@@ -636,11 +635,11 @@ public class CouchDb implements AutoCloseable {
                 String remoteServerWithoutCreds;
                 
                 if (user.isBlank() && password.isBlank()) {
-                    remoteServer = String.format("http://%s:%s/%s", ip, port, remoteDb);
-                    remoteServerWithoutCreds = String.format("http://%s:%s/%s", user, password, ip, port, remoteDb);
+                    remoteServer = String.format("%s://%s:%s/%s", protocol, host, port, remoteDb);
+                    remoteServerWithoutCreds = String.format("%s://%s:%s/%s", protocol, user, password, host, port, remoteDb);
                 } else {
-                    remoteServer = String.format("http://%s:%s@%s:%s/%s", user, password, ip, port, remoteDb);
-                    remoteServerWithoutCreds = String.format("http://***:***@%s:%s/%s", user, password, ip, port, remoteDb);
+                    remoteServer = String.format("%s://%s:%s@%s:%s/%s", protocol, user, password, host, port, remoteDb);
+                    remoteServerWithoutCreds = String.format("%s://***:***@%s:%s/%s", protocol, host, port, remoteDb);
                 }
                 
                 String localServer;
@@ -651,7 +650,7 @@ public class CouchDb implements AutoCloseable {
                     localServerWithoutCreds = String.format("http://%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
                 } else {
                     localServer = String.format("http://%s:%s@%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
-                    localServerWithoutCreds = String.format("http://***:***@%s:%s/%s", this.user, this.password, this.host, this.port, getDbName());
+                    localServerWithoutCreds = String.format("http://***:***@%s:%s/%s", this.host, this.port, getDbName());
                 }
                 
                 Map<String, Object> selectorMap = null;
@@ -802,18 +801,18 @@ public class CouchDb implements AutoCloseable {
         return value;
     }
 
-    private void putSecurityObject(HttpClient client, CouchDbSecurityObject securityObject) throws InterruptedException, IOException, JsonProcessingException {
-        if (client.send(prototype.copy()
-                                 .PUT(BodyPublishers.ofString(mapper.writeValueAsString(securityObject)))
-                                 .uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(), 
-                                 BodyHandlers.ofString()).statusCode() != 200) {
+    public void putSecurityObject(CouchDbSecurityObject securityObject) throws InterruptedException, IOException, JsonProcessingException {
+        if (config.getHttpClient().send(prototype.copy()
+                                  .PUT(BodyPublishers.ofString(mapper.writeValueAsString(securityObject)))
+                                  .uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(), 
+                                  BodyHandlers.ofString()).statusCode() != 200) {
             throw new RuntimeException("Can't apply security");
         }
     }
 
-    private CouchDbSecurityObject getSecurityObject(HttpClient client) throws IOException, InterruptedException {
-        return mapper.readValue(client.send(prototype.copy().GET().uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(),
-                                            BodyHandlers.ofString()).body(), CouchDbSecurityObject.class);
+    public CouchDbSecurityObject getSecurityObject() throws IOException, InterruptedException {
+        return mapper.readValue(config.getHttpClient().send(prototype.copy().GET().uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(),
+                                       BodyHandlers.ofString()).body(), CouchDbSecurityObject.class);
     }
     
     private void synchronizeDesignDocs() {
