@@ -198,6 +198,10 @@ public class CouchDb implements AutoCloseable {
         init();
     }
     
+    public CouchDbAsyncOperations getAsyncOps() {
+        return asyncOps;
+    }
+    
     public HttpRequest.Builder getRequestPrototype() {
         return prototype.copy();
     }

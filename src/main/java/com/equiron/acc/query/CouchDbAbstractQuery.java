@@ -197,10 +197,10 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
                     builder.GET();
                 }
                 
-                OperationInfo opInfo = new OperationInfo(OperationType.QUERY, viewUrl);
+                OperationInfo opInfo = new OperationInfo(OperationType.QUERY, viewUrl.substring(viewUrl.lastIndexOf("/") + 1), 0, 0);
                 
                 return couchDb.getHttpClient().sendAsync(builder.build(), BodyHandlers.ofString()).thenApply(response -> {
-                    return new CouchDbAsyncHandler<>(response, resultSetType, transformer, couchDb.getMapper(), opInfo).transform();
+                    return new CouchDbAsyncHandler<>(response, resultSetType, transformer, couchDb.getMapper(), opInfo, couchDb.getAsyncOps().getCouchDbOperationStats()).transform();
                 });
             } catch (IOException e) {
                 throw new RuntimeException(e);

@@ -18,6 +18,7 @@ import com.equiron.acc.exception.http.CouchDbNotFoundException;
 import com.equiron.acc.exception.http.CouchDbPreconditionFailedException;
 import com.equiron.acc.exception.http.CouchDbRequestedRangeException;
 import com.equiron.acc.exception.http.CouchDbUnauthorizedException;
+import com.equiron.acc.json.resultset.CouchDbAbstractResultSet;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -33,17 +34,20 @@ public class CouchDbAsyncHandler<F, T> {
     private HttpResponse<String> response;
     
     private OperationInfo opInfo;
+    
+    private CouchDbOperationStats couchDbOperationStats;
 
-    public CouchDbAsyncHandler(HttpResponse<String> response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo) {
-        this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo);
+    public CouchDbAsyncHandler(HttpResponse<String> response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
+        this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo, couchDbOperationStats);
     }
 
-    public CouchDbAsyncHandler(HttpResponse<String> response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo) {
+    public CouchDbAsyncHandler(HttpResponse<String> response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
         this.response = response;
         this.javaType = javaType;
         this.transformer = transformer;
         this.mapper = mapper;
         this.opInfo = opInfo;
+        this.couchDbOperationStats = couchDbOperationStats;
     }
     
     public T transform() {
@@ -66,10 +70,24 @@ public class CouchDbAsyncHandler<F, T> {
     
             F couchDbResult = parseHttpResponse(couchDbHttpResponse, javaType);
             
+            if (opInfo != null) {
+                if (opInfo.getOperationType() == OperationType.GET 
+                 || opInfo.getOperationType() == OperationType.GET_WITH_ATTACHMENT 
+                 || opInfo.getOperationType() == OperationType.QUERY) {
+                    opInfo.setSize(body.length());
+                }
+            
+                if (couchDbResult instanceof CouchDbAbstractResultSet) {
+                    CouchDbAbstractResultSet<?,?,?> rs = (CouchDbAbstractResultSet<?,?,?>) couchDbResult;
+                    
+                    opInfo.setDocsCount(rs.getRows().size());
+                }
+            }
+            
             return transformResult(couchDbResult, couchDbHttpResponse);
         } finally {
             if (opInfo != null) {
-                CouchDbOperationStats.addOperation(opInfo);
+                couchDbOperationStats.addOperation(opInfo);
             }
         }
     }

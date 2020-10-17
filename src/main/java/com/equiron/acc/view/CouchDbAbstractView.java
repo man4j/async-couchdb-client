@@ -52,7 +52,7 @@ public abstract class CouchDbAbstractView implements CouchDbView {
             try {
                 return couchDb.getHttpClient().sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(designUrl + "/_info")).build(), BodyHandlers.ofString())
                                               .thenApply(response -> {
-                                                  return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDb.getMapper(), null).transform();
+                                                  return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbDesignInfo>() {/* empty */}, Function.identity(), couchDb.getMapper(), null, null).transform();
                                               });
             } catch(Exception e) {
                 throw new RuntimeException(e);

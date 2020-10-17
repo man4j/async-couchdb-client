@@ -38,10 +38,17 @@ public class CouchDbAsyncOperations {
     private CouchDb couchDb;
 
     private HttpClient httpClient;
+    
+    private CouchDbOperationStats couchDbOperationStats;
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
         this.httpClient = couchDb.getHttpClient();
+        this.couchDbOperationStats = new CouchDbOperationStats(couchDb.getDbName());
+    }
+    
+    public CouchDbOperationStats getCouchDbOperationStats() {
+        return couchDbOperationStats;
     }
 
     private UrlBuilder createUrlBuilder() {
@@ -95,9 +102,13 @@ public class CouchDbAsyncOperations {
             return doc;
         };
         
+        OperationType operationType = attachments ? OperationType.GET_WITH_ATTACHMENT : OperationType.GET;
+        
+        OperationInfo operationInfo = new OperationInfo(operationType, 1, 0);
+        
         return httpClient.sendAsync(couchDb.getRequestPrototype().GET().header("Accept", attachments ? "application/json" : "*/*").uri(URI.create(urlBuilder.build())).build(), 
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, docType, transformer, couchDb.mapper, new OperationInfo(OperationType.GET, "[t:GET]")).transform();
+                                        return new CouchDbAsyncHandler<>(response, docType, transformer, couchDb.mapper, operationInfo, couchDbOperationStats).transform();
                                     });
     }
     
@@ -158,11 +169,11 @@ public class CouchDbAsyncOperations {
             
             String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", allDocs));
             
-            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:SAVE_OR_UPDATE, d:" + allDocs.length + ", s:" + valueAsString.length() + "]");
+            OperationInfo opInfo = new OperationInfo(OperationType.INSERT_UPDATE, allDocs.length, valueAsString.length());
             
             return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
                                         BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
                                         });
         } catch(Exception e) {
             throw new RuntimeException(e);
@@ -202,11 +213,11 @@ public class CouchDbAsyncOperations {
             
             String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docs));
             
-            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:SAVE_OR_UPDATE, d:" + docs.length + ", s:" + valueAsString.length() + "]");
+            OperationInfo opInfo = new OperationInfo(OperationType.INSERT_UPDATE, docs.length, valueAsString.length());
             
             return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
                                         BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
                                         });
         } catch(Exception e) {
             throw new RuntimeException(e);
@@ -255,11 +266,11 @@ public class CouchDbAsyncOperations {
             
             String valueAsString = couchDb.mapper.writeValueAsString(Collections.singletonMap("docs", docsWithoutBody));
             
-            OperationInfo opInfo = new OperationInfo(OperationType.BULK, "[t:DELETE, d:" + docRevs.size() + ", s:" + valueAsString.length() + "]");
+            OperationInfo opInfo = new OperationInfo(OperationType.DELETE, docRevs.size(), valueAsString.length());
             
             return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
                                         BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
                                         });
         } catch(Exception e) {
             throw new RuntimeException(e);
@@ -307,11 +318,11 @@ public class CouchDbAsyncOperations {
             
             String valueAsString = couchDb.mapper.writeValueAsString(purgedMap);
             
-            OperationInfo opInfo = new OperationInfo(OperationType.PURGE, "[t:PURGE, d:" + docRevs.size() + ", s:" + valueAsString.length() + "]");
+            OperationInfo opInfo = new OperationInfo(OperationType.PURGE, docRevs.size(), valueAsString.length());
             
             return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
                                         BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper, opInfo).transform();
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
                                         });
         } catch(Exception e) {
             throw new RuntimeException(e);
@@ -332,11 +343,9 @@ public class CouchDbAsyncOperations {
             urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
         }
         
-        OperationInfo opInfo = new OperationInfo(OperationType.ATTACH, "[t:ATTACH]");
-        
         return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.ofInputStream(() -> in)).setHeader("Content-Type", contentType).uri(URI.create(urlBuilder.build())).build(), 
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper, opInfo).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 
@@ -360,6 +369,8 @@ public class CouchDbAsyncOperations {
      * Gets an attachment of the document as String.
      */
     public CompletableFuture<String> getAttachmentAsString(String docId, String name) {
+        OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
+        
         return getAttachment(docId, name).thenApply(r -> {
            if (r.statusCode() == 200) {
                return new String(r.body(), StandardCharsets.UTF_8);
@@ -371,6 +382,10 @@ public class CouchDbAsyncOperations {
            
            CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
            
+           opInfo.setSize(r.body().length);
+           
+           couchDbOperationStats.addOperation(opInfo);
+           
            throw CouchDbAsyncHandler.responseCode2Exception(response);
         });
     }
@@ -379,6 +394,8 @@ public class CouchDbAsyncOperations {
      * Gets an attachment of the document as bytes.
      */
     public CompletableFuture<byte[]> getAttachmentAsBytes(String docId, String name) {
+        OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
+
         return getAttachment(docId, name).thenApply(r -> {
            if (r.statusCode() == 200) {
                return r.body();
@@ -389,6 +406,10 @@ public class CouchDbAsyncOperations {
            }
            
            CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
+           
+           opInfo.setSize(r.body().length);
+           
+           couchDbOperationStats.addOperation(opInfo);
            
            throw CouchDbAsyncHandler.responseCode2Exception(response);
         });
@@ -405,11 +426,11 @@ public class CouchDbAsyncOperations {
                                                   .addPathSegment(name)
                                                   .addQueryParam("rev", docIdAndRev.getRev());
         
-        OperationInfo opInfo = new OperationInfo(OperationType.DELETE_ATTACHMENT, "[t:DELETE_ATTACHMENT]");
+        OperationInfo opInfo = new OperationInfo(OperationType.DELETE_ATTACHMENT, 0, 0);
         
         return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(urlBuilder.build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, opInfo).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, opInfo, couchDbOperationStats).transform();
                                     });
     }
 
@@ -425,7 +446,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<List<String>> getDatabases() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(new UrlBuilder(couchDb.getServerUrl()).addPathSegment("_all_dbs").build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<List<String>>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<List<String>>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 
@@ -435,7 +456,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<Boolean> createDb() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.noBody()).uri(URI.create(createUrlBuilder().build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, resp -> resp.isOk(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, resp -> resp.isOk(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 
@@ -445,7 +466,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<Boolean> deleteDb() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(createUrlBuilder().build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 
@@ -455,7 +476,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<CouchDbInfo> getInfo() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(createUrlBuilder().build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
     
@@ -467,7 +488,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<CouchDbInstanceInfo> getInstanceInfo() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(couchDb.getServerUrl())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInstanceInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbInstanceInfo>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 
@@ -483,7 +504,7 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<Boolean> cleanupViews() {
         return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.noBody()).uri(URI.create(createUrlBuilder().addPathSegment("_view_cleanup").build())).build(),
                                     BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null).transform();
+                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, null, couchDbOperationStats).transform();
                                     });
     }
 }
