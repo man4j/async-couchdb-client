@@ -1,7 +1,6 @@
-package com.equiron.acc;
+package com.equiron.acc.profiler;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
@@ -15,7 +14,10 @@ public class CouchDbOperationStats {
     
     static {
         Integer port = System.getenv("COUCHDB_METRICS_PORT") != null ? Integer.parseInt(System.getenv("COUCHDB_METRICS_PORT")) : null;
-        port = System.getProperty("COUCHDB_METRICS_PORT") != null ? Integer.parseInt(System.getProperty("COUCHDB_METRICS_PORT")) : null;
+        
+        if (port == null) {        
+            port = System.getProperty("COUCHDB_METRICS_PORT") != null ? Integer.parseInt(System.getProperty("COUCHDB_METRICS_PORT")) : null;
+        }
         
         if (port != null) {
             try {
@@ -32,12 +34,8 @@ public class CouchDbOperationStats {
     
     private final String dbName;
     
-    private final String instance;
-    
     public CouchDbOperationStats(String dbName) {
         this.dbName = dbName;
-        
-        instance = System.getenv("SERVICE_NAME") == null ? UUID.randomUUID().toString() : System.getenv("SERVICE_NAME");
     }
 
     public void addOperation(OperationInfo opInfo) {
@@ -55,7 +53,7 @@ public class CouchDbOperationStats {
             long opTime = System.currentTimeMillis() - opInfo.getStartTime();
             
             if (prevProfile == null) {
-                map.put(key, new OperationProfile(instance, dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize()));
+                map.put(key, new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize()));
             } else {
                 prevProfile.addTotalTime(opTime);
                 prevProfile.incCount();

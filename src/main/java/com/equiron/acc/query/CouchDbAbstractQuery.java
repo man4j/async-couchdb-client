@@ -13,10 +13,10 @@ import java.util.function.Function;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.CouchDbAsyncHandler;
-import com.equiron.acc.OperationInfo;
-import com.equiron.acc.OperationType;
 import com.equiron.acc.json.resultset.CouchDbAbstractResultSet;
 import com.equiron.acc.json.resultset.CouchDbAbstractRow;
+import com.equiron.acc.profiler.OperationInfo;
+import com.equiron.acc.profiler.OperationType;
 import com.equiron.acc.util.ExceptionHandler;
 import com.fasterxml.jackson.databind.JavaType;
 

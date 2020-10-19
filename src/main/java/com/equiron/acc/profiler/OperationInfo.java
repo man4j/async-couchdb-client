@@ -1,4 +1,4 @@
-package com.equiron.acc;
+package com.equiron.acc.profiler;
 
 public class OperationInfo {
     private final OperationType operationType;
