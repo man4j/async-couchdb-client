@@ -13,6 +13,8 @@ public class OperationInfo {
     
     private volatile long size;
     
+    private volatile int status;
+    
     public OperationInfo(OperationType operationType, long docsCount, long size) {
         this(operationType, "", docsCount, size);
     }
@@ -79,5 +81,13 @@ public class OperationInfo {
     
     public void setSize(long size) {
         this.size = size;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 }

@@ -61,6 +61,10 @@ public class CouchDbAsyncHandler<F, T> {
             int statusCode = response.statusCode();
             String body = response.body();
             
+            if (opInfo != null) {
+                opInfo.setStatus(statusCode);
+            }
+            
             couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, response.uri().toString());
             
             if (statusCode == 404 && !response.uri().getPath().contains("_view")) {//this is not query request.
@@ -73,12 +77,8 @@ public class CouchDbAsyncHandler<F, T> {
     
             F couchDbResult = parseHttpResponse(couchDbHttpResponse, javaType);
             
-            if (opInfo != null) {
-                if (opInfo.getOperationType() == OperationType.GET 
-                 || opInfo.getOperationType() == OperationType.GET_WITH_ATTACHMENT 
-                 || opInfo.getOperationType() == OperationType.QUERY) {
-                    opInfo.setSize(body.length());
-                }
+            if (opInfo != null && opInfo.getOperationType() == OperationType.QUERY) {
+                opInfo.setSize(body.length());
             
                 if (couchDbResult instanceof CouchDbAbstractResultSet) {
                     CouchDbAbstractResultSet<?,?,?> rs = (CouchDbAbstractResultSet<?,?,?>) couchDbResult;
@@ -87,7 +87,20 @@ public class CouchDbAsyncHandler<F, T> {
                 }
             }
             
-            return transformResult(couchDbResult, couchDbHttpResponse);
+            try {
+                return transformResult(couchDbResult, couchDbHttpResponse);
+            } catch (CouchDbConflictException e) {
+                if (opInfo != null) {
+                    opInfo.setStatus(409);
+                }
+                throw e;
+            } catch (CouchDbForbiddenException e) {
+                if (opInfo != null) {
+                    opInfo.setStatus(403);
+                }
+                throw e;
+            }
+            
         } finally {
             if (opInfo != null) {
                 couchDbOperationStats.addOperation(opInfo);

@@ -12,6 +12,11 @@ public class OperationProfile {
     private long count;
     private long size;
     
+    private int successCount;
+    private int notFoundCount;
+    private int conflictCount;
+    private int errorsCount;
+    
     public OperationProfile(String database, OperationType operationType, String operationInfo, String stackTrace) {
         this.database = database;
         this.operationType = operationType;
@@ -95,5 +100,37 @@ public class OperationProfile {
 
     public void setSize(long size) {
         this.size = size;
+    }
+
+    public int getSuccessCount() {
+        return successCount;
+    }
+
+    public void setSuccessCount(int successCount) {
+        this.successCount = successCount;
+    }
+
+    public int getErrorsCount() {
+        return errorsCount;
+    }
+
+    public void setErrorsCount(int errorsCount) {
+        this.errorsCount = errorsCount;
+    }
+
+    public int getNotFoundCount() {
+        return notFoundCount;
+    }
+
+    public void setNotFoundCount(int notFoundCount) {
+        this.notFoundCount = notFoundCount;
+    }
+
+    public int getConflictCount() {
+        return conflictCount;
+    }
+
+    public void setConflictCount(int conflictCount) {
+        this.conflictCount = conflictCount;
     }
 }

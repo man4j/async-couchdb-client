@@ -375,21 +375,24 @@ public class CouchDbAsyncOperations {
         OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
         
         return getAttachment(docId, name).thenApply(r -> {
-           if (r.statusCode() == 200) {
-               return new String(r.body(), StandardCharsets.UTF_8);
-           }
-           
-           if (r.statusCode() == 404) {
-               return null;
-           }
-           
-           CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
-           
-           opInfo.setSize(r.body().length);
-           
-           couchDbOperationStats.addOperation(opInfo);
-           
-           throw CouchDbAsyncHandler.responseCode2Exception(response);
+            try {
+                opInfo.setStatus(r.statusCode());
+                
+                if (r.statusCode() == 200) {
+                    opInfo.setSize(r.body().length);
+                    return new String(r.body(), StandardCharsets.UTF_8);
+                }
+               
+                if (r.statusCode() == 404) {
+                    return null;
+                }
+               
+                CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
+               
+                throw CouchDbAsyncHandler.responseCode2Exception(response);
+            } finally {
+                couchDbOperationStats.addOperation(opInfo);
+            }
         });
     }
     
@@ -400,21 +403,24 @@ public class CouchDbAsyncOperations {
         OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
 
         return getAttachment(docId, name).thenApply(r -> {
-           if (r.statusCode() == 200) {
-               return r.body();
-           }
-           
-           if (r.statusCode() == 404) {
-               return null;
-           }
-           
-           CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
-           
-           opInfo.setSize(r.body().length);
-           
-           couchDbOperationStats.addOperation(opInfo);
-           
-           throw CouchDbAsyncHandler.responseCode2Exception(response);
+            try {
+                opInfo.setStatus(r.statusCode());
+                
+                if (r.statusCode() == 200) {
+                    opInfo.setSize(r.body().length);
+                    return r.body();
+                }
+               
+                if (r.statusCode() == 404) {
+                    return null;
+                }
+               
+                CouchDbHttpResponse response = new CouchDbHttpResponse(r.statusCode(), r.statusCode() + "", new String(r.body(), StandardCharsets.UTF_8), r.uri().toString());
+               
+                throw CouchDbAsyncHandler.responseCode2Exception(response);
+            } finally {
+                couchDbOperationStats.addOperation(opInfo);
+            }
         });
     }
 

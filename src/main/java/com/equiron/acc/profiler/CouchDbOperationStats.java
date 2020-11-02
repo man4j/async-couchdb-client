@@ -26,10 +26,18 @@ public class CouchDbOperationStats {
     
     private volatile String logstashHost;
     
+    private volatile String instance;
+    
     public CouchDbOperationStats(String dbName) {
         this.dbName = dbName;
         
         logstashHost = System.getenv("LOGSTASH_HOST");
+
+        if (logstashHost == null || logstashHost.isBlank()) {
+            logstashHost = System.getProperty("LOGSTASH_HOST");
+        }
+
+        instance = System.getenv("SERVICE_NAME") == null ? "default_instance" : System.getenv("SERVICE_NAME");
         
         if (logstashHost != null && !logstashHost.isBlank()) {        
             Thread t = new Thread() {
@@ -39,16 +47,26 @@ public class CouchDbOperationStats {
                         for (OperationProfile profile : byTypeAndInfoAndStackTraceMap.values()) {
                             Map<String, Object> metrics = new HashMap<>();
                             
+                            metrics.put("acc.instance", instance);
                             metrics.put("acc.database", profile.getDatabase());
                             metrics.put("acc.operationType", profile.getOperationType());
                             metrics.put("acc.operationInfo", profile.getOperationInfo());
                             metrics.put("acc.stacktrace", profile.getStackTrace());
+
+                            metrics.put("acc.instance_database", instance + "/" + profile.getDatabase());
+                            metrics.put("acc.instance_database_operation", instance + "/" + profile.getDatabase() + "/" + profile.getOperationType() + (profile.getOperationInfo().isBlank() ? "" : ("/" + profile.getOperationInfo())));
+
                             metrics.put("acc.totalTime", profile.getTotalTime());
                             metrics.put("acc.count", profile.getCount());
                             metrics.put("acc.size", profile.getSize());
                             metrics.put("acc.avg", profile.getAvgOperationTime());
                             metrics.put("acc.max", profile.getMaxOperationTime());
                             metrics.put("acc.min", profile.getMinOperationTime());
+                            
+                            metrics.put("acc.success", profile.getSuccessCount());
+                            metrics.put("acc.notFound", profile.getNotFoundCount());
+                            metrics.put("acc.conflicts", profile.getConflictCount());
+                            metrics.put("acc.errors", profile.getErrorsCount());
                             
                             info(metrics);
                         }
@@ -90,9 +108,31 @@ public class CouchDbOperationStats {
             long opTime = System.currentTimeMillis() - opInfo.getStartTime();
             
             if (prevProfile == null) {
-                map.put(key, new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize()));
+                OperationProfile profile = new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize());
+                
+                if (opInfo.getStatus() == 200) {
+                    profile.setSuccessCount(1);
+                } else if (opInfo.getStatus() == 404) {
+                    profile.setNotFoundCount(1);
+                } else if (opInfo.getStatus() == 409) {
+                    profile.setConflictCount(1);
+                } else {
+                    profile.setErrorsCount(1);
+                }
+                
+                map.put(key, profile);
             } else {
                 OperationProfile profile = new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace());
+                
+                if (opInfo.getStatus() == 200) {
+                    profile.setSuccessCount(prevProfile.getSuccessCount() + 1);
+                } else if (opInfo.getStatus() == 404) {
+                    profile.setNotFoundCount(prevProfile.getNotFoundCount() + 1);
+                } else if (opInfo.getStatus() == 409) {
+                    profile.setConflictCount(prevProfile.getConflictCount() + 1);
+                } else {
+                    profile.setErrorsCount(prevProfile.getErrorsCount() + 1);
+                }
                 
                 profile.setTotalTime(prevProfile.getTotalTime() + opTime);
                 profile.setCount(prevProfile.getCount() + 1);
