@@ -5,9 +5,7 @@ public class OperationProfile {
     private OperationType operationType;
     private String operationInfo;
     private String stackTrace;
-    private long maxOperationTime;
-    private long avgOperationTime;
-    private long minOperationTime;
+    
     private long totalTime;
     private long count;
     private long size;
@@ -31,31 +29,8 @@ public class OperationProfile {
         this.stackTrace = stackTrace;
         
         setCount(1);
-        setAvgOperationTime(time);
-        setMaxOperationTime(time);
-        setMinOperationTime(time);
         setTotalTime(time);
         setSize(size);
-    }
-    
-    public void setAvgOperationTime(long amount) {
-        avgOperationTime = amount;
-    }
-    
-    public long getMaxOperationTime() {
-        return maxOperationTime;
-    }
-
-    public void setMaxOperationTime(long amount) {
-        maxOperationTime = amount;
-    }
-    
-    public long getMinOperationTime() {
-        return minOperationTime;
-    }
-
-    public void setMinOperationTime(long amount) {
-        minOperationTime = amount;
     }
     
     public long getTotalTime() {
@@ -88,10 +63,6 @@ public class OperationProfile {
 
     public String getStackTrace() {
         return stackTrace;
-    }
-
-    public long getAvgOperationTime() {
-        return avgOperationTime;
     }
 
     public long getSize() {
