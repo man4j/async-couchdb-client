@@ -668,7 +668,7 @@ public class CouchDb implements AutoCloseable {
                 }
 
                 if (replicated.direction() == Direction.TO || replicated.direction() == Direction.BOTH) {                
-                    CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_to", localServer, remoteServer, selectorMap);
+                    CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + ">>>" + protocol + "://" + host + ":" + port + "/" + remoteDb, localServer, remoteServer, selectorMap);
                     
                     if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
                         toRemote.setCreateTarget(true);
@@ -678,7 +678,7 @@ public class CouchDb implements AutoCloseable {
                 }
                 
                 if (replicated.direction() == Direction.FROM || replicated.direction() == Direction.BOTH) {
-                    CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "$" + remoteDb + "_from", remoteServer, localServer, selectorMap);
+                    CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "<<<" + protocol + "://" + host + ":" + port + "/" + remoteDb, remoteServer, localServer, selectorMap);
                     
                     if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
                         fromRemote.setCreateTarget(true);
@@ -711,10 +711,18 @@ public class CouchDb implements AutoCloseable {
                                                                             .filter(id -> !id.startsWith("_design/"))//exclude design docs
                                                                             .collect(Collectors.toList());
             
-            List<CouchDbReplicationDocument> replicationsDocs = replicatorDb.getBuiltInView().<CouchDbReplicationDocument>createDocQuery().byKeys(replicationsDocsIds).asDocs();
+            List<CouchDbReplicationDocument> replicationsDocs = new ArrayList<>();
+            
+            for (String docId : replicationsDocsIds) {
+                try {
+                    replicationsDocs.add(replicatorDb.get(docId));
+                } catch (Exception e) {
+                    logger.warn("Can't parse replication document: " + e.getMessage());
+                }
+            }
             
             for (var doc : replicationsDocs) {
-                if (doc.getDocId().startsWith(getDbName() + "$")) {//находим документы связанные с этой базой
+                if (doc.getDocId().startsWith(getDbName() + "<<<") || doc.getDocId().startsWith(getDbName() + ">>>")) {//находим документы связанные с этой базой
                     if (newReplicationDocs.containsKey(doc.getDocId())) {//значит надо просто обновить
                         CouchDbReplicationDocument updatedReplicationDoc = newReplicationDocs.get(doc.getDocId());
                         

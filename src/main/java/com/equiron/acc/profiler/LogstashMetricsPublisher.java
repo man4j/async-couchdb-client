@@ -58,13 +58,9 @@ public class LogstashMetricsPublisher {
                             metrics.put("acc.operationInfo", profile.getOperationInfo());
                             metrics.put("acc.instance_database_operation", extrackKey(profile.getOperationType().toString(), profile.getOperationInfo()));
                             
-                            //Поле для агрегации в кибане
-                            metrics.put("acc.byStack.instance_database_operation_stack", e.getKey());
-                            
-                            //Поле для отображения stacktrace
                             metrics.put("acc.byStack.stacktrace", profile.getStackTrace());
 
-                            //Не используются в кибане
+                            //Поля для таблицы
                             metrics.put("acc.byStack.totalTime", profile.getTotalTime());
                             metrics.put("acc.byStack.count", profile.getCount());
                             metrics.put("acc.byStack.size", profile.getSize());
@@ -103,7 +99,7 @@ public class LogstashMetricsPublisher {
                         }
                         
                         try {
-                            Thread.sleep(30_000);
+                            Thread.sleep(60_000);
                         } catch (@SuppressWarnings("unused") InterruptedException e) {
                             break;
                         }
@@ -177,5 +173,9 @@ public class LogstashMetricsPublisher {
         } finally {
             striped.get(key).unlock();
         }
+    }
+    
+    public static void main(String[] args) {
+        System.out.println(12345 % 10_000);
     }
 }

@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.equiron.acc.CouchDb;
+import com.equiron.acc.json.CouchDbDeletedEvent;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbEvent;
 import com.equiron.acc.util.BufUtils;
@@ -199,7 +200,9 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
         boolean processEvent = true;
         
         if (node.path("deleted").asBoolean()) {
-            event = new CouchDbEvent<>(node.path("id").asText(), node.path("seq").asText(), true);                
+            CouchDbDeletedEvent deletedEvent = db.getMapper().readValue(eventArray, new TypeReference<CouchDbDeletedEvent>() { /* empty */});
+            
+            event = new CouchDbEvent<>(deletedEvent.getDocId(), deletedEvent.getSeq(), true, deletedEvent.getDoc());
         } else {
             event = db.getMapper().readValue(eventArray, new TypeReference<CouchDbEvent<D>>() { /* empty */});
             

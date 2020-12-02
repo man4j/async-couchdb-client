@@ -28,8 +28,12 @@ public class OperationInfo {
         this.size = size;
     }
     
-    private String generateStackTrace() {
+    private static String generateStackTrace() {
         String stackTrace = "";
+        
+        if (!CouchDbOperationStats.COUCHDB_METRICS_STACK_TRACE) {
+            return stackTrace;
+        }
         
         for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
             if (!e.toString().startsWith("java")
@@ -47,6 +51,9 @@ public class OperationInfo {
                 return null;
             }
         }
+        
+        stackTrace = stackTrace.replace("EnhancerBySpringCGLIB", "");
+        stackTrace = stackTrace.replace("FastClassBySpringCGLIB", "");
         
         return stackTrace;
     }
@@ -89,5 +96,5 @@ public class OperationInfo {
 
     public void setStatus(int status) {
         this.status = status;
-    }
+    }    
 }
