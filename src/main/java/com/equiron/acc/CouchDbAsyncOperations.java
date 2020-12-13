@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,7 @@ import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.rainerhahnekamp.sneakythrow.Sneaky;
 
 public class CouchDbAsyncOperations {
     private CouchDb couchDb;
@@ -43,6 +45,8 @@ public class CouchDbAsyncOperations {
     private HttpClient httpClient;
     
     private CouchDbOperationStats couchDbOperationStats;
+    
+    private Semaphore semaphore = new Semaphore(128);
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
@@ -109,10 +113,17 @@ public class CouchDbAsyncOperations {
         
         OperationInfo operationInfo = new OperationInfo(operationType, 1, 0);
         
-        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().header("Accept", attachments ? "application/json" : "*/*").uri(URI.create(urlBuilder.build())).build(), 
-                                    BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, docType, transformer, couchDb.mapper, operationInfo, couchDbOperationStats).transform();
-                                    });
+        Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+        
+        try {        
+            return httpClient.sendAsync(couchDb.getRequestPrototype().GET().header("Accept", attachments ? "application/json" : "*/*").uri(URI.create(urlBuilder.build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, docType, transformer, couchDb.mapper, operationInfo, couchDbOperationStats).transform();
+                                        }).handle((r, e) -> { semaphore.release(); return r;});
+        } catch (Exception e) {
+            semaphore.release();
+            throw e;
+        }
     }
     
     //------------------ Bulk API -------------------------
@@ -174,10 +185,19 @@ public class CouchDbAsyncOperations {
             
             OperationInfo opInfo = new OperationInfo(OperationType.INSERT_UPDATE, allDocs.length, valueAsString.length());
             
-            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
-                                        BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
-                                        });
+            int replicas = couchDb.getClusterInfo() == null ? 1 : couchDb.getClusterInfo().getN();
+            
+            Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+            
+            try {
+                return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", replicas + "").build())).build(), 
+                                            BodyHandlers.ofString()).thenApply(response -> {
+                                                return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
+                                            }).handle((r, e) -> { semaphore.release(); return r;});
+            } catch (Exception e) {
+                semaphore.release();
+                throw e;
+            }
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -218,10 +238,19 @@ public class CouchDbAsyncOperations {
             
             OperationInfo opInfo = new OperationInfo(OperationType.INSERT_UPDATE, docs.length, valueAsString.length());
             
-            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
-                                        BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
-                                        });
+            int replicas = couchDb.getClusterInfo() == null ? 1 : couchDb.getClusterInfo().getN();
+            
+            Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+            
+            try {
+                return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", replicas + "").build())).build(), 
+                                            BodyHandlers.ofString()).thenApply(response -> {
+                                                return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
+                                            }).handle((r, e) -> { semaphore.release(); return r;});
+            } catch (Exception e) {
+                semaphore.release();
+                throw e;
+            }
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -271,10 +300,19 @@ public class CouchDbAsyncOperations {
             
             OperationInfo opInfo = new OperationInfo(OperationType.DELETE, docRevs.size(), valueAsString.length());
             
-            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
-                                        BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
-                                        });
+            int replicas = couchDb.getClusterInfo() == null ? 1 : couchDb.getClusterInfo().getN();
+            
+            Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+            
+            try {
+                return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", replicas + "").build())).build(), 
+                                            BodyHandlers.ofString()).thenApply(response -> {
+                                                return new CouchDbAsyncHandler<>(response, new TypeReference<List<CouchDbBulkResponse>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
+                                            }).handle((r, e) -> { semaphore.release(); return r;});
+            } catch (Exception e) {
+                semaphore.release();
+                throw e;
+            }
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -323,10 +361,19 @@ public class CouchDbAsyncOperations {
             
             OperationInfo opInfo = new OperationInfo(OperationType.PURGE, docRevs.size(), valueAsString.length());
             
-            return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", couchDb.getClusterInfo().getN() + "").build())).build(), 
-                                        BodyHandlers.ofString()).thenApply(response -> {
-                                            return new CouchDbAsyncHandler<>(response, new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
-                                        });
+            int replicas = couchDb.getClusterInfo() == null ? 1 : couchDb.getClusterInfo().getN();
+            
+            Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+            
+            try {
+                return httpClient.sendAsync(couchDb.getRequestPrototype().POST(BodyPublishers.ofString(valueAsString)).uri(URI.create(createUrlBuilder().addPathSegment("_purge").addQueryParam("w", replicas + "").build())).build(), 
+                                            BodyHandlers.ofString()).thenApply(response -> {
+                                                return new CouchDbAsyncHandler<>(response, new TypeReference<Map<String, Object>>() {/* empty */}, transformer, couchDb.mapper, opInfo, couchDbOperationStats).transform();
+                                            }).handle((r, e) -> { semaphore.release(); return r;});
+            } catch (Exception e) {
+                semaphore.release();
+                throw e;
+            }
         } catch(Exception e) {
             throw new RuntimeException(e);
         }
@@ -346,10 +393,17 @@ public class CouchDbAsyncOperations {
             urlBuilder.addQueryParam("rev", docIdAndRev.getRev());
         }
         
-        return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.ofInputStream(() -> in)).setHeader("Content-Type", contentType).uri(URI.create(urlBuilder.build())).build(), 
-                                    BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
-                                    });
+        Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+        
+        try {
+            return httpClient.sendAsync(couchDb.getRequestPrototype().PUT(BodyPublishers.ofInputStream(() -> in)).setHeader("Content-Type", contentType).uri(URI.create(urlBuilder.build())).build(), 
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBulkResponse>() {/* empty */}, Function.identity(), couchDb.mapper, null, couchDbOperationStats).transform();
+                                        }).handle((r, e) -> { semaphore.release(); return r;});
+        } catch (Exception e) {
+            semaphore.release();
+            throw e;
+        }
     }
 
     /**
@@ -365,7 +419,15 @@ public class CouchDbAsyncOperations {
     public CompletableFuture<HttpResponse<byte[]>> getAttachment(String docId, String name) {
         if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
         
-        return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build())).build(), BodyHandlers.ofByteArray());
+        Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+        
+        try {
+            return httpClient.sendAsync(couchDb.getRequestPrototype().GET().uri(URI.create(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build())).build(), 
+                                        BodyHandlers.ofByteArray()).handle((r, e) -> { semaphore.release(); return r;});
+        } catch (Exception e) {
+            semaphore.release();
+            throw e;
+        }
     }
         
     /**
@@ -437,10 +499,17 @@ public class CouchDbAsyncOperations {
         
         OperationInfo opInfo = new OperationInfo(OperationType.DELETE_ATTACHMENT, 0, 0);
         
-        return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(urlBuilder.build())).build(),
-                                    BodyHandlers.ofString()).thenApply(response -> {
-                                        return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, opInfo, couchDbOperationStats).transform();
-                                    });
+        Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+        
+        try {
+            return httpClient.sendAsync(couchDb.getRequestPrototype().DELETE().uri(URI.create(urlBuilder.build())).build(),
+                                        BodyHandlers.ofString()).thenApply(response -> {
+                                            return new CouchDbAsyncHandler<>(response, new TypeReference<CouchDbBooleanResponse>() {/* empty */}, new CouchDbBooleanResponseTransformer(), couchDb.mapper, opInfo, couchDbOperationStats).transform();
+                                        }).handle((r, e) -> { semaphore.release(); return r;});
+        } catch (Exception e) {
+            semaphore.release();
+            throw e;
+        }
     }
 
     //------------------ Admin API -------------------------

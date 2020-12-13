@@ -37,12 +37,14 @@ import org.springframework.beans.factory.config.BeanExpressionResolver;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.context.ApplicationContext;
 
+import com.equiron.acc.annotation.ErlangView;
 import com.equiron.acc.annotation.JsView;
 import com.equiron.acc.annotation.Replicated;
 import com.equiron.acc.annotation.Replicated.Direction;
 import com.equiron.acc.annotation.Security;
 import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
+import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.exception.CouchDbTimeoutException;
 import com.equiron.acc.json.CouchDbBulkResponse;
@@ -101,16 +103,19 @@ public class CouchDb implements AutoCloseable {
     
     private volatile boolean selfDiscovering = true;
     
+    private volatile boolean enablePurgeListener = false;
+    
     private boolean leaveStaleReplications = false;
     
     private volatile boolean initialized;
     
     private volatile List<CouchDbView> viewList = new CopyOnWriteArrayList<>();
     
-    private volatile Thread updateViewThread;
-    
     private volatile CouchDbClusterInfo clusterInfo;
     
+    private volatile CouchDbEventListener<CouchDbDocument> purgeListener = new CouchDbEventListener<>(this) {/* empty */};
+    
+    @SuppressWarnings("resource")
     @PostConstruct
     public void init() {
         if (!initialized) {//может быть инициализирована в конструкторе
@@ -150,38 +155,19 @@ public class CouchDb implements AutoCloseable {
                     cleanupViews();
                     
                     synchronizeReplicationDocs();
-                    
-                    if (getInstanceInfo().getVersion().startsWith("2")) {
-                        updateViewThread = new Thread("CouchDB view updater for: " + getDbName()) {
-                            @Override
-                            public void run() {
-                                logger.info("Start CouchDB view updater thread");
-
-                                while (!Thread.interrupted()) {
-                                    try {
-                                        updateAllViews();
-                                    } catch (Exception e) {
-                                        if (e instanceof InterruptedException) {
-                                            Thread.currentThread().interrupt();
-                                        } else {
-                                            logger.error("Can't update views: " + e.getMessage());
-                                        }
-                                    }
-                                    
-                                    try {
-                                        Thread.sleep(60_000);
-                                    } catch (@SuppressWarnings("unused") InterruptedException e) {
-                                        Thread.currentThread().interrupt();
-                                    }
-                                }
-                            }
-                        };
-                        
-                        updateViewThread.start();
-                    }
                 }
                 
                 initialized = true;
+
+                if (enablePurgeListener) {
+                    purgeListener.addEventHandler(e -> {
+                        if (e.isDeleted()) {
+                            purge(e.getDocIdAndRev());
+                        }
+                    });
+                    
+                    purgeListener.startListening("0");
+                }
             } else {
                 logger.warn("Database " + getDbName() + " was disabled!");
             }
@@ -480,6 +466,7 @@ public class CouchDb implements AutoCloseable {
         String password = config.getPassword();
         String dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
         selfDiscovering = config.isSelfDiscovering();
+        enablePurgeListener = config.isEnablePurgeListener();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
@@ -492,6 +479,7 @@ public class CouchDb implements AutoCloseable {
             
             selfDiscovering = annotationConfig.selfDiscovering();
             leaveStaleReplications = annotationConfig.leaveStaleReplications();
+            enablePurgeListener = annotationConfig.enablePurgeListener();
             
             String enabledParam = resolve(annotationConfig.enabled(), true);
             
@@ -849,27 +837,45 @@ public class CouchDb implements AutoCloseable {
         Set<CouchDbDesignDocument> designSet = new HashSet<>();
 
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
-            if (field.isAnnotationPresent(JsView.class)) {
-                JsView view = field.getAnnotation(JsView.class);
-
+            if (field.isAnnotationPresent(JsView.class) || field.isAnnotationPresent(ErlangView.class)) {
                 String viewName = NamedStrategy.addUnderscores(field.getName());
                 String designName = "_design/" + viewName;
                 
-                String map = "function(doc) {" + view.map() + ";}";
-
+                String map = null;
                 String reduce = null;
+                CouchDbDesignDocument designDocument = null;
 
-                if (!view.reduce().isEmpty()) {
-                    if (Arrays.asList(JsView.COUNT, JsView.STATS, JsView.SUM).contains(view.reduce())) {
-                        reduce = view.reduce();
-                    } else {
-                        reduce = "function(key, values, rereduce) {" + view.reduce() + ";}";
+                if (field.isAnnotationPresent(JsView.class)) {
+                    JsView view = field.getAnnotation(JsView.class);
+
+                    map = "function(doc) {" + view.map() + ";}";
+    
+                    if (!view.reduce().isEmpty()) {
+                        if (Arrays.asList(JsView.COUNT, JsView.STATS, JsView.SUM).contains(view.reduce())) {
+                            reduce = view.reduce();
+                        } else {
+                            reduce = "function(key, values, rereduce) {" + view.reduce() + ";}";
+                        }
                     }
-                }
+                    
+                    designDocument = new CouchDbDesignDocument(designName);
+                } else {
+                    ErlangView view = field.getAnnotation(ErlangView.class);
 
-                CouchDbDesignDocument designDocument = new CouchDbDesignDocument(designName);
-                designDocument.addView(viewName, map, reduce);
+                    map = "fun({Doc}) -> " + view.map() + " end.";
+    
+                    if (!view.reduce().isEmpty()) {
+                        if (Arrays.asList(ErlangView.COUNT, ErlangView.STATS, ErlangView.SUM).contains(view.reduce())) {
+                            reduce = view.reduce();
+                        } else {
+                            reduce = "fun(Keys, Values, ReReduce) -> " + view.reduce() + " end.";
+                        }
+                    }
+                    
+                    designDocument = new CouchDbDesignDocument(designName, "erlang");
+                }
                 
+                designDocument.addView(viewName, map, reduce);
                 designSet.add(designDocument);
             }
             
@@ -903,9 +909,8 @@ public class CouchDb implements AutoCloseable {
     @PreDestroy
     @Override
     public void close() throws Exception {
-        if (updateViewThread != null) {
-            updateViewThread.interrupt();
-            updateViewThread.join();
+        if (!purgeListener.isStopped()) {
+            purgeListener.stopListening();
         }
     }
 }

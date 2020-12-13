@@ -21,7 +21,9 @@ public class CouchDbConfig {
     
     private final boolean selfDiscovering;
     
-    CouchDbConfig(String host, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering) {
+    private final boolean enablePurgeListener;
+    
+    CouchDbConfig(String host, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering, boolean enablePurgeListener) {
         this.host = host;
         this.port = port;
         this.user = user;
@@ -30,6 +32,7 @@ public class CouchDbConfig {
         this.httpClient = httpClient;
         this.buildViewsOnStart = buildViewsOnStart;
         this.selfDiscovering = selfDiscovering;
+        this.enablePurgeListener = enablePurgeListener;
     }
 
     public static class Builder {
@@ -46,6 +49,8 @@ public class CouchDbConfig {
         boolean buildViewsOnStart = true;
         
         boolean selfDiscovering = true;
+        
+        boolean enablePurgeListener = false;
         
         @Deprecated
         public Builder setIp(String host) {
@@ -95,12 +100,18 @@ public class CouchDbConfig {
             
             return this;
         }
+        
+        public Builder setEnablePurgeListener(boolean enablePurgeListener) {
+            this.enablePurgeListener = enablePurgeListener;
+            
+            return this;
+        }
 
         public CouchDbConfig build() {
             HttpClient.Builder builder = HttpClient.newBuilder().version(Version.HTTP_1_1)
                                                    .connectTimeout(Duration.ofSeconds(30));
             
-            return new CouchDbConfig(host, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering);
+            return new CouchDbConfig(host, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering, enablePurgeListener);
         }
     }
     
@@ -139,5 +150,9 @@ public class CouchDbConfig {
     
     public boolean isSelfDiscovering() {
         return selfDiscovering;
+    }
+    
+    public boolean isEnablePurgeListener() {
+        return enablePurgeListener;
     }
 }

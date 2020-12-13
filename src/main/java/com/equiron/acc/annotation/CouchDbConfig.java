@@ -23,4 +23,6 @@ public @interface CouchDbConfig {
     boolean selfDiscovering() default true;
     
     boolean leaveStaleReplications() default false;
+    
+    boolean enablePurgeListener() default false;
 }
