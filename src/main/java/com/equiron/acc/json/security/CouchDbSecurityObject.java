@@ -4,9 +4,9 @@ import java.util.Objects;
 import java.util.Set;
 
 public class CouchDbSecurityObject {
-    private CouchDbSecurityPattern admins = new CouchDbSecurityPattern(null, Set.of("_admin"));
+    private CouchDbSecurityPattern admins = new CouchDbSecurityPattern(Set.of(), Set.of("_admin"));
     
-    private CouchDbSecurityPattern members = new CouchDbSecurityPattern(null, Set.of("_admin"));
+    private CouchDbSecurityPattern members = new CouchDbSecurityPattern(Set.of(), Set.of("_admin"));
 
     public CouchDbSecurityPattern getAdmins() {
         return admins;
