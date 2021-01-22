@@ -3,6 +3,8 @@ package com.equiron.acc;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,22 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         Assertions.assertNotNull(testDoc);
         Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());
     }
+    
+    @Test
+    public void shouldSaveDocAndGetAsync() throws InterruptedException, ExecutionException {
+        TestDoc testDoc = new TestDoc();
+        
+        testDoc.addAttachment("doc", new CouchDbDocumentAttachment("application/json", "{\"age\":10}"));
+
+        db.saveOrUpdate(testDoc);
+        
+        Future<TestDoc> f = db.async().get(testDoc.getDocId(), true);
+        
+        testDoc = f.get();
+        
+        Assertions.assertNotNull(testDoc);
+        Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());
+    }
 
     @Test
     public void shouldSaveGenericDoc() {
@@ -43,7 +61,6 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         Assertions.assertEquals(BigDecimal.class, d.getValue().getClass());
         Assertions.assertEquals(new BigDecimal("123"), d.getValue());
     }
-
 
     @Test
     public void shouldGetDesignDocs() {
