@@ -56,6 +56,10 @@ public class CouchDbAsyncOperations {
         
         String maxParallelism = System.getProperty("COUCHDB_CLIENT_MAX_PARALLELISM");
         
+        if (maxParallelism == null || maxParallelism.isBlank()) {
+            maxParallelism = System.getenv("COUCHDB_CLIENT_MAX_PARALLELISM");
+        }
+        
         if (maxParallelism != null && !maxParallelism.isBlank()) {
             semaphore = new Semaphore(Integer.parseInt(maxParallelism));
         } else {
