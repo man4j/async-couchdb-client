@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.ArrayUtils;
 
+import com.equiron.acc.exception.CouchDbResponseException;
 import com.equiron.acc.exception.http.CouchDbConflictException;
 import com.equiron.acc.exception.http.CouchDbForbiddenException;
 import com.equiron.acc.json.CouchDbBooleanResponse;
@@ -46,12 +47,20 @@ public class CouchDbAsyncOperations {
     
     private CouchDbOperationStats couchDbOperationStats;
     
-    private Semaphore semaphore = new Semaphore(128);
+    private Semaphore semaphore;
 
     public CouchDbAsyncOperations(CouchDb couchDb) {
         this.couchDb = couchDb;
         this.httpClient = couchDb.getHttpClient();
         this.couchDbOperationStats = new CouchDbOperationStats(couchDb.getDbName());
+        
+        String maxParallelism = System.getProperty("COUCHDB_CLIENT_MAX_PARALLELISM");
+        
+        if (maxParallelism != null && !maxParallelism.isBlank()) {
+            semaphore = new Semaphore(Integer.parseInt(maxParallelism));
+        } else {
+            semaphore = new Semaphore(128);
+        }
     }
     
     public CouchDbOperationStats getCouchDbOperationStats() {
@@ -169,12 +178,17 @@ public class CouchDbAsyncOperations {
                         e = new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
                     }
                     
+                    if (response.getError() != null && !response.getError().isBlank()) {
+                        e = new CouchDbResponseException("Bulk error: " +  response.getError());
+                    }
+                    
                     allDocs[i].setDocId(response.getDocId());
                     allDocs[i].setRev(response.getRev());
 
                     new CouchDbDocumentAccessor(allDocs[i]).setCurrentDb(couchDb)
                                                            .setInConflict(response.isInConflict())
                                                            .setForbidden(response.isForbidden())
+                                                           .setBulkError(response.getError())
                                                            .setConflictReason(response.getConflictReason());
                 }
                 

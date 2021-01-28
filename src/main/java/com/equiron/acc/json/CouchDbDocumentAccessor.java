@@ -26,6 +26,12 @@ public class CouchDbDocumentAccessor {
 
         return this;
     }
+    
+    public CouchDbDocumentAccessor setBulkError(String bulkError) {
+        document.bulkError = bulkError;
+
+        return this;
+    }
 
     public CouchDbDocumentAccessor setCurrentDb(CouchDb currentDb) {
         document.currentDb = currentDb;
