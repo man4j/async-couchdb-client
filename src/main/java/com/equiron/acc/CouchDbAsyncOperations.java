@@ -148,6 +148,7 @@ public class CouchDbAsyncOperations {
                     new CouchDbDocumentAccessor(allDocs[i]).setCurrentDb(couchDb)
                                                            .setInConflict(response.isInConflict())
                                                            .setForbidden(response.isForbidden())
+                                                           .setBulkError(response.getError())
                                                            .setConflictReason(response.getConflictReason());
                 }
                 

@@ -32,4 +32,10 @@ public class CouchDbDocumentAccessor {
 
         return this;
     }
+    
+    public CouchDbDocumentAccessor setBulkError(String error) {
+        document.bulkError = error;
+
+        return this;
+    }
 }

@@ -52,6 +52,9 @@ public class CouchDbDocument implements HasId<String> {
 
     @JsonIgnore
     String conflictReason;
+    
+    @JsonIgnore
+    String bulkError;
 
     @JsonIgnore
     CouchDb currentDb;
@@ -143,6 +146,10 @@ public class CouchDbDocument implements HasId<String> {
 
     public String getConflictReason() {
         return conflictReason;
+    }
+    
+    public String getBulkError() {
+        return bulkError;
     }
 
     /**
