@@ -242,11 +242,12 @@ public class CouchDbAsyncOperations {
                         e = new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
                     }
                     
+                    if (response.getError() != null && !response.getError().isBlank()) {
+                        e = new CouchDbResponseException("Bulk error: " +  response.getError());
+                    }
+                    
                     docs[i].put("_id", response.getDocId());
                     docs[i].put("_rev", response.getRev());
-                    docs[i].put("conflictReason", response.getConflictReason());
-                    docs[i].put("reason", response.getConflictReason());
-                    docs[i].put("error", response.getError());
                 }
                 
                 if (e != null) throw e;
@@ -310,6 +311,10 @@ public class CouchDbAsyncOperations {
                     
                     if (response.isForbidden()) {
                         throw new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
+                    }
+                    
+                    if (response.getError() != null && !response.getError().isBlank()) {
+                        throw new CouchDbResponseException("Bulk error: " +  response.getError());
                     }
                 }
 
