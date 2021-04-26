@@ -172,17 +172,11 @@ public class CouchDbAsyncOperations {
                 for (int i = 0; i < allDocs.length; i++) {
                     CouchDbBulkResponse response = responses.get(i);
                     
-                    if (!ignoreConflicts) {
-                        if (response.isInConflict()) {
-                            e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
-                        }
-                    }
-                    
-                    if (response.isForbidden()) {
+                    if (!ignoreConflicts && response.isInConflict()) {
+                        e = new CouchDbConflictException(response.getConflictReason() + " _docId: " + response.getDocId());
+                    } else if (response.isForbidden()) {
                         e = new CouchDbForbiddenException("Forbidden: " +  response.getConflictReason());
-                    }
-                    
-                    if (response.getError() != null && !response.getError().isBlank()) {
+                    } else if (response.getError() != null && !response.getError().isBlank()) {
                         e = new CouchDbResponseException("Bulk error: " +  response.getError());
                     }
                     
