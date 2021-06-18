@@ -127,8 +127,8 @@ public class CouchDb implements AutoCloseable {
                 prototype = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30))
                                                     .setHeader("Content-Type", "application/json; charset=utf-8");
                 
-                if (config.getUser() != null && config.getPassword() != null) {
-                    prototype.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((config.getUser() + ":" + config.getPassword()).getBytes()));
+                if (user != null && password != null) {
+                    prototype.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((user + ":" + password).getBytes()));
                 }
                                                                       
                 asyncOps = new CouchDbAsyncOperations(this);
