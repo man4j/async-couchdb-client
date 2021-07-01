@@ -5,6 +5,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.equiron.acc.provider.HttpClientProviderType;
+
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface CouchDbConfig {
@@ -25,4 +27,6 @@ public @interface CouchDbConfig {
     boolean leaveStaleReplications() default false;
     
     boolean enablePurgeListener() default false;
+    
+    HttpClientProviderType httpClientProviderType() default HttpClientProviderType.JDK;
 }

@@ -5,6 +5,6 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbBadContentTypeException extends CouchDbResponseException {
     public CouchDbBadContentTypeException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 415);
     }
 }

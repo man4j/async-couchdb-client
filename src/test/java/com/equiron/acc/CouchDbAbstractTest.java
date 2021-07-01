@@ -4,9 +4,12 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import com.equiron.acc.fixture.TestDb;
+import com.equiron.acc.provider.HttpClientProviderType;
 
 public class CouchDbAbstractTest {
     protected TestDb db;
+    
+    public static final HttpClientProviderType PROVIDER = HttpClientProviderType.OK_HTTP;
 
     @BeforeEach
     public void before() {
@@ -15,6 +18,7 @@ public class CouchDbAbstractTest {
                                                    .setUser(System.getProperty("USER"))
                                                    .setPassword(System.getProperty("PASSWORD"))
                                                    .setSelfDiscovering(true)
+                                                   .setHttpClientProviderType(PROVIDER)
                                                    .build());
     }
 

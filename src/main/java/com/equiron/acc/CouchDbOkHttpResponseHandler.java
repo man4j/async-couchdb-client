@@ -1,6 +1,5 @@
 package com.equiron.acc;
 
-import java.net.http.HttpResponse;
 import java.util.function.Function;
 
 import com.equiron.acc.exception.CouchDbResponseException;
@@ -26,25 +25,28 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.rainerhahnekamp.sneakythrow.Sneaky;
 
-public class CouchDbAsyncHandler<F, T> {
+import okhttp3.Response;
+
+public class CouchDbOkHttpResponseHandler<F, T> {
     private JavaType javaType;
 
     private Function<F, T> transformer;
     
     private ObjectMapper mapper;
 
-    private HttpResponse<String> response;
+    private Response response;
     
     private OperationInfo opInfo;
     
     private CouchDbOperationStats couchDbOperationStats;
 
-    public CouchDbAsyncHandler(HttpResponse<String> response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
+    public CouchDbOkHttpResponseHandler(Response response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
         this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo, couchDbOperationStats);
     }
 
-    public CouchDbAsyncHandler(HttpResponse<String> response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
+    public CouchDbOkHttpResponseHandler(Response response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, CouchDbOperationStats couchDbOperationStats) {
         this.response = response;
         this.javaType = javaType;
         this.transformer = transformer;
@@ -57,17 +59,17 @@ public class CouchDbAsyncHandler<F, T> {
         try {
             CouchDbHttpResponse couchDbHttpResponse;
     
-            String statusText = response.statusCode() + "";
-            int statusCode = response.statusCode();
-            String body = response.body();
+            String statusText = response.code() + "";
+            int statusCode = response.code();
+            String body = Sneaky.sneak(() -> response.body().string());
             
             if (opInfo != null) {
                 opInfo.setStatus(statusCode);
             }
             
-            couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, response.uri().toString());
+            couchDbHttpResponse = new CouchDbHttpResponse(statusCode, statusText, body, response.request().url().toString());
             
-            if (statusCode == 404 && !response.uri().getPath().contains("_view")) {//this is not query request.
+            if (statusCode == 404 && !response.request().url().toString().contains("_view")) {//this is not query request.
                 return transformResult(null, couchDbHttpResponse);
             }
     
@@ -89,15 +91,8 @@ public class CouchDbAsyncHandler<F, T> {
             
             try {
                 return transformResult(couchDbResult, couchDbHttpResponse);
-            } catch (CouchDbConflictException e) {
-                if (opInfo != null) {
-                    opInfo.setStatus(409);
-                }
-                throw e;
-            } catch (CouchDbForbiddenException e) {
-                if (opInfo != null) {
-                    opInfo.setStatus(403);
-                }
+            } catch (CouchDbResponseException e) {
+                opInfo.setStatus(e.getStatus());
                 throw e;
             }
             
@@ -140,7 +135,7 @@ public class CouchDbAsyncHandler<F, T> {
             case 416: return new CouchDbRequestedRangeException(response);
             case 417: return new CouchDbExpectationFailedException(response);
             case 500: return new CouchDbInternalServerErrorException(response);
-             default: return new CouchDbResponseException(response);
+             default: return new CouchDbResponseException(response, response.getStatusCode());
         }
     }
 }

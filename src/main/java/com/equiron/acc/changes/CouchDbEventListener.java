@@ -2,12 +2,6 @@ package com.equiron.acc.changes;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URI;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpRequest.Builder;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -20,6 +14,7 @@ import com.equiron.acc.CouchDb;
 import com.equiron.acc.json.CouchDbDeletedEvent;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbEvent;
+import com.equiron.acc.provider.HttpClientProviderResponse;
 import com.equiron.acc.util.BufUtils;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -85,21 +80,24 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                                                              .addQueryParam("heartbeat", "15000")
                                                                              .addQueryParam("since", lastSuccessSeq)
                                                                              .addQueryParam("include_docs", Boolean.toString(true));
-                        Builder builder = db.getRequestPrototype();
+                        
+                        String method;
+                        String body = "";
                         
                         if (selector == null) {
-                            builder.GET();
+                            method = "GET";
                         } else {
                             urlBuilder.addQueryParam("filter", "_selector");
-                            builder.POST(BodyPublishers.ofString(Sneaky.sneak(() -> new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)))));
+                            method = "POST";
+                            body = Sneaky.sneak(() -> new ObjectMapper().writeValueAsString(Collections.singletonMap("selector", selector)));
                         }
                         
                         String url = urlBuilder.build();
                         
                         try {
-                            HttpResponse<InputStream> response = db.getHttpClient().send(builder.uri(URI.create(url)).timeout(Duration.ofDays(Integer.MAX_VALUE)).build(), BodyHandlers.ofInputStream());
+                            HttpClientProviderResponse response = db.getHttpClientProvider().stream(url, method, body);
                             
-                            if (response.statusCode() == 200) {
+                            if (response.getStatus() == 200) {
                                 logger.debug("Start listening " + url);
                                 
                                 for (CouchDbEventHandler<D> eventHandler : getHandlers()) {
@@ -110,10 +108,10 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                                     }
                                 }
                             } else {
-                                throw new IOException("Can't connect to server. Status code: " + response.statusCode() + "");
+                                throw new IOException("Can't connect to server. Status code: " + response.getStatus() + "");
                             }
                             
-                            try (InputStream in = response.body()) {
+                            try (InputStream in = response.getIn()) {
                                 byte[] buffer = new byte[8192];
                                 int bytesRead = in.read(buffer);
                                 

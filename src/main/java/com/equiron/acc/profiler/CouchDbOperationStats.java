@@ -16,8 +16,6 @@ public class CouchDbOperationStats {
     
     private volatile LogstashMetricsPublisher logstashMetricsPublisher;
     
-    private volatile PrometheusMetricsPublisher prometheusMetricsPublisher;
-    
     private final String dbName;
     
     public CouchDbOperationStats(String dbName) {
@@ -25,7 +23,6 @@ public class CouchDbOperationStats {
         
         if (CouchDbOperationStats.COUCHDB_METRICS_ENABLE) {
             logstashMetricsPublisher = new LogstashMetricsPublisher(dbName);
-            prometheusMetricsPublisher = new PrometheusMetricsPublisher(dbName);
         }
     }
 
@@ -36,7 +33,6 @@ public class CouchDbOperationStats {
         
         if (!dbName.equals("_replicator") && !dbName.equals("_users") && opInfo.getStackTrace() != null) {
             logstashMetricsPublisher.addOperation(opInfo);
-            prometheusMetricsPublisher.addOperation(opInfo);
         }
     }
 }

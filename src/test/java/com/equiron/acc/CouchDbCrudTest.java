@@ -3,8 +3,6 @@ package com.equiron.acc;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -33,16 +31,14 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
     }
     
     @Test
-    public void shouldSaveDocAndGetAsync() throws InterruptedException, ExecutionException {
+    public void shouldSaveDocAndGet() {
         TestDoc testDoc = new TestDoc();
         
         testDoc.addAttachment("doc", new CouchDbDocumentAttachment("application/json", "{\"age\":10}"));
 
         db.saveOrUpdate(testDoc);
         
-        Future<TestDoc> f = db.async().get(testDoc.getDocId(), true);
-        
-        testDoc = f.get();
+        testDoc = db.get(testDoc.getDocId(), true);
         
         Assertions.assertNotNull(testDoc);
         Assertions.assertEquals("{\"age\":10}", testDoc.getAttachment("doc").getTextData());

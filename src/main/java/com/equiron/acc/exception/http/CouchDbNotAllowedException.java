@@ -5,6 +5,6 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbNotAllowedException extends CouchDbResponseException {
     public CouchDbNotAllowedException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 405);
     }
 }

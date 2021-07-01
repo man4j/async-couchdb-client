@@ -39,6 +39,10 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
     public void setValidateDocUpdate(String validateDocUpdate) {
         this.validateDocUpdate = validateDocUpdate;
     }
+    
+    public String getValidateDocUpdate() {
+        return validateDocUpdate;
+    }
 
     public void addView(String name, CouchDbMapReduceFunction function) {
         views.put(name, function);

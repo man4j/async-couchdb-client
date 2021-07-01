@@ -44,6 +44,7 @@ public class CouchDbReplicationTest {
                                           .setPort(Integer.parseInt(System.getProperty("PORT")))
                                           .setUser(System.getProperty("USER"))
                                           .setPassword(System.getProperty("PASSWORD"))
+                                          .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
                                           .build();
     }
     

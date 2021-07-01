@@ -3,7 +3,6 @@ package com.equiron.acc.tutorial.lesson1;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpResponse;
 import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -14,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.FileCopyUtils;
 
+import com.equiron.acc.CouchDbAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDocument;
@@ -28,6 +28,7 @@ public class UserDbTest {
                                                    .setPort(Integer.parseInt(System.getProperty("PORT")))
                                                    .setUser(System.getProperty("USER"))
                                                    .setPassword(System.getProperty("PASSWORD"))
+                                                   .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
                                                    .build());
     }
 
@@ -71,9 +72,9 @@ public class UserDbTest {
             db.attach(userJohn.getDocIdAndRev(), in, "avatar", "image/gif");
         }
 
-        HttpResponse<byte[]> r = db.getAttachment(userJohn.getDocId(), "avatar");
+        byte[] r = db.getAttachmentAsString(userJohn.getDocId(), "avatar").getBytes();
 
-        Assertions.assertEquals(200, r.statusCode());
+        Assertions.assertNotNull(r);
     }
 
     @Test
@@ -90,8 +91,8 @@ public class UserDbTest {
 
         db.saveOrUpdate(userJohn);
 
-        HttpResponse<byte[]> r = db.getAttachment(userJohn.getDocId(), "avatar");
-
-        Assertions.assertEquals(200, r.statusCode());
+        byte[] r = db.getAttachmentAsString(userJohn.getDocId(), "avatar").getBytes();
+        
+        Assertions.assertNotNull(r);
     }
 }

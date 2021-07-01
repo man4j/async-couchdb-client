@@ -6,7 +6,7 @@ public class CouchDbHttpResponse {
     private String statusText;
 
     private String responseBody;
-
+    
     private String requestUri;
     
     public CouchDbHttpResponse(int statusCode, String statusText, String responseBody, String requestUri) {
@@ -15,7 +15,7 @@ public class CouchDbHttpResponse {
         this.responseBody = responseBody;
         this.requestUri = requestUri;
     }
-
+    
     public int getStatusCode() {
         return statusCode;
     }

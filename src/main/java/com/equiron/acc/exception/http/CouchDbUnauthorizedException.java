@@ -5,6 +5,6 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbUnauthorizedException extends CouchDbResponseException {
     public CouchDbUnauthorizedException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 401);
     }
 }

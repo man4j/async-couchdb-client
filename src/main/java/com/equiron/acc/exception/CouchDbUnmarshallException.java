@@ -4,6 +4,6 @@ import com.equiron.acc.CouchDbHttpResponse;
 
 public class CouchDbUnmarshallException extends CouchDbResponseException {
     public CouchDbUnmarshallException(CouchDbHttpResponse response, Throwable cause) {
-        super(response, cause);
+        super(response, cause, -1);
     }
 }

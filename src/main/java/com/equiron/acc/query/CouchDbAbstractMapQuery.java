@@ -1,13 +1,11 @@
 package com.equiron.acc.query;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.equiron.acc.CouchDb;
 import com.equiron.acc.json.resultset.CouchDbAbstractMapResultSet;
 import com.equiron.acc.json.resultset.CouchDbMapRow;
-import com.equiron.acc.util.ExceptionHandler;
 import com.fasterxml.jackson.databind.JavaType;
 
 public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K, V>, RS extends CouchDbAbstractMapResultSet<K, V, ROW>, T extends CouchDbAbstractMapQuery<K, V, ROW, RS, T>> extends CouchDbAbstractQuery<K, V, ROW, RS, T> {
@@ -57,33 +55,28 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
         return totalRows;
     }
 
-    public class CouchDbAbstractMapQueryAsyncOperations extends CouchDbAbstractQueryAsyncOperations {
-        @Override
-        protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
-            Function<RS, O> delegate = rs -> {
-                if (!rs.ids().isEmpty()) {
-                    lastKeyDocId = rs.ids().get(rs.ids().size() - 1);
-                    lastKey = rs.keys().get(rs.keys().size() - 1);
-                    totalRows = rs.getTotalRows();
-                }
+    @Override
+    protected <O> O executeRequest(final Function<RS, O> transformer) {
+        Function<RS, O> delegate = rs -> {
+            if (!rs.ids().isEmpty()) {
+                lastKeyDocId = rs.ids().get(rs.ids().size() - 1);
+                lastKey = rs.keys().get(rs.keys().size() - 1);
+                totalRows = rs.getTotalRows();
+            }
 
-                return transformer.apply(rs);
-            };
+            return transformer.apply(rs);
+        };
 
-            return super.executeRequest(delegate);
-        }
-
-        public CompletableFuture<List<String>> asIds() {
-            return executeRequest(rs -> rs.ids());
-        }
-
-        public CompletableFuture<String> asId() {
-            return executeRequest(rs -> rs.firstId());
-        }
+        return super.executeRequest(delegate);
     }
 
-    @Override
-    public abstract CouchDbAbstractMapQueryAsyncOperations async();
+    public List<String> asIds() {
+        return executeRequest(rs -> rs.ids());
+    }
+
+    public String asId() {
+        return executeRequest(rs -> rs.firstId());
+    }
 
     public CouchDbIterable<ROW> asRowIterator(int batchSize) {
         return new CouchDbIterator<>(q -> q.asRows(), batchSize, derived.cast(this));
@@ -115,13 +108,5 @@ public abstract class CouchDbAbstractMapQuery<K, V, ROW extends CouchDbMapRow<K,
 
     public CouchDbIterable<V> asValueIterator() {
         return asValueIterator(BATCH_SIZE);
-    }
-
-    public List<String> asIds() {
-        return ExceptionHandler.handleFutureResult(async().asIds());
-    }
-
-    public String asId() {
-        return ExceptionHandler.handleFutureResult(async().asId());
     }
 }

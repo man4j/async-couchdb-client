@@ -5,6 +5,6 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbExpectationFailedException extends CouchDbResponseException {
     public CouchDbExpectationFailedException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 417);
     }
 }

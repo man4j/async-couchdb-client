@@ -14,6 +14,7 @@ import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import com.equiron.acc.CouchDbAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.database.ReplicatorDb;
@@ -62,6 +63,7 @@ public class SyncTest {
                                           .setPort(Integer.parseInt(System.getProperty("PORT")))
                                           .setUser(System.getProperty("USER"))
                                           .setPassword(System.getProperty("PASSWORD"))
+                                          .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
                                           .build();
     }
 

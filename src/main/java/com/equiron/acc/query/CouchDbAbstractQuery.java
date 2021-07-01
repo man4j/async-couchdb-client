@@ -1,24 +1,20 @@
 package com.equiron.acc.query;
 
 import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.equiron.acc.CouchDb;
-import com.equiron.acc.CouchDbAsyncHandler;
+import com.equiron.acc.CouchDbResponseHandler;
 import com.equiron.acc.json.resultset.CouchDbAbstractResultSet;
 import com.equiron.acc.json.resultset.CouchDbAbstractRow;
 import com.equiron.acc.profiler.OperationInfo;
 import com.equiron.acc.profiler.OperationType;
-import com.equiron.acc.util.ExceptionHandler;
+import com.equiron.acc.provider.HttpClientProviderResponse;
 import com.fasterxml.jackson.databind.JavaType;
+import com.rainerhahnekamp.sneakythrow.Sneaky;
 
 public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<K, V>, RS extends CouchDbAbstractResultSet<K, V, ROW>, T extends CouchDbAbstractQuery<K, V, ROW, RS, T>> {
     String viewUrl;
@@ -150,101 +146,63 @@ public abstract class CouchDbAbstractQuery<K, V, ROW extends CouchDbAbstractRow<
         return derived.cast(this);
     }
 
-    public class CouchDbAbstractQueryAsyncOperations {
-        public CompletableFuture<List<ROW>> asRows() {
-            return executeRequest(rs -> rs.getRows());
-        }
-
-        public CompletableFuture<List<K>> asKeys() {
-            return executeRequest(rs -> rs.keys());
-        }
-
-        public CompletableFuture<List<V>> asValues() {
-            return executeRequest(rs ->rs.values());
-        }
-
-        public CompletableFuture<ROW> asRow() {
-            return executeRequest(rs -> rs.firstRow());
-        }
-
-        public CompletableFuture<RS> asResultSet() {
-            return executeRequest(Function.identity());
-        }
-
-        public CompletableFuture<K> asKey() {
-            return executeRequest(rs -> rs.firstKey());
-        }
-
-        public CompletableFuture<V> asValue() {
-            return executeRequest(rs -> rs.firstValue());
-        }
-
-        public CompletableFuture<Map<K, ROW>> asMap() {
-            return executeRequest(rs -> rs.map());
-        }
-
-        public CompletableFuture<Map<K, List<ROW>>> asMultiMap() {
-            return executeRequest(rs -> rs.multiMap());
-        }
-
-        protected <O> CompletableFuture<O> executeRequest(final Function<RS, O> transformer) {
-            try {
-                HttpRequest.Builder builder = couchDb.getRequestPrototype().uri(URI.create(viewUrl + queryObject.toQuery()));
-                
-                if (queryObject.getKeys() != null) {
-                    builder.POST(BodyPublishers.ofString(queryObject.jsonKeys()));
-                } else {
-                    builder.GET();
-                }
-                
-                OperationInfo opInfo = new OperationInfo(OperationType.QUERY, viewUrl.substring(viewUrl.lastIndexOf("/") + 1), 0, 0);
-                
-                return couchDb.getHttpClient().sendAsync(builder.build(), BodyHandlers.ofString()).thenApply(response -> {
-                    return new CouchDbAsyncHandler<>(response, resultSetType, transformer, couchDb.getMapper(), opInfo, couchDb.getAsyncOps().getCouchDbOperationStats()).transform();
-                });
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    public abstract CouchDbAbstractQueryAsyncOperations async();
-
-    //-----------
-
     public List<ROW> asRows() {
-        return ExceptionHandler.handleFutureResult(async().asRows());
+        return executeRequest(rs -> rs.getRows());
     }
 
     public List<K> asKeys() {
-        return ExceptionHandler.handleFutureResult(async().asKeys());
+        return executeRequest(rs -> rs.keys());
     }
 
     public List<V> asValues() {
-        return ExceptionHandler.handleFutureResult(async().asValues());
+        return executeRequest(rs ->rs.values());
     }
 
     public ROW asRow() {
-        return ExceptionHandler.handleFutureResult(async().asRow());
+        return executeRequest(rs -> rs.firstRow());
     }
 
     public RS asResultSet() {
-        return ExceptionHandler.handleFutureResult(async().asResultSet());
+        return executeRequest(Function.identity());
     }
 
     public K asKey() {
-        return ExceptionHandler.handleFutureResult(async().asKey());
+        return executeRequest(rs -> rs.firstKey());
     }
 
     public V asValue() {
-        return ExceptionHandler.handleFutureResult(async().asValue());
+        return executeRequest(rs -> rs.firstValue());
     }
 
     public Map<K, ROW> asMap() {
-        return ExceptionHandler.handleFutureResult(async().asMap());
+        return executeRequest(rs -> rs.map());
     }
 
     public Map<K, List<ROW>> asMultiMap() {
-        return ExceptionHandler.handleFutureResult(async().asMultiMap());
+        return executeRequest(rs -> rs.multiMap());
+    }
+
+    protected <O> O executeRequest(final Function<RS, O> transformer) {
+        try {
+            OperationInfo opInfo = new OperationInfo(OperationType.QUERY, viewUrl.substring(viewUrl.lastIndexOf("/") + 1), 0, 0);
+            
+            Sneaky.sneak(() -> { couchDb.getOperations().getSemaphore().acquire(); return true;} );
+            
+            try {
+                HttpClientProviderResponse response;
+                
+                if (queryObject.getKeys() != null) {
+                    response = couchDb.getHttpClientProvider().post(viewUrl + queryObject.toQuery(), queryObject.jsonKeys());
+                } else {
+                    response = couchDb.getHttpClientProvider().get(viewUrl + queryObject.toQuery());
+                }
+    
+                return new CouchDbResponseHandler<>(response, resultSetType, transformer, couchDb.getMapper(), opInfo, couchDb.getOperations().getCouchDbOperationStats()).transform();
+            } finally {
+                couchDb.getOperations().getSemaphore().release();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

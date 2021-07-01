@@ -5,10 +5,10 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbConflictException extends CouchDbResponseException {
     public CouchDbConflictException(String message) {
-        super(message);
+        super(message, 409);
     }
 
     public CouchDbConflictException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 409);
     }
 }

@@ -5,6 +5,10 @@ import com.equiron.acc.exception.CouchDbResponseException;
 
 public class CouchDbInternalServerErrorException extends CouchDbResponseException {
     public CouchDbInternalServerErrorException(CouchDbHttpResponse response) {
-        super(response);
+        super(response, 500);
+    }
+
+    public CouchDbInternalServerErrorException(String error) {
+        super(error, 500);
     }
 }

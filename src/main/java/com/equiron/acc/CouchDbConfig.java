@@ -1,8 +1,6 @@
 package com.equiron.acc;
 
-import java.net.http.HttpClient;
-import java.net.http.HttpClient.Version;
-import java.time.Duration;
+import com.equiron.acc.provider.HttpClientProviderType;
 
 public class CouchDbConfig {
     private final String host;
@@ -15,24 +13,24 @@ public class CouchDbConfig {
     
     private final String dbName;
 
-    private final HttpClient httpClient;
-    
     private final boolean buildViewsOnStart;
     
     private final boolean selfDiscovering;
     
     private final boolean enablePurgeListener;
     
-    CouchDbConfig(String host, int port, String user, String password, String dbName, HttpClient httpClient, boolean buildViewsOnStart, boolean selfDiscovering, boolean enablePurgeListener) {
+    private final HttpClientProviderType httpClientProviderType;
+    
+    CouchDbConfig(String host, int port, String user, String password, String dbName, boolean buildViewsOnStart, boolean selfDiscovering, boolean enablePurgeListener, HttpClientProviderType httpClientProviderType) {
         this.host = host;
         this.port = port;
         this.user = user;
         this.password = password;
         this.dbName = dbName;
-        this.httpClient = httpClient;
         this.buildViewsOnStart = buildViewsOnStart;
         this.selfDiscovering = selfDiscovering;
         this.enablePurgeListener = enablePurgeListener;
+        this.httpClientProviderType = httpClientProviderType;
     }
 
     public static class Builder {
@@ -51,6 +49,8 @@ public class CouchDbConfig {
         boolean selfDiscovering = true;
         
         boolean enablePurgeListener = false;
+        
+        HttpClientProviderType httpClientProviderType = HttpClientProviderType.JDK;
         
         @Deprecated
         public Builder setIp(String host) {
@@ -106,18 +106,16 @@ public class CouchDbConfig {
             
             return this;
         }
+        
+        public Builder setHttpClientProviderType(HttpClientProviderType httpClientProviderType) {
+            this.httpClientProviderType = httpClientProviderType;
+            
+            return this;
+        }
 
         public CouchDbConfig build() {
-            HttpClient.Builder builder = HttpClient.newBuilder().version(Version.HTTP_1_1)
-                                                   .connectTimeout(Duration.ofSeconds(30));
-            
-            return new CouchDbConfig(host, port, user, password, dbName, builder.build(), buildViewsOnStart, selfDiscovering, enablePurgeListener);
+            return new CouchDbConfig(host, port, user, password, dbName, buildViewsOnStart, selfDiscovering, enablePurgeListener, httpClientProviderType);
         }
-    }
-    
-    @Deprecated
-    public String getIp() {
-        return host;
     }
     
     public String getHost() {
@@ -140,10 +138,6 @@ public class CouchDbConfig {
         return dbName;
     }
 
-    public HttpClient getHttpClient() {
-        return httpClient;
-    }
-
     public boolean isBuildViewsOnStart() {
         return buildViewsOnStart;
     }
@@ -154,5 +148,9 @@ public class CouchDbConfig {
     
     public boolean isEnablePurgeListener() {
         return enablePurgeListener;
+    }
+    
+    public HttpClientProviderType getHttpClientProviderType() {
+        return httpClientProviderType;
     }
 }

@@ -3,17 +3,8 @@ package com.equiron.acc;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
-import java.net.ConnectException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,7 +37,6 @@ import com.equiron.acc.annotation.SecurityPattern;
 import com.equiron.acc.annotation.ValidateDocUpdate;
 import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.database.ReplicatorDb;
-import com.equiron.acc.exception.CouchDbTimeoutException;
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.CouchDbDocument;
@@ -56,7 +46,10 @@ import com.equiron.acc.json.CouchDbInstanceInfo;
 import com.equiron.acc.json.CouchDbReplicationDocument;
 import com.equiron.acc.json.security.CouchDbSecurityObject;
 import com.equiron.acc.json.security.CouchDbSecurityPattern;
-import com.equiron.acc.util.ExceptionHandler;
+import com.equiron.acc.provider.HttpClientProvider;
+import com.equiron.acc.provider.HttpClientProviderType;
+import com.equiron.acc.provider.JdkHttpClientProvider;
+import com.equiron.acc.provider.OkHttpClientProvider;
 import com.equiron.acc.util.NamedStrategy;
 import com.equiron.acc.util.ReflectionUtils;
 import com.equiron.acc.util.UrlBuilder;
@@ -65,12 +58,12 @@ import com.equiron.acc.view.CouchDbMapReduceView;
 import com.equiron.acc.view.CouchDbMapView;
 import com.equiron.acc.view.CouchDbReduceView;
 import com.equiron.acc.view.CouchDbView;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.rainerhahnekamp.sneakythrow.Sneaky;
 
 public class CouchDb implements AutoCloseable {
     private Logger logger = LoggerFactory.getLogger(getClass().getName());
@@ -83,8 +76,6 @@ public class CouchDb implements AutoCloseable {
 
     final ObjectMapper mapper = new ObjectMapper();
 
-    private volatile HttpRequest.Builder prototype;
-    
     private volatile String host;
     
     private volatile int port;
@@ -97,9 +88,11 @@ public class CouchDb implements AutoCloseable {
     
     private volatile boolean enabled = true;
     
+    private volatile HttpClientProviderType httpClientProviderType;
+    
     private volatile CouchDbBuiltInView builtInView;
 
-    private volatile CouchDbAsyncOperations asyncOps;
+    private volatile CouchDbOperations operations;
     
     private volatile boolean selfDiscovering = true;
     
@@ -115,8 +108,10 @@ public class CouchDb implements AutoCloseable {
     
     private volatile CouchDbEventListener<CouchDbDocument> purgeListener = new CouchDbEventListener<>(this) {/* empty */};
     
+    private volatile HttpClientProvider httpClientProvider;
+    
     @SuppressWarnings("resource")
-    @PostConstruct
+	@PostConstruct
     public void init() {
         if (!initialized) {//может быть инициализирована в конструкторе
             mapper.registerModule(new JavaTimeModule());
@@ -124,14 +119,13 @@ public class CouchDb implements AutoCloseable {
             applyConfig();
             
             if (enabled) {
-                prototype = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30))
-                                                    .setHeader("Content-Type", "application/json; charset=utf-8");
+                httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
                 
                 if (user != null && password != null) {
-                    prototype.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((user + ":" + password).getBytes()));
+                    httpClientProvider.setCredentials(user, password);
                 }
                                                                       
-                asyncOps = new CouchDbAsyncOperations(this);
+                operations = new CouchDbOperations(this);
                 
                 builtInView = new CouchDbBuiltInView(this);
                 
@@ -161,7 +155,7 @@ public class CouchDb implements AutoCloseable {
 
                 if (enablePurgeListener) {
                     purgeListener.addEventHandler(e -> {
-                        if (e.isDeleted()) {
+                        if (e.isDeleted()) {    
                             purge(e.getDocIdAndRev());
                         }
                     });
@@ -184,16 +178,12 @@ public class CouchDb implements AutoCloseable {
         init();
     }
     
-    public CouchDbAsyncOperations getAsyncOps() {
-        return asyncOps;
+    public CouchDbOperations getOperations() {
+        return operations;
     }
-    
-    public HttpRequest.Builder getRequestPrototype() {
-        return prototype.copy();
-    }
-    
-    public HttpClient getHttpClient() {
-        return config.getHttpClient();
+
+    public HttpClientProvider getHttpClientProvider() {
+        return httpClientProvider;
     }
     
     @Autowired
@@ -227,10 +217,6 @@ public class CouchDb implements AutoCloseable {
         return builtInView;
     }
 
-    public CouchDbAsyncOperations async() {
-        return asyncOps;
-    }
-    
     public void updateAllViews() {
         for (CouchDbView view : viewList) {
             updateView(view, false);
@@ -243,28 +229,28 @@ public class CouchDb implements AutoCloseable {
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> T get(String docId) {
-        return ExceptionHandler.handleFutureResult(asyncOps.get(docId));
+        return operations.get(docId);
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public Map<String, Object> getRaw(String docId) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getRaw(docId));
+        return operations.getRaw(docId);
     }
     
     /**
      * Returns the latest revision of the document.
      */
     public <T extends CouchDbDocument> T get(String docId, boolean attachments) {
-        return ExceptionHandler.handleFutureResult(asyncOps.get(docId, attachments));
+        return operations.get(docId, attachments);
     }
 
     /**
      * Returns the latest revision of the document.
      */
     public Map<String, Object> getRaw(String docId, boolean attachments) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getRaw(docId, attachments));
+        return operations.getRaw(docId, attachments);
     }
     
     //------------------ Bulk API -------------------------
@@ -273,21 +259,21 @@ public class CouchDb implements AutoCloseable {
      * Insert or update multiple documents in to the database in a single request.
      */
     public <T extends CouchDbDocument> List<T> saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(doc, docs));
+        return operations.saveOrUpdate(doc, docs);
     }
 
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
     public <T extends CouchDbDocument> List<T> saveOrUpdate(List<T> docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+        return operations.saveOrUpdate(docs);
     }
     
     /**
      * Insert or update multiple documents in to the database in a single request.
      */
     public <T extends CouchDbDocument> List<T> saveOrUpdate(List<T> docs, boolean ignoreConflicts) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs, ignoreConflicts));
+        return operations.saveOrUpdate(docs, ignoreConflicts);
     }
 
     /**
@@ -295,21 +281,21 @@ public class CouchDb implements AutoCloseable {
      */
     @SafeVarargs
     public final List<CouchDbBulkResponse> saveOrUpdate(Map<String, Object>... docs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.saveOrUpdate(docs));
+        return operations.saveOrUpdate(docs);
     }
     
     /**
      * Delete multiple documents from the database in a single request.
      */
     public List<CouchDbBulkResponse> delete(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.delete(docRev, docRevs));
+        return operations.delete(docRev, docRevs);
     }
     
     /**
      * Delete multiple documents from the database in a single request.
      */
     public List<CouchDbBulkResponse> delete(List<CouchDbDocIdAndRev> docRevs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.delete(docRevs));
+        return operations.delete(docRevs);
     }
     
     /**
@@ -319,7 +305,7 @@ public class CouchDb implements AutoCloseable {
      * and update_seq will be increased.
      */
     public Map<String, Boolean> purge(CouchDbDocIdAndRev docRev, CouchDbDocIdAndRev... docRevs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.purge(docRev, docRevs));
+        return operations.purge(docRev, docRevs);
     }
     
     /**
@@ -329,7 +315,7 @@ public class CouchDb implements AutoCloseable {
      * and update_seq will be increased.
      */
     public Map<String, Boolean> purge(List<CouchDbDocIdAndRev> docRevs) {
-        return ExceptionHandler.handleFutureResult(asyncOps.purge(docRevs));
+        return operations.purge(docRevs);
     }
 
     //------------------ Attach API -------------------------
@@ -338,77 +324,69 @@ public class CouchDb implements AutoCloseable {
      * Attach content to the document.
      */
     public CouchDbBulkResponse attach(CouchDbDocIdAndRev docIdAndRev, InputStream in, String name, String contentType) {
-        return ExceptionHandler.handleFutureResult(asyncOps.attach(docIdAndRev, in, name, contentType));
+        return operations.attach(docIdAndRev, in, name, contentType);
     }
 
     /**
      * Attach content to non-existing document.
      */
     public CouchDbBulkResponse attach(String docId, InputStream in, String name, String contentType) {
-        return attach(new CouchDbDocIdAndRev(docId, null), in, name, contentType);
-    }
-
-    /**
-     * Gets an attachment of the document as Response.
-     */
-    public HttpResponse<byte[]> getAttachment(String docId, String name) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getAttachment(docId, name));
+        return operations.attach(new CouchDbDocIdAndRev(docId, null), in, name, contentType);
     }
     
     /**
      * Gets an attachment of the document as String.
      */
     public String getAttachmentAsString(String docId, String name) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getAttachmentAsString(docId, name));
+        return operations.getAttachmentAsString(docId, name);
     }
     
     /**
      * Gets an attachment of the document as bytes.
      */
     public byte[] getAttachmentAsBytes(String docId, String name) {
-        return ExceptionHandler.handleFutureResult(asyncOps.getAttachmentAsBytes(docId, name));
+        return operations.getAttachmentAsBytes(docId, name);
     }
-
 
     /**
      * Deletes an attachment from the document.
      */
     public boolean deleteAttachment(CouchDbDocIdAndRev docIdAndRev, String name) {
-        return ExceptionHandler.handleFutureResult(asyncOps.deleteAttachment(docIdAndRev, name));
+        return operations.deleteAttachment(docIdAndRev, name);
     }
 
     //------------------ Admin API -------------------------
 
     public List<CouchDbDesignDocument> getDesignDocs() {
-        return ExceptionHandler.handleFutureResult(asyncOps.getDesignDocs());
+        return operations.getDesignDocs();
     }
     
     /**
      * Returns a list of databases on this server.
      */
     public List<String> getDatabases() {
-        return ExceptionHandler.handleFutureResult(asyncOps.getDatabases());
+        return operations.getDatabases();
     }
 
     /**
      * Create a new database.
      */
     public boolean createDb() {
-        return ExceptionHandler.handleFutureResult(asyncOps.createDb());
+        return operations.createDb();
     }
 
     /**
      * Delete an existing database.
      */
     public boolean deleteDb() {
-        return ExceptionHandler.handleFutureResult(asyncOps.deleteDb());
+        return operations.deleteDb();
     }
 
     /**
      * Returns database information.
      */
     public CouchDbInfo getInfo() {
-        return ExceptionHandler.handleFutureResult(asyncOps.getInfo());
+        return operations.getInfo();
     }
     
     /**
@@ -417,7 +395,7 @@ public class CouchDb implements AutoCloseable {
      * welcome message and the version of the server.     
      */
     public CouchDbInstanceInfo getInstanceInfo() {
-        return ExceptionHandler.handleFutureResult(asyncOps.getInstanceInfo());
+        return operations.getInstanceInfo();
     }
 
     /**
@@ -429,7 +407,7 @@ public class CouchDb implements AutoCloseable {
      * trigger a view cleanup.
      */
     public boolean cleanupViews() {
-        return ExceptionHandler.handleFutureResult(asyncOps.cleanupViews());
+        return operations.cleanupViews();
     }
 
     //------------------ Discovering methods -------------------------
@@ -437,8 +415,8 @@ public class CouchDb implements AutoCloseable {
     private void testConnection() {
         while (true) {
             try {
-                if (config.getHttpClient().send(prototype.copy().GET().uri(URI.create(getServerUrl())).build(), BodyHandlers.ofString()).statusCode() != 200) {
-                    throw new ConnectException("Could not connect to " + getServerUrl());
+                if (httpClientProvider.get(getServerUrl()).getStatus() != 200) {
+                    throw new IOException("Could not connect to " + getServerUrl());
                 }
                 
                 break;
@@ -460,26 +438,28 @@ public class CouchDb implements AutoCloseable {
     }
 
     private void applyConfig() {
-        String host = config.getHost();
-        String port = config.getPort() + "";
-        String user = config.getUser();
-        String password = config.getPassword();
-        String dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
+        String _host = config.getHost();
+        String _port = config.getPort() + "";
+        String _user = config.getUser();
+        String _password = config.getPassword();
+        String _dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
         selfDiscovering = config.isSelfDiscovering();
         enablePurgeListener = config.isEnablePurgeListener();
+        httpClientProviderType = config.getHttpClientProviderType();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.CouchDbConfig.class)) {
             com.equiron.acc.annotation.CouchDbConfig annotationConfig = getClass().getAnnotation(com.equiron.acc.annotation.CouchDbConfig.class);
 
-            host = annotationConfig.host().isBlank() ? host : annotationConfig.host();
-            port = annotationConfig.port().isBlank() ? port : annotationConfig.port();
-            user = annotationConfig.user().isBlank() ? user : annotationConfig.user();
-            password = annotationConfig.password().isBlank() ? password : annotationConfig.password();
-            dbName = annotationConfig.dbName().isBlank() ? dbName : annotationConfig.dbName();
+            _host = annotationConfig.host().isBlank() ? _host : annotationConfig.host();
+            _port = annotationConfig.port().isBlank() ? _port : annotationConfig.port();
+            _user = annotationConfig.user().isBlank() ? _user : annotationConfig.user();
+            _password = annotationConfig.password().isBlank() ? _password : annotationConfig.password();
+            _dbName = annotationConfig.dbName().isBlank() ? _dbName : annotationConfig.dbName();
             
             selfDiscovering = annotationConfig.selfDiscovering();
             leaveStaleReplications = annotationConfig.leaveStaleReplications();
             enablePurgeListener = annotationConfig.enablePurgeListener();
+            httpClientProviderType = annotationConfig.httpClientProviderType();
             
             String enabledParam = resolve(annotationConfig.enabled(), true);
             
@@ -487,13 +467,13 @@ public class CouchDb implements AutoCloseable {
         }
         
         if (enabled) {
-            this.host = resolve(host, false);
-            this.port = Integer.parseInt(resolve(port, false));
-            this.user = resolve(user, true);
-            this.password = resolve(password, true);
+            this.host = resolve(_host, false);
+            this.port = Integer.parseInt(resolve(_port, false));
+            this.user = resolve(_user, true);
+            this.password = resolve(_password, true);
         }
         
-        this.dbName = resolve(dbName, true);//need for logging
+        this.dbName = resolve(_dbName, true);//need for logging
     }
 
     private void createDbIfNotExist() {
@@ -553,8 +533,10 @@ public class CouchDb implements AutoCloseable {
             try {
                 view.update();
                 complete = true;
-            } catch (CouchDbTimeoutException e) {
-                logger.warn("Not critical exception: " + e.getMessage());
+            } catch (Exception e) {
+                if (e instanceof IOException) {
+                    logger.warn("Not critical exception: " + e.getMessage());
+                }
             }
         }
         
@@ -605,16 +587,14 @@ public class CouchDb implements AutoCloseable {
         Map<String, CouchDbReplicationDocument> newReplicationDocs = new HashMap<>();
 
         for (Replicated replicated : getClass().getAnnotationsByType(Replicated.class)) {
-            String enabled = replicated.enabled();
+            String _enabled = resolve(replicated.enabled(), true);
             
-            enabled = resolve(enabled, true);
-            
-            if (!enabled.isBlank() && enabled.equalsIgnoreCase("true")) {
+            if (!_enabled.isBlank() && _enabled.equalsIgnoreCase("true")) {
                 String protocol = resolve(replicated.targetProtocol(), false);
-                String host = resolve(replicated.targetHost(), false);
-                String port = resolve(replicated.targetPort(), false);
-                String user = resolve(replicated.targetUser(), true);
-                String password = resolve(replicated.targetPassword(), true);
+                String _host = resolve(replicated.targetHost(), false);
+                String _port = resolve(replicated.targetPort(), false);
+                String _user = resolve(replicated.targetUser(), true);
+                String _password = resolve(replicated.targetPassword(), true);
                 String remoteDb = resolve(replicated.targetDbName(), true);
                 String selector = resolve(replicated.selector(), true);
                 String createTarget = resolve(replicated.createTarget(), true);
@@ -626,12 +606,12 @@ public class CouchDb implements AutoCloseable {
                 String remoteServer;
                 String remoteServerWithoutCreds;
                 
-                if (user.isBlank() && password.isBlank()) {
-                    remoteServer = String.format("%s://%s:%s/%s", protocol, host, port, remoteDb);
-                    remoteServerWithoutCreds = String.format("%s://%s:%s/%s", protocol, user, password, host, port, remoteDb);
+                if (_user.isBlank() && _password.isBlank()) {
+                    remoteServer = String.format("%s://%s:%s/%s", protocol, _host, _port, remoteDb);
+                    remoteServerWithoutCreds = String.format("%s://%s:%s/%s", protocol, _user, _password, _host, _port, remoteDb);
                 } else {
-                    remoteServer = String.format("%s://%s:%s@%s:%s/%s", protocol, user, password, host, port, remoteDb);
-                    remoteServerWithoutCreds = String.format("%s://***:***@%s:%s/%s", protocol, host, port, remoteDb);
+                    remoteServer = String.format("%s://%s:%s@%s:%s/%s", protocol, _user, _password, _host, _port, remoteDb);
+                    remoteServerWithoutCreds = String.format("%s://***:***@%s:%s/%s", protocol, _host, _port, remoteDb);
                 }
                 
                 String localServer;
@@ -656,7 +636,7 @@ public class CouchDb implements AutoCloseable {
                 }
 
                 if (replicated.direction() == Direction.TO || replicated.direction() == Direction.BOTH) {                
-                    CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + ">>>" + protocol + "://" + host + ":" + port + "/" + remoteDb, localServer, remoteServer, selectorMap);
+                    CouchDbReplicationDocument toRemote = new CouchDbReplicationDocument(getDbName() + ">>>" + protocol + "://" + _host + ":" + _port + "/" + remoteDb, localServer, remoteServer, selectorMap);
                     
                     if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
                         toRemote.setCreateTarget(true);
@@ -666,7 +646,7 @@ public class CouchDb implements AutoCloseable {
                 }
                 
                 if (replicated.direction() == Direction.FROM || replicated.direction() == Direction.BOTH) {
-                    CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "<<<" + protocol + "://" + host + ":" + port + "/" + remoteDb, remoteServer, localServer, selectorMap);
+                    CouchDbReplicationDocument fromRemote = new CouchDbReplicationDocument(getDbName() + "<<<" + protocol + "://" + _host + ":" + _port + "/" + remoteDb, remoteServer, localServer, selectorMap);
                     
                     if (!createTarget.isBlank() && createTarget.equalsIgnoreCase("true")) {
                         fromRemote.setCreateTarget(true);
@@ -686,13 +666,13 @@ public class CouchDb implements AutoCloseable {
             }
         }
         
-        CouchDbConfig config = new CouchDbConfig.Builder().setHost(host)
-                                                          .setPort(port)
-                                                          .setUser(user)
-                                                          .setPassword(password)
-                                                          .build();
+        CouchDbConfig _config = new CouchDbConfig.Builder().setHost(host)
+                                                           .setPort(port)
+                                                           .setUser(user)
+                                                           .setPassword(password)
+                                                           .build();
         
-        try (ReplicatorDb replicatorDb = new ReplicatorDb(config)) {        
+        try (ReplicatorDb replicatorDb = new ReplicatorDb(_config)) {        
             List<String> replicationsDocsIds = replicatorDb.getBuiltInView().createQuery()
                                                                             .asIds()
                                                                             .stream()
@@ -771,7 +751,7 @@ public class CouchDb implements AutoCloseable {
                 throw new IllegalStateException("Environment variable or system property not found: " + placeholder);
             } else if (ctx != null) {
                 try {
-                    return param = (String) resolveExpression(ctx, param);
+                    return (String) resolveExpression(param);
                 } catch (@SuppressWarnings("unused") Exception e) {
                     //empty
                 }
@@ -781,7 +761,7 @@ public class CouchDb implements AutoCloseable {
         return param;
     }
     
-    private Object resolveExpression(ApplicationContext ctx, String expression) {
+    private Object resolveExpression(String expression) {
         DefaultListableBeanFactory bf = (DefaultListableBeanFactory) ctx.getAutowireCapableBeanFactory();
 
         String placeholdersResolved = bf.resolveEmbeddedValue(expression);
@@ -801,18 +781,18 @@ public class CouchDb implements AutoCloseable {
         return value;
     }
 
-    public void putSecurityObject(CouchDbSecurityObject securityObject) throws InterruptedException, IOException, JsonProcessingException {
-        if (config.getHttpClient().send(prototype.copy()
-                                  .PUT(BodyPublishers.ofString(mapper.writeValueAsString(securityObject)))
-                                  .uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(), 
-                                  BodyHandlers.ofString()).statusCode() != 200) {
-            throw new RuntimeException("Can't apply security");
-        }
+    public void putSecurityObject(CouchDbSecurityObject securityObject) {
+        Sneaky.sneak(() -> {
+            if (httpClientProvider.put(new UrlBuilder(getDbUrl()).addPathSegment("_security").build(), mapper.writeValueAsString(securityObject)).getStatus() != 200) {
+                throw new RuntimeException("Can't apply security");
+            }
+            
+            return true;
+        });
     }
 
-    public CouchDbSecurityObject getSecurityObject() throws IOException, InterruptedException {
-        return mapper.readValue(config.getHttpClient().send(prototype.copy().GET().uri(URI.create(new UrlBuilder(getDbUrl()).addPathSegment("_security").build())).build(),
-                                       BodyHandlers.ofString()).body(), CouchDbSecurityObject.class);
+    public CouchDbSecurityObject getSecurityObject() {
+        return Sneaky.sneak(() -> mapper.readValue(httpClientProvider.get(new UrlBuilder(getDbUrl()).addPathSegment("_security").build()).getBody(), CouchDbSecurityObject.class));
     }
     
     private void synchronizeDesignDocs() {
