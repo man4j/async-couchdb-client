@@ -20,8 +20,6 @@ public class LogstashMetricsPublisher {
     
     private final ConcurrentHashMap<String, OperationProfile> byTypeAndInfoAndStackTraceMap = new ConcurrentHashMap<>();
     
-    private final ConcurrentHashMap<String, OperationProfile> byTypeAndInfoMap = new ConcurrentHashMap<>();
-    
     private final String dbName;
     
     private final String instance;
@@ -56,35 +54,8 @@ public class LogstashMetricsPublisher {
                             metrics.put("acc.database", profile.getDatabase());
                             metrics.put("acc.operationType", profile.getOperationType());
                             metrics.put("acc.operationInfo", profile.getOperationInfo());
-                            metrics.put("acc.instance_database_operation", extrackKey(profile.getOperationType().toString(), profile.getOperationInfo()));
+                            metrics.put("acc.instance_database_operation", e.getKey());
                             
-                            metrics.put("acc.byStack.stacktrace", profile.getStackTrace());
-
-                            //Поля для таблицы
-                            metrics.put("acc.byStack.totalTime", profile.getTotalTime());
-                            metrics.put("acc.byStack.count", profile.getCount());
-                            metrics.put("acc.byStack.size", profile.getSize());
-                            
-                            metrics.put("acc.byStack.success", profile.getSuccessCount());
-                            metrics.put("acc.byStack.notFound", profile.getNotFoundCount());
-                            metrics.put("acc.byStack.conflicts", profile.getConflictCount());
-                            metrics.put("acc.byStack.errors", profile.getErrorsCount());
-                            
-                            info(metrics);
-                        }
-                        
-                        for (Entry<String, OperationProfile> e : byTypeAndInfoMap.entrySet()) {
-                            OperationProfile profile = e.getValue();
-                            
-                            Map<String, Object> metrics = new HashMap<>();
-                            
-                            //Поля для общей фильтрации
-                            metrics.put("acc.instance", instance);
-                            metrics.put("acc.database", profile.getDatabase());
-                            metrics.put("acc.operationType", profile.getOperationType());
-                            metrics.put("acc.operationInfo", profile.getOperationInfo());
-                            metrics.put("acc.instance_database_operation", extrackKey(profile.getOperationType().toString(), profile.getOperationInfo()));
-
                             //Поля для таблицы
                             metrics.put("acc.byOp.totalTime", profile.getTotalTime());
                             metrics.put("acc.byOp.count", profile.getCount());
@@ -94,10 +65,10 @@ public class LogstashMetricsPublisher {
                             metrics.put("acc.byOp.notFound", profile.getNotFoundCount());
                             metrics.put("acc.byOp.conflicts", profile.getConflictCount());
                             metrics.put("acc.byOp.errors", profile.getErrorsCount());
-
+                            
                             info(metrics);
                         }
-                        
+                                                
                         try {
                             Thread.sleep(60_000);
                         } catch (@SuppressWarnings("unused") InterruptedException e) {
@@ -114,8 +85,7 @@ public class LogstashMetricsPublisher {
     
     public void addOperation(OperationInfo opInfo) {
         if ((logstashHost != null && !logstashHost.isBlank())) {      
-            fill(byTypeAndInfoAndStackTraceMap, opInfo, extrackKey(opInfo.getOperationType().toString(), opInfo.getOperationInfo()) + "/" + opInfo.getStackTrace().hashCode());
-            fill(byTypeAndInfoMap,              opInfo, extrackKey(opInfo.getOperationType().toString(), opInfo.getOperationInfo()));
+            fill(opInfo);
         }
     }
     
@@ -125,15 +95,16 @@ public class LogstashMetricsPublisher {
         LOGSTASH_JSON_LOGGER.info(Markers.appendEntries(fields), "");
     }
     
-    private String extrackKey(String type, String info) {
-        return instance + "/" + dbName + "/" + type + (info.isBlank() ? "" : ("/" + info));
+    private String extrackKey(OperationInfo opInfo) {
+        return instance + "/" + dbName + "/" + opInfo.getOperationType().toString() + (opInfo.getOperationInfo().isBlank() ? "" : ("/" + opInfo.getOperationInfo()) + " (" + opInfo.getStackTrace() + ")");
     }
     
-    private void fill(ConcurrentHashMap<String, OperationProfile> map, OperationInfo opInfo, String key) {
+    private void fill(OperationInfo opInfo) {
+        String key = extrackKey(opInfo);
         striped.get(key).lock();
         
         try {
-            OperationProfile prevProfile = map.get(key);
+            OperationProfile prevProfile = byTypeAndInfoAndStackTraceMap.get(key);
     
             long opTime = System.currentTimeMillis() - opInfo.getStartTime();
             
@@ -169,13 +140,9 @@ public class LogstashMetricsPublisher {
                 }
             }
             
-            map.put(key, profile);
+            byTypeAndInfoAndStackTraceMap.put(key, profile);
         } finally {
             striped.get(key).unlock();
         }
-    }
-    
-    public static void main(String[] args) {
-        System.out.println(12345 % 10_000);
     }
 }
