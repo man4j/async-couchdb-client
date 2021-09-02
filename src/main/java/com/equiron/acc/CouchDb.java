@@ -361,6 +361,10 @@ public class CouchDb implements AutoCloseable {
         return operations.getDesignDocs();
     }
     
+    public List<CouchDbDesignDocument> getDesignDocsWithValidators() {
+        return operations.getDesignDocsWithValidators();
+    }
+    
     /**
      * Returns a list of databases on this server.
      */
@@ -796,7 +800,7 @@ public class CouchDb implements AutoCloseable {
     }
     
     private void synchronizeDesignDocs() {
-        Set<CouchDbDesignDocument> oldDesignDocs = new HashSet<>(getDesignDocs());
+        Set<CouchDbDesignDocument> oldDesignDocs = new HashSet<>(getDesignDocsWithValidators());
 
         Set<CouchDbDesignDocument> newDesignDocs = generateNewDesignDocs();
 

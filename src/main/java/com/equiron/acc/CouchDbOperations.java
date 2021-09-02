@@ -442,6 +442,10 @@ public class CouchDbOperations {
         return couchDb.getBuiltInView().<CouchDbDesignDocument>createDocQuery().startKey("_design/").endKey("_design0").asDocs().stream().filter(d -> d.getValidateDocUpdate() == null || d.getValidateDocUpdate().isBlank()).collect(Collectors.toList());
     }
     
+    public List<CouchDbDesignDocument> getDesignDocsWithValidators() {
+        return couchDb.getBuiltInView().<CouchDbDesignDocument>createDocQuery().startKey("_design/").endKey("_design0").asDocs().stream().collect(Collectors.toList());
+    }
+    
     public List<String> getDatabases() {
         HttpClientProviderResponse response = httpClient.get(new UrlBuilder(couchDb.getServerUrl()).addPathSegment("_all_dbs").build());
         
