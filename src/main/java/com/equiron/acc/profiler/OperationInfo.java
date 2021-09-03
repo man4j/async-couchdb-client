@@ -44,7 +44,7 @@ public class OperationInfo {
              && !e.toString().startsWith("org.springframework")
              && !e.toString().startsWith("org.jboss")
              && !e.toString().startsWith("io.undertow")) {
-                stackTrace += e.getClassName().substring(e.getClassName().lastIndexOf(".") + 1) + "." + e.getMethodName() + ":" + e.getLineNumber() + "\n";
+                stackTrace += "  " + e.getClassName().substring(e.getClassName().lastIndexOf(".") + 1) + "." + e.getMethodName() + ":" + e.getLineNumber() + "\n";
             }
             
             if (e.toString().startsWith("com.equiron.acc.CouchDb.init")) {
