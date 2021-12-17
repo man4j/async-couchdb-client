@@ -91,7 +91,7 @@ public class SyncTest {
                 OmsDocument doc = e.getDoc();
                 
                 if (doc.getStatus() == OmsDocumentStatus.PROCESSED) {
-                    Assertions.assertTrue(localDb.purge(doc.getDocIdAndRev()).get(doc.getDocId())); //удаляем обработанные документы
+                    Assertions.assertTrue(localDb.delete(doc.getDocIdAndRev()).get(0).isOk()); //удаляем обработанные документы
                 }
             }
         });

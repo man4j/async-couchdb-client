@@ -2,7 +2,6 @@ package com.equiron.acc;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -94,7 +93,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
         boolean result = db.deleteAttachment(doc.getDocIdAndRev(), "Non-existing attachment");
 
-        Assertions.assertTrue(result);//why true?
+        Assertions.assertFalse(result);//why true?
     }
 
 //    @Test
