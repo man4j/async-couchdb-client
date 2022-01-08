@@ -36,9 +36,13 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     private volatile Thread listenerThread = null;
     
     private volatile boolean interrupted;
-    
+
     public CouchDbEventListener(CouchDb db) {
         this.db = db;
+    }
+    
+    public CouchDb getDb() {
+        return db;
     }
 
     public CouchDbEventListener<D> addEventHandler(CouchDbEventHandler<D> eventHandler) {
@@ -53,6 +57,10 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
     
     public CopyOnWriteArrayList<CouchDbEventHandler<D>> getHandlers() {
         return handlers;
+    }
+    
+    public synchronized void startListening() {
+        startListening(db.getInfo().getUpdateSeq(), null);
     }
     
     public synchronized void startListening(String seq) {

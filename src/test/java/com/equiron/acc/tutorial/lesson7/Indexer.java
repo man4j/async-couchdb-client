@@ -1,7 +1,6 @@
 package com.equiron.acc.tutorial.lesson7;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,17 +21,17 @@ import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.FuzzyQuery;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.MMapDirectory;
+import org.apache.lucene.store.FSDirectory;
 
 import com.equiron.acc.changes.CouchDbEventHandler;
 import com.equiron.acc.json.CouchDbEvent;
 
 public class Indexer implements CouchDbEventHandler<ForumContent> {
     private IndexWriter indexWriter;
-
+    
     @SuppressWarnings("resource")
     public Indexer() throws Exception {
-        indexWriter = new IndexWriter(new MMapDirectory(Files.createTempDirectory("tmp")), new IndexWriterConfig(new StandardAnalyzer()));
+        indexWriter = new IndexWriter(FSDirectory.open(Files.createTempDirectory("tmp")), new IndexWriterConfig(new StandardAnalyzer()));
     }
 
     @Override
@@ -68,35 +67,38 @@ public class Indexer implements CouchDbEventHandler<ForumContent> {
             }
 
             indexWriter.updateDocument(new Term("uid", doc.getDocId()), luceneDoc);
+            indexWriter.commit();
         }
     }
 
     public List<String> search(String query) throws Exception {
-        IndexSearcher indexSearcher = new IndexSearcher(DirectoryReader.open(indexWriter));
+    	try (DirectoryReader directoryReader = DirectoryReader.open(indexWriter)) {
+    		IndexSearcher indexSearcher = new IndexSearcher(directoryReader);
 
-        BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
+            BooleanQuery.Builder booleanQueryBuilder = new BooleanQuery.Builder();
 
-        try (StandardAnalyzer analyzer = new StandardAnalyzer(); TokenStream stream = analyzer.tokenStream("text", new StringReader(query))) {
-            stream.reset();
+            try (StandardAnalyzer analyzer = new StandardAnalyzer(); TokenStream stream = analyzer.tokenStream(null, query)) {
+                stream.reset();
 
-            CharTermAttribute attribute = stream.addAttribute(CharTermAttribute.class);
+                CharTermAttribute attribute = stream.addAttribute(CharTermAttribute.class);
 
-            while (stream.incrementToken()) {
-                booleanQueryBuilder.add(new FuzzyQuery(new Term("text", attribute.toString()), 2, 1), Occur.SHOULD);
+                while (stream.incrementToken()) {
+                    booleanQueryBuilder.add(new FuzzyQuery(new Term("text", attribute.toString()), 2, 1), Occur.SHOULD);
+                }
+
+                stream.end();
             }
 
-            stream.end();
-        }
+            TopDocs topDocs = indexSearcher.search(booleanQueryBuilder.build(), 15);
 
-        TopDocs topDocs = indexSearcher.search(booleanQueryBuilder.build(), 15);
+            List<String> results = new ArrayList<>();
 
-        List<String> results = new ArrayList<>();
+            for (int i = 0; i < topDocs.scoreDocs.length; i++) {
+                results.add(indexSearcher.doc(topDocs.scoreDocs[i].doc).get("uid"));
+            }
 
-        for (int i = 0; i < topDocs.scoreDocs.length; i++) {
-            results.add(indexSearcher.doc(topDocs.scoreDocs[i].doc).get("uid"));
-        }
-
-        return results;
+            return results;
+    	}
     }
 
     @Override
