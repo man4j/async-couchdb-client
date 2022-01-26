@@ -103,7 +103,7 @@ public abstract class CouchDbEventListener<D extends CouchDbDocument> implements
                         String url = urlBuilder.build();
                         
                         try {
-                            HttpClientProviderResponse response = db.getHttpClientProvider().stream(url, method, body);
+                            HttpClientProviderResponse response = db.getHttpClientProvider().getStream(url, method, body, null);
                             
                             if (response.getStatus() == 200) {
                                 logger.debug("Start listening " + url);

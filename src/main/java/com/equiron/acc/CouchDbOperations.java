@@ -350,6 +350,7 @@ public class CouchDbOperations {
         }
     }
         
+    @Deprecated
     public String getAttachmentAsString(String docId, String name) {
         OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
         
@@ -383,6 +384,7 @@ public class CouchDbOperations {
         }
     }
     
+    @Deprecated
     public byte[] getAttachmentAsBytes(String docId, String name) {
         OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
         
@@ -417,6 +419,10 @@ public class CouchDbOperations {
     }
     
     public StreamResponse getAttachmentAsStream(String docId, String name) {
+        return getAttachmentAsStream(docId, name, null);
+    }
+    
+    public StreamResponse getAttachmentAsStream(String docId, String name, Map<String, String> headers) {
         OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
         
         if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
@@ -426,7 +432,7 @@ public class CouchDbOperations {
         HttpClientProviderResponse r;
         
         try {
-            r = httpClient.stream(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build(), "GET", "");
+            r = httpClient.getStream(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build(), "GET", "", headers);
         } finally {
             semaphore.release();
         }
@@ -434,14 +440,14 @@ public class CouchDbOperations {
         try {
             opInfo.setStatus(r.getStatus());
             
-            if (r.getStatus() == 200) {
+            if (r.getStatus() == 200 || r.getStatus() == 304) {
                 if (r.getHeaders().get("content-length") != null) {
                     opInfo.setSize(Long.parseLong(r.getHeaders().get("content-length")));
                 }
                 
-                return new StreamResponse(r.getIn(), r.getHeaders());
+                return new StreamResponse(r.getIn(), r.getHeaders(), r.getStatus());
             }
-           
+            
             if (r.getStatus() == 404) {
                 return null;
             }

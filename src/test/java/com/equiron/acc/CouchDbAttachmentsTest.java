@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
@@ -30,7 +31,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     
     @Test
     public void shouldAddAttachmentToExistingDocument() throws IOException {
-        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+        try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
             CouchDbDocument doc = new CouchDbDocument();
@@ -47,7 +48,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
     @Test
     public void shouldCreateDocumentAndAddAttachment() throws IOException {
-        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+        try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
@@ -60,7 +61,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     
     @Test
     public void shouldCreateDocumentAndAddAttachmentAndGetAsBytes() throws IOException {
-        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+        try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
@@ -75,15 +76,22 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     
     @Test
     public void shouldCreateDocumentAndAddAttachmentAndGetAsStream() throws IOException {
-        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+        try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
             CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             StreamResponse response = db.getAttachmentAsStream(putResponse.getDocId(), attachmentName);
-
             Assertions.assertEquals(9559, Integer.parseInt(response.getHeader("Content-Length")));
             Assertions.assertEquals(9559, IOUtils.toByteArray(response.getStream()).length);
+            Assertions.assertEquals(200, response.getStatus());
+            
+            String etag = response.getHeader("ETag");
+            
+            response = db.getAttachmentAsStream(putResponse.getDocId(), attachmentName, Map.of("If-None-Match", etag));
+            Assertions.assertEquals(0, Integer.parseInt(response.getHeader("Content-Length")));
+            Assertions.assertEquals(0, IOUtils.toByteArray(response.getStream()).length);
+            Assertions.assertEquals(304, response.getStatus());
         }
     }
 

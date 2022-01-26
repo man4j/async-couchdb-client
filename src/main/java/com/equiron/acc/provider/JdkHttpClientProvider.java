@@ -31,30 +31,22 @@ public class JdkHttpClientProvider implements HttpClientProvider {
     
     @Override
     public HttpClientProviderResponse post(String url, String body) {
-        return post(url, body, null);
+        Builder builder = prototype.copy().POST(BodyPublishers.ofString(body)).uri(URI.create(url));
+        return exec(null, builder);
     }
     
     @Override
     public HttpClientProviderResponse put(String url, String body) {
         Builder builder = prototype.copy().PUT(BodyPublishers.ofString(body)).uri(URI.create(url));
-        
         return exec(null, builder);
     }
     
     @Override
     public HttpClientProviderResponse put(String url, InputStream in, Map<String, String> headers) {
         Builder builder = prototype.copy().PUT(BodyPublishers.ofInputStream(() -> in)).uri(URI.create(url));
-        
         return exec(headers, builder);
     }
 
-    @Override
-    public HttpClientProviderResponse post(String url, String body, Map<String, String> headers) {
-        Builder builder = prototype.copy().POST(BodyPublishers.ofString(body)).uri(URI.create(url));
-            
-        return exec(headers, builder);
-    }
-    
     @Override
     public HttpClientProviderResponse get(String url) {
         return get(url, null);
@@ -63,43 +55,29 @@ public class JdkHttpClientProvider implements HttpClientProvider {
     @Override
     public HttpClientProviderResponse get(String url, Map<String, String> headers) {
         Builder builder = prototype.copy().GET().uri(URI.create(url));
-
         return exec(headers, builder);
     }
     
-    private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
-        return Sneaky.sneak(() -> {
-            if (headers != null && !headers.isEmpty()) {
-                for (Entry<String, String> e : headers.entrySet()) {
-                    builder.header(e.getKey(), e.getValue());
-                }
-            }
-            
-            HttpResponse<String> response = client.send(builder.build(), BodyHandlers.ofString());
-            
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
-        });
+    @Override
+    public HttpClientProviderResponse delete(String url) {
+        Builder builder = prototype.copy().DELETE().uri(URI.create(url));
+        return exec(null, builder);
     }
-    
-    private HttpClientProviderResponse execBytes(Map<String, String> headers, Builder builder) {
+
+    @Override
+    public HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers) {
+        Builder builder;
+
+        if (method.equals("GET")) {
+            builder = prototype.copy().timeout(Duration.ofDays(9999)).GET().uri(URI.create(url));
+        } else {
+            builder = prototype.copy().timeout(Duration.ofDays(9999)).POST(BodyPublishers.ofString(body)).uri(URI.create(url));
+        }
+        
         return Sneaky.sneak(() -> {
             if (headers != null && !headers.isEmpty()) {
                 for (Entry<String, String> e : headers.entrySet()) {
-                    builder.header(e.getKey(), e.getValue());
-                }
-            }
-            
-            HttpResponse<byte[]> response = client.send(builder.build(), BodyHandlers.ofByteArray());
-            
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
-        });
-    }
-    
-    private HttpClientProviderResponse execStream(Map<String, String> headers, Builder builder) {
-        return Sneaky.sneak(() -> {
-            if (headers != null && !headers.isEmpty()) {
-                for (Entry<String, String> e : headers.entrySet()) {
-                    builder.header(e.getKey(), e.getValue());
+                    builder.setHeader(e.getKey(), e.getValue());
                 }
             }
             
@@ -120,29 +98,27 @@ public class JdkHttpClientProvider implements HttpClientProvider {
     }
 
     @Override
-    public HttpClientProviderResponse delete(String url) {
-        Builder builder = prototype.copy().DELETE().uri(URI.create(url));
-
-        return exec(null, builder);
-    }
-
-    @Override
-    public HttpClientProviderResponse stream(String url, String method, String body) {
-        Builder builder;
-
-        if (method.equals("GET")) {
-            builder = prototype.copy().timeout(Duration.ofDays(9999)).GET().uri(URI.create(url));
-        } else {
-            builder = prototype.copy().timeout(Duration.ofDays(9999)).POST(BodyPublishers.ofString(body)).uri(URI.create(url));
-        }
-        
-        return execStream(null, builder);
-    }
-
-    @Override
     public HttpClientProviderResponse getBytes(String url) {
         Builder builder = prototype.copy().GET().uri(URI.create(url));
 
-        return execBytes(null, builder);
+        return Sneaky.sneak(() -> {
+            HttpResponse<byte[]> response = client.send(builder.build(), BodyHandlers.ofByteArray());
+            
+            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
+        });
+    }
+    
+    private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
+        return Sneaky.sneak(() -> {
+            if (headers != null && !headers.isEmpty()) {
+                for (Entry<String, String> e : headers.entrySet()) {
+                    builder.setHeader(e.getKey(), e.getValue());
+                }
+            }
+            
+            HttpResponse<String> response = client.send(builder.build(), BodyHandlers.ofString());
+            
+            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
+        });
     }
 }

@@ -37,7 +37,7 @@ public class HttpClientProviderResponse {
         Map<String, String> normalized = new HashMap<>();
         
         for (String key : headers.keySet()) {
-            normalized.put(key.toLowerCase(), headers.get(key).toLowerCase());
+            normalized.put(key.toLowerCase(), headers.get(key));
         }
         
         this.headers = normalized;

@@ -6,8 +6,6 @@ import java.util.Map;
 public interface HttpClientProvider {
     void setCredentials(String username, String password);
     
-    HttpClientProviderResponse post(String url, String body, Map<String, String> headers);
-    
     HttpClientProviderResponse get(String url, Map<String, String> headers);
     
     HttpClientProviderResponse post(String url, String body);
@@ -18,9 +16,10 @@ public interface HttpClientProvider {
     
     HttpClientProviderResponse get(String url);
     
+    @Deprecated
     HttpClientProviderResponse getBytes(String url);
     
     HttpClientProviderResponse delete(String url);
     
-    HttpClientProviderResponse stream(String url, String method, String body);
+    HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers);
 }

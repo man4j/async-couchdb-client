@@ -57,7 +57,9 @@ public class OkHttpClientProvider implements HttpClientProvider {
     
     @Override
     public HttpClientProviderResponse post(String url, String body) {
-        return post(url, body, null);
+        Builder builder = new Request.Builder().post(RequestBody.create(body, MediaType.get("application/json; charset=utf-8"))).url(url);
+
+        return exec(null, builder);
     }
     
     @Override
@@ -69,19 +71,11 @@ public class OkHttpClientProvider implements HttpClientProvider {
     
     @Override
     public HttpClientProviderResponse put(String url, InputStream in, Map<String, String> headers) {
-        Builder builder = Sneaky.sneak(() -> new Request.Builder().put(RequestBody.create(IOUtils.toByteArray(in), MediaType.get("application/json; charset=utf-8"))).url(url));
-
-        return exec(null, builder);
-    }
-
-    @Override
-    public HttpClientProviderResponse post(String url, String body, Map<String, String> headers) {
-        Builder builder = new Request.Builder().post(RequestBody.create(body, MediaType.get("application/json; charset=utf-8"))).url(url);
+        Builder builder = Sneaky.sneak(() -> new Request.Builder().put(RequestBody.create(IOUtils.toByteArray(in))).url(url));
 
         return exec(headers, builder);
     }
 
-    
     @Override
     public HttpClientProviderResponse get(String url) {
         return get(url, null);
@@ -102,7 +96,7 @@ public class OkHttpClientProvider implements HttpClientProvider {
     }
     
     @Override
-    public HttpClientProviderResponse stream(String url, String method, String body) {
+    public HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers) {
         Builder builder;
         
         if (method.equals("GET")) {
@@ -111,38 +105,6 @@ public class OkHttpClientProvider implements HttpClientProvider {
             builder = new Request.Builder().post(RequestBody.create(body, MediaType.get("application/json; charset=utf-8"))).url(url);
         }
 
-        return execStream(null, builder);
-    }
-    
-    private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
-        if (headers != null && !headers.isEmpty()) {
-            for (Entry<String, String> e : headers.entrySet()) {
-                builder.header(e.getKey(), e.getValue());
-            }
-        }
-        
-        return Sneaky.sneak(() -> {
-            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
-                return new HttpClientProviderResponse(response.code(), body.string(), response.request().url().toString());
-            }
-        });
-    }
-    
-    private HttpClientProviderResponse execBytes(Map<String, String> headers, Builder builder) {
-        if (headers != null && !headers.isEmpty()) {
-            for (Entry<String, String> e : headers.entrySet()) {
-                builder.header(e.getKey(), e.getValue());
-            }
-        }
-        
-        return Sneaky.sneak(() -> {
-            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
-                return new HttpClientProviderResponse(response.code(), body.bytes(), response.request().url().toString());
-            }
-        });
-    }
-    
-    private HttpClientProviderResponse execStream(Map<String, String> headers, Builder builder) {
         if (headers != null && !headers.isEmpty()) {
             for (Entry<String, String> e : headers.entrySet()) {
                 builder.header(e.getKey(), e.getValue());
@@ -163,6 +125,31 @@ public class OkHttpClientProvider implements HttpClientProvider {
             }
             
             return new HttpClientProviderResponse(response.code(), response.body().byteStream(), response.request().url().toString(), responseHeaders);
+        });
+    }
+    
+    @Override
+    public HttpClientProviderResponse getBytes(String url) {
+        Builder builder = new Request.Builder().get().url(url);
+
+        return Sneaky.sneak(() -> {
+            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
+                return new HttpClientProviderResponse(response.code(), body.bytes(), response.request().url().toString());
+            }
+        });
+    }
+    
+    private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
+        if (headers != null && !headers.isEmpty()) {
+            for (Entry<String, String> e : headers.entrySet()) {
+                builder.header(e.getKey(), e.getValue());
+            }
+        }
+        
+        return Sneaky.sneak(() -> {
+            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
+                return new HttpClientProviderResponse(response.code(), body.string(), response.request().url().toString());
+            }
         });
     }
 
@@ -196,12 +183,5 @@ public class OkHttpClientProvider implements HttpClientProvider {
         public void setPassword(String password) {
             this.password = password;
         }
-    }
-
-    @Override
-    public HttpClientProviderResponse getBytes(String url) {
-        Builder builder = new Request.Builder().get().url(url);
-
-        return execBytes(null, builder);
     }
 }

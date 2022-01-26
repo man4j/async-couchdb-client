@@ -338,6 +338,7 @@ public class CouchDb implements AutoCloseable {
     /**
      * Gets an attachment of the document as String.
      */
+    @Deprecated
     public String getAttachmentAsString(String docId, String name) {
         return operations.getAttachmentAsString(docId, name);
     }
@@ -345,6 +346,7 @@ public class CouchDb implements AutoCloseable {
     /**
      * Gets an attachment of the document as bytes.
      */
+    @Deprecated
     public byte[] getAttachmentAsBytes(String docId, String name) {
         return operations.getAttachmentAsBytes(docId, name);
     }
@@ -354,6 +356,13 @@ public class CouchDb implements AutoCloseable {
      */
     public StreamResponse getAttachmentAsStream(String docId, String name) {
         return operations.getAttachmentAsStream(docId, name);
+    }
+    
+    /**
+     * Gets an attachment of the document as stream.
+     */
+    public StreamResponse getAttachmentAsStream(String docId, String name, Map<String, String> headers) {
+        return operations.getAttachmentAsStream(docId, name, headers);
     }
 
     /**
