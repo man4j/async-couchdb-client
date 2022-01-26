@@ -1,6 +1,8 @@
 package com.equiron.acc.provider;
 
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class HttpClientProviderResponse {
     private final int status;
@@ -12,6 +14,8 @@ public class HttpClientProviderResponse {
     private final String uri;
     
     private volatile InputStream in;
+    
+    private Map<String, String> headers;
 
     public HttpClientProviderResponse(int status, String body, String uri) {
         this.status = status;
@@ -25,10 +29,18 @@ public class HttpClientProviderResponse {
         this.uri = uri;
     }
     
-    public HttpClientProviderResponse(int status, InputStream in, String uri) {
+    public HttpClientProviderResponse(int status, InputStream in, String uri, Map<String, String> headers) {
         this.status = status;
         this.in = in;
         this.uri = uri;
+        
+        Map<String, String> normalized = new HashMap<>();
+        
+        for (String key : headers.keySet()) {
+            normalized.put(key.toLowerCase(), headers.get(key).toLowerCase());
+        }
+        
+        this.headers = normalized;
     }
     
     public int getStatus() {
@@ -49,5 +61,9 @@ public class HttpClientProviderResponse {
     
     public InputStream getIn() {
         return in;
+    }
+    
+    public Map<String, String> getHeaders() {
+        return headers;
     }
 }

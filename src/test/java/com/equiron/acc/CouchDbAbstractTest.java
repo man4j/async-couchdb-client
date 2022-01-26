@@ -9,7 +9,7 @@ import com.equiron.acc.provider.HttpClientProviderType;
 public class CouchDbAbstractTest {
     protected TestDb db;
     
-    public static final HttpClientProviderType PROVIDER = HttpClientProviderType.OK_HTTP;
+    public static final HttpClientProviderType PROVIDER = HttpClientProviderType.JDK;
 
     @BeforeEach
     public void before() {

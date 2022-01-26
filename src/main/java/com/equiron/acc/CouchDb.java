@@ -52,6 +52,7 @@ import com.equiron.acc.provider.JdkHttpClientProvider;
 import com.equiron.acc.provider.OkHttpClientProvider;
 import com.equiron.acc.util.NamedStrategy;
 import com.equiron.acc.util.ReflectionUtils;
+import com.equiron.acc.util.StreamResponse;
 import com.equiron.acc.util.UrlBuilder;
 import com.equiron.acc.view.CouchDbBuiltInView;
 import com.equiron.acc.view.CouchDbMapReduceView;
@@ -346,6 +347,13 @@ public class CouchDb implements AutoCloseable {
      */
     public byte[] getAttachmentAsBytes(String docId, String name) {
         return operations.getAttachmentAsBytes(docId, name);
+    }
+
+    /**
+     * Gets an attachment of the document as stream.
+     */
+    public StreamResponse getAttachmentAsStream(String docId, String name) {
+        return operations.getAttachmentAsStream(docId, name);
     }
 
     /**

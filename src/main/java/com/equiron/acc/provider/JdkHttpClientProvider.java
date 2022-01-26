@@ -11,6 +11,8 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -103,7 +105,17 @@ public class JdkHttpClientProvider implements HttpClientProvider {
             
             HttpResponse<InputStream> response = client.send(builder.build(), BodyHandlers.ofInputStream());
             
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
+            Map<String, String> responseHeaders = new HashMap<>();
+
+            for (Entry<String, List<String>> e : response.headers().map().entrySet()) {
+                String value = response.headers().firstValue(e.getKey()).orElse(null);
+                
+                if (value != null) {
+                    responseHeaders.put(e.getKey(), value);
+                }
+            }
+            
+            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString(), responseHeaders);
         });
     }
 

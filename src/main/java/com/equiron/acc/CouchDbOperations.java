@@ -29,6 +29,7 @@ import com.equiron.acc.profiler.OperationType;
 import com.equiron.acc.provider.HttpClientProvider;
 import com.equiron.acc.provider.HttpClientProviderResponse;
 import com.equiron.acc.transformer.CouchDbBooleanResponseTransformer;
+import com.equiron.acc.util.StreamResponse;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -403,6 +404,42 @@ public class CouchDbOperations {
             if (r.getStatus() == 200) {
                 opInfo.setSize(r.getBodyAsBytes().length);
                 return r.getBodyAsBytes();
+            }
+           
+            if (r.getStatus() == 404) {
+                return null;
+            }
+           
+            throw CouchDbResponseHandler.responseCode2Exception(new CouchDbHttpResponse(r.getStatus(), r.getStatus() + "", r.getBody(), r.getUri().toString()));
+        } finally {
+            couchDbOperationStats.addOperation(opInfo);
+        }
+    }
+    
+    public StreamResponse getAttachmentAsStream(String docId, String name) {
+        OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
+        
+        if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
+        
+        Sneaky.sneak(() -> { semaphore.acquire(); return true;} );
+        
+        HttpClientProviderResponse r;
+        
+        try {
+            r = httpClient.stream(createUrlBuilder().addPathSegment(docId).addPathSegment(name).build(), "GET", "");
+        } finally {
+            semaphore.release();
+        }
+        
+        try {
+            opInfo.setStatus(r.getStatus());
+            
+            if (r.getStatus() == 200) {
+                if (r.getHeaders().get("content-length") != null) {
+                    opInfo.setSize(Long.parseLong(r.getHeaders().get("content-length")));
+                }
+                
+                return new StreamResponse(r.getIn(), r.getHeaders());
             }
            
             if (r.getStatus() == 404) {

@@ -5,12 +5,14 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.json.CouchDbBulkResponse;
 import com.equiron.acc.json.CouchDbDocument;
 import com.equiron.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.util.StreamResponse;
 
 public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     @Test
@@ -68,6 +70,20 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
             Assertions.assertEquals(9559, data.length);
             
             Files.write(Paths.get("test123.gif"), data);
+        }
+    }
+    
+    @Test
+    public void shouldCreateDocumentAndAddAttachmentAndGetAsStream() throws IOException {
+        try(InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
+            String attachmentName = "the/rabbit/pic";
+
+            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+
+            StreamResponse response = db.getAttachmentAsStream(putResponse.getDocId(), attachmentName);
+
+            Assertions.assertEquals(9559, Integer.parseInt(response.getHeader("Content-Length")));
+            Assertions.assertEquals(9559, IOUtils.toByteArray(response.getStream()).length);
         }
     }
 
