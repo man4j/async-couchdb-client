@@ -16,9 +16,6 @@ public interface HttpClientProvider {
     
     HttpClientProviderResponse get(String url);
     
-    @Deprecated
-    HttpClientProviderResponse getBytes(String url);
-    
     HttpClientProviderResponse delete(String url);
     
     HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers);

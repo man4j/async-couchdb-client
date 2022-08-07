@@ -2,11 +2,11 @@ package com.equiron.acc.database;
 
 import org.springframework.stereotype.Component;
 
-import com.equiron.acc.CouchDb;
-import com.equiron.acc.annotation.CouchDbConfig;
+import com.equiron.acc.YnsDb;
+import com.equiron.acc.annotation.YnsDbConfig;
 
 @Component
-@CouchDbConfig(dbName = "_global_changes", selfDiscovering = false)
-public class GlobalChanges extends CouchDb {
+@YnsDbConfig(dbName = "_global_changes", selfDiscovering = false)
+public class GlobalChanges extends YnsDb {
     //empty
 }

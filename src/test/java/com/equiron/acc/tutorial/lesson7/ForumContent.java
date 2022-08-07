@@ -1,7 +1,7 @@
 package com.equiron.acc.tutorial.lesson7;
 
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 
-public class ForumContent extends CouchDbDocument {
+public class ForumContent extends YnsDocument {
     //empty
 }

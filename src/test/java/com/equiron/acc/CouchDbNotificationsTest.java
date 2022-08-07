@@ -4,10 +4,10 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.changes.CouchDbEventHandler;
+import com.equiron.acc.changes.YnsEventHandler;
 import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.fixture.TestDoc;
-import com.equiron.acc.json.CouchDbEvent;
+import com.equiron.acc.json.YnsEvent;
 
 public class CouchDbNotificationsTest extends CouchDbAbstractTest {
     @Test
@@ -20,9 +20,9 @@ public class CouchDbNotificationsTest extends CouchDbAbstractTest {
         try (CouchDbEventListener<TestDoc> listener = new CouchDbEventListener<>(db) {/*empty*/};) {        
             final CountDownLatch latch = new CountDownLatch(1);
     
-            listener.addEventHandler(new CouchDbEventHandler<TestDoc>() {
+            listener.addEventHandler(new YnsEventHandler<TestDoc>() {
                 @Override
-                public void onEvent(CouchDbEvent<TestDoc> event) {
+                public void onEvent(YnsEvent<TestDoc> event) {
                     latch.countDown();
                 }
     

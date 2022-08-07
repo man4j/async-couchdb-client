@@ -31,7 +31,7 @@ public class OperationInfo {
     private static String generateStackTrace() {
         String stackTrace = "";
         
-        if (!CouchDbOperationStats.COUCHDB_METRICS_STACK_TRACE) {
+        if (!YnsOperationStats.COUCHDB_METRICS_STACK_TRACE) {
             return stackTrace;
         }
         

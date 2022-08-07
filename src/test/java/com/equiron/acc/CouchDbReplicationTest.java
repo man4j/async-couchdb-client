@@ -18,8 +18,8 @@ import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.database.UsersDb;
 import com.equiron.acc.fixture.RemoteTestDb;
 import com.equiron.acc.fixture.ReplicatedTestDb;
-import com.equiron.acc.json.CouchDbDocument;
-import com.equiron.acc.json.security.CouchDbUser;
+import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.json.security.YnsUser;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes=CouchDbReplicationTest.class)
@@ -50,11 +50,11 @@ public class CouchDbReplicationTest {
     
     @Test
     public void shouldReplicate() throws InterruptedException {
-        usersDb.saveOrUpdate(new CouchDbUser("oms", "123456", Collections.singleton("oms")));
+        usersDb.saveOrUpdate(new YnsUser("oms", "123456", Collections.singleton("oms")));
         
         Assertions.assertNull(remoteDb.get("1"));
         
-        replicatedDb.saveOrUpdate(new CouchDbDocument("1"));
+        replicatedDb.saveOrUpdate(new YnsDocument("1"));
         
         Thread.sleep(10_000);
         

@@ -23,10 +23,10 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.store.FSDirectory;
 
-import com.equiron.acc.changes.CouchDbEventHandler;
-import com.equiron.acc.json.CouchDbEvent;
+import com.equiron.acc.changes.YnsEventHandler;
+import com.equiron.acc.json.YnsEvent;
 
-public class Indexer implements CouchDbEventHandler<ForumContent> {
+public class Indexer implements YnsEventHandler<ForumContent> {
     private IndexWriter indexWriter;
     
     @SuppressWarnings("resource")
@@ -44,7 +44,7 @@ public class Indexer implements CouchDbEventHandler<ForumContent> {
     }
 
     @Override
-    public void onEvent(CouchDbEvent<ForumContent> e) throws Exception {
+    public void onEvent(YnsEvent<ForumContent> e) throws Exception {
         if (e.isDeleted()) {
             indexWriter.deleteDocuments(new Term("uid", e.getDocId()));
         } else {

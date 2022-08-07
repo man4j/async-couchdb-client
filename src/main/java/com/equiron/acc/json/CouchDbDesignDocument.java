@@ -9,8 +9,8 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonInclude(Include.NON_DEFAULT)
-public final class CouchDbDesignDocument extends CouchDbDocument {
-    private Map<String, CouchDbMapReduceFunction> views = new LinkedHashMap<>();
+public final class CouchDbDesignDocument extends YnsDocument {
+    private Map<String, YnsMapReduceFunction> views = new LinkedHashMap<>();
 
     @JsonProperty("validate_doc_update")
     private String validateDocUpdate;
@@ -32,7 +32,7 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
         /* empty */
     }
 
-    public Map<String, CouchDbMapReduceFunction> getViews() {
+    public Map<String, YnsMapReduceFunction> getViews() {
         return views;
     }
 
@@ -44,23 +44,23 @@ public final class CouchDbDesignDocument extends CouchDbDocument {
         return validateDocUpdate;
     }
 
-    public void addView(String name, CouchDbMapReduceFunction function) {
+    public void addView(String name, YnsMapReduceFunction function) {
         views.put(name, function);
     }
 
     public void addView(String name, String map, String reduce) {
-        views.put(name, new CouchDbMapReduceFunction(map, reduce));
+        views.put(name, new YnsMapReduceFunction(map, reduce));
     }
 
     public void addView(String name, String map) {
-        views.put(name, new CouchDbMapReduceFunction(map));
+        views.put(name, new YnsMapReduceFunction(map));
     }
 
-    public CouchDbMapReduceFunction getView(String name) {
+    public YnsMapReduceFunction getView(String name) {
         return views.get(name);
     }
 
-    public CouchDbMapReduceFunction deleteView(String name) {
+    public YnsMapReduceFunction deleteView(String name) {
         return views.remove(name);
     }
 

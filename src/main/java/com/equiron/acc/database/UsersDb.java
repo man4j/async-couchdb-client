@@ -2,13 +2,13 @@ package com.equiron.acc.database;
 
 import org.springframework.stereotype.Component;
 
-import com.equiron.acc.CouchDb;
-import com.equiron.acc.annotation.CouchDbConfig;
+import com.equiron.acc.YnsDb;
+import com.equiron.acc.annotation.YnsDbConfig;
 
 @Component
-@CouchDbConfig(dbName = "_users", selfDiscovering = false)
-public class UsersDb extends CouchDb {
-    public UsersDb(com.equiron.acc.CouchDbConfig config) {
+@YnsDbConfig(dbName = "_users", selfDiscovering = false)
+public class UsersDb extends YnsDb {
+    public UsersDb(com.equiron.acc.YnsDbConfig config) {
         super(config);
     }
 }

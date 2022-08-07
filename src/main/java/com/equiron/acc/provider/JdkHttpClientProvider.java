@@ -16,16 +16,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import com.rainerhahnekamp.sneakythrow.Sneaky;
+import lombok.SneakyThrows;
 
 public class JdkHttpClientProvider implements HttpClientProvider {
     private HttpClient client = HttpClient.newBuilder().version(Version.HTTP_1_1).connectTimeout(Duration.ofSeconds(30)).build();
     
-    private volatile HttpRequest.Builder prototype = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30))
-                                                                             .setHeader("Content-Type", "application/json; charset=utf-8");
+    private volatile HttpRequest.Builder prototype;
     
     @Override
     public void setCredentials(String username, String password) {
+        prototype = HttpRequest.newBuilder().timeout(Duration.ofSeconds(30)).setHeader("Content-Type", "application/json; charset=utf-8");
         prototype.header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()));
     }
     
@@ -65,6 +65,7 @@ public class JdkHttpClientProvider implements HttpClientProvider {
     }
 
     @Override
+    @SneakyThrows
     public HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers) {
         Builder builder;
 
@@ -74,51 +75,37 @@ public class JdkHttpClientProvider implements HttpClientProvider {
             builder = prototype.copy().timeout(Duration.ofDays(9999)).POST(BodyPublishers.ofString(body)).uri(URI.create(url));
         }
         
-        return Sneaky.sneak(() -> {
-            if (headers != null && !headers.isEmpty()) {
-                for (Entry<String, String> e : headers.entrySet()) {
-                    builder.setHeader(e.getKey(), e.getValue());
-                }
+        if (headers != null && !headers.isEmpty()) {
+            for (Entry<String, String> e : headers.entrySet()) {
+                builder.setHeader(e.getKey(), e.getValue());
             }
-            
-            HttpResponse<InputStream> response = client.send(builder.build(), BodyHandlers.ofInputStream());
-            
-            Map<String, String> responseHeaders = new HashMap<>();
+        }
+        
+        HttpResponse<InputStream> response = client.send(builder.build(), BodyHandlers.ofInputStream());
+        
+        Map<String, String> responseHeaders = new HashMap<>();
 
-            for (Entry<String, List<String>> e : response.headers().map().entrySet()) {
-                String value = response.headers().firstValue(e.getKey()).orElse(null);
-                
-                if (value != null) {
-                    responseHeaders.put(e.getKey(), value);
-                }
-            }
+        for (Entry<String, List<String>> e : response.headers().map().entrySet()) {
+            String value = response.headers().firstValue(e.getKey()).orElse(null);
             
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString(), responseHeaders);
-        });
+            if (value != null) {
+                responseHeaders.put(e.getKey(), value);
+            }
+        }
+        
+        return new HttpClientProviderResponse(response.uri().toString(), response.statusCode(), response.body(), responseHeaders);
     }
 
-    @Override
-    public HttpClientProviderResponse getBytes(String url) {
-        Builder builder = prototype.copy().GET().uri(URI.create(url));
-
-        return Sneaky.sneak(() -> {
-            HttpResponse<byte[]> response = client.send(builder.build(), BodyHandlers.ofByteArray());
-            
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
-        });
-    }
-    
+    @SneakyThrows
     private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
-        return Sneaky.sneak(() -> {
-            if (headers != null && !headers.isEmpty()) {
-                for (Entry<String, String> e : headers.entrySet()) {
-                    builder.setHeader(e.getKey(), e.getValue());
-                }
+        if (headers != null && !headers.isEmpty()) {
+            for (Entry<String, String> e : headers.entrySet()) {
+                builder.setHeader(e.getKey(), e.getValue());
             }
-            
-            HttpResponse<String> response = client.send(builder.build(), BodyHandlers.ofString());
-            
-            return new HttpClientProviderResponse(response.statusCode(), response.body(), response.uri().toString());
-        });
+        }
+        
+        HttpResponse<String> response = client.send(builder.build(), BodyHandlers.ofString());
+        
+        return new HttpClientProviderResponse(response.uri().toString(), response.statusCode(), response.body());
     }
 }

@@ -1,10 +1,10 @@
 package com.equiron.acc.tutorial.lesson5;
 
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class Book extends CouchDbDocument {
+public class Book extends YnsDocument {
     private String title;
 
     private String publisherName;

@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
-import com.equiron.acc.json.CouchDbDesignInfo;
+import com.equiron.acc.json.YnsDesignInfo;
 
 public class CouchDbMapViewTest extends CouchDbAbstractTest {
     @Test
@@ -26,7 +26,7 @@ public class CouchDbMapViewTest extends CouchDbAbstractTest {
 
     @Test
     public void shouldGetViewInfo() {
-        CouchDbDesignInfo designInfo = db.getTestView().getInfo();
+        YnsDesignInfo designInfo = db.getTestView().getInfo();
 
         Assertions.assertEquals("test_view", designInfo.getName());
         Assertions.assertEquals("javascript", designInfo.getViewInfo().getLanguage());

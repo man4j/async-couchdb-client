@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
-import com.equiron.acc.json.CouchDbDesignInfo;
+import com.equiron.acc.json.YnsDesignInfo;
 
 public class CouchDbMapErlangViewTest extends CouchDbAbstractTest {
     @Test
@@ -25,7 +25,7 @@ public class CouchDbMapErlangViewTest extends CouchDbAbstractTest {
 
     @Test
     public void shouldGetViewInfo() {
-        CouchDbDesignInfo designInfo = db.getTestErlangView().getInfo();
+        YnsDesignInfo designInfo = db.getTestErlangView().getInfo();
 
         Assertions.assertEquals("test_erlang_view", designInfo.getName());
         Assertions.assertEquals("erlang", designInfo.getViewInfo().getLanguage());

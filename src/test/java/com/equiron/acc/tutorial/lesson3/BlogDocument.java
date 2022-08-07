@@ -1,8 +1,8 @@
 package com.equiron.acc.tutorial.lesson3;
 
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 
-public class BlogDocument extends CouchDbDocument implements Comparable<BlogDocument> {
+public class BlogDocument extends YnsDocument implements Comparable<BlogDocument> {
     private long createdAt = System.currentTimeMillis();
 
     public long getCreatedAt() {

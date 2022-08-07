@@ -2,11 +2,11 @@ package com.equiron.acc.tutorial.lesson6;
 
 import java.util.Set;
 
-import com.equiron.acc.json.security.CouchDbUser;
+import com.equiron.acc.json.security.YnsUser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class CustomUser extends CouchDbUser {
+public class CustomUser extends YnsUser {
     private String firstName;
     
     private String lastName;

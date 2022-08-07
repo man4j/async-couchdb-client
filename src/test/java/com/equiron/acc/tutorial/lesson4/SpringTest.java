@@ -14,7 +14,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import com.equiron.acc.CouchDbAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.fixture.TestDoc;
-import com.equiron.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.json.YnsDocumentAttachment;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes=SpringTest.class)
@@ -46,7 +46,7 @@ public class SpringTest {
     @Test
     public void shouldWork() {
         TestDoc document = new TestDoc();
-        document.addAttachment("test", new CouchDbDocumentAttachment("text/html", new byte[1_000_000]));
+        document.addAttachment("test", new YnsDocumentAttachment("text/html", new byte[1_000_000]));
         document.setName(new String(new byte[1_000]));
         exampleDb.saveOrUpdate(document);
     }

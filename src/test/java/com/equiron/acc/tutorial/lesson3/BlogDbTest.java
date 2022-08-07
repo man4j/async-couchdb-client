@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.CouchDbAbstractTest;
 import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 
 public class BlogDbTest {
     private BlogDb db;
@@ -67,11 +67,11 @@ public class BlogDbTest {
 
         List<BlogDocument> comments = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogComment.class).collect(Collectors.toList());
 
-        CouchDbDocument post = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogPost.class).findFirst().get();
+        YnsDocument post = blogRelatedDocs.stream().filter(d -> d.getClass() == BlogPost.class).findFirst().get();
 
         Map<String, Author> authors = new HashMap<>();
 
-        for (CouchDbDocument author : blogRelatedDocs.stream().filter(d -> d.getClass() == Author.class).collect(Collectors.toList())) {
+        for (YnsDocument author : blogRelatedDocs.stream().filter(d -> d.getClass() == Author.class).collect(Collectors.toList())) {
             authors.put(author.getDocId(), (Author)author);
         }
 

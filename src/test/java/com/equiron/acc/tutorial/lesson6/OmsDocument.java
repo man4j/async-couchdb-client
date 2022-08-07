@@ -1,8 +1,8 @@
 package com.equiron.acc.tutorial.lesson6;
 
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 
-public class OmsDocument extends CouchDbDocument {
+public class OmsDocument extends YnsDocument {
     private String omsId;
     
     private OmsDocumentStatus status = OmsDocumentStatus.CREATED;

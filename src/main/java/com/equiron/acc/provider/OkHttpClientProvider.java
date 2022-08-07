@@ -10,8 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.io.IOUtils;
 
-import com.rainerhahnekamp.sneakythrow.Sneaky;
-
+import lombok.SneakyThrows;
 import okhttp3.Authenticator;
 import okhttp3.Credentials;
 import okhttp3.MediaType;
@@ -29,6 +28,10 @@ public class OkHttpClientProvider implements HttpClientProvider {
     private OkHttpClient listenerClient;
     
     public OkHttpClientProvider() {
+        init();
+    }
+
+    private void init() {
         OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
         okHttpClientBuilder.connectTimeout(5, TimeUnit.SECONDS);
         okHttpClientBuilder.readTimeout(5, TimeUnit.SECONDS);
@@ -70,8 +73,9 @@ public class OkHttpClientProvider implements HttpClientProvider {
     }
     
     @Override
+    @SneakyThrows
     public HttpClientProviderResponse put(String url, InputStream in, Map<String, String> headers) {
-        Builder builder = Sneaky.sneak(() -> new Request.Builder().put(RequestBody.create(IOUtils.toByteArray(in))).url(url));
+        Builder builder = new Request.Builder().put(RequestBody.create(IOUtils.toByteArray(in))).url(url);
 
         return exec(headers, builder);
     }
@@ -96,6 +100,7 @@ public class OkHttpClientProvider implements HttpClientProvider {
     }
     
     @Override
+    @SneakyThrows
     public HttpClientProviderResponse getStream(String url, String method, String body, Map<String, String> headers) {
         Builder builder;
         
@@ -111,34 +116,22 @@ public class OkHttpClientProvider implements HttpClientProvider {
             }
         }
         
-        return Sneaky.sneak(() -> {
-            Response response = listenerClient.newCall(builder.build()).execute();
-            
-            Map<String, String> responseHeaders = new HashMap<>();
+        Response response = listenerClient.newCall(builder.build()).execute();
+        
+        Map<String, String> responseHeaders = new HashMap<>();
 
-            for (Entry<String, List<String>> e : response.headers().toMultimap().entrySet()) {
-                String value = response.header(e.getKey(), null);
-                
-                if (value != null) {
-                    responseHeaders.put(e.getKey(), value);
-                }
-            }
+        for (Entry<String, List<String>> e : response.headers().toMultimap().entrySet()) {
+            String value = response.header(e.getKey(), null);
             
-            return new HttpClientProviderResponse(response.code(), response.body().byteStream(), response.request().url().toString(), responseHeaders);
-        });
-    }
-    
-    @Override
-    public HttpClientProviderResponse getBytes(String url) {
-        Builder builder = new Request.Builder().get().url(url);
-
-        return Sneaky.sneak(() -> {
-            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
-                return new HttpClientProviderResponse(response.code(), body.bytes(), response.request().url().toString());
+            if (value != null) {
+                responseHeaders.put(e.getKey(), value);
             }
-        });
+        }
+        
+        return new HttpClientProviderResponse(response.request().url().toString(), response.code(), response.body().byteStream(), responseHeaders);
     }
-    
+
+    @SneakyThrows
     private HttpClientProviderResponse exec(Map<String, String> headers, Builder builder) {
         if (headers != null && !headers.isEmpty()) {
             for (Entry<String, String> e : headers.entrySet()) {
@@ -146,11 +139,9 @@ public class OkHttpClientProvider implements HttpClientProvider {
             }
         }
         
-        return Sneaky.sneak(() -> {
-            try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
-                return new HttpClientProviderResponse(response.code(), body.string(), response.request().url().toString());
-            }
-        });
+        try (Response response = client.newCall(builder.build()).execute(); ResponseBody body = response.body();) {          
+            return new HttpClientProviderResponse(response.request().url().toString(), response.code(), body.string());
+        }
     }
 
     class MyAuthenticator implements Authenticator {

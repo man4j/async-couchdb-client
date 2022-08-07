@@ -3,11 +3,11 @@ package com.equiron.acc.fixture;
 import org.springframework.stereotype.Component;
 
 import com.equiron.acc.CouchDb;
-import com.equiron.acc.annotation.Security;
-import com.equiron.acc.annotation.SecurityPattern;
+import com.equiron.acc.annotation.YnsSecurity;
+import com.equiron.acc.annotation.YnsSecurityPattern;
 
 @Component
-@Security(admins = @SecurityPattern(names = "admin"), members = @SecurityPattern(roles = "oms"))
+@YnsSecurity(admins = @YnsSecurityPattern(names = "admin"), members = @YnsSecurityPattern(roles = "oms"))
 public class RemoteTestDb extends CouchDb {
     //empty
 }

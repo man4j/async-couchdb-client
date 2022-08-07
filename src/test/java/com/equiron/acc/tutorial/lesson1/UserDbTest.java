@@ -15,9 +15,9 @@ import org.springframework.util.FileCopyUtils;
 
 import com.equiron.acc.CouchDbAbstractTest;
 import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.json.CouchDbBulkResponse;
-import com.equiron.acc.json.CouchDbDocument;
-import com.equiron.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.json.YnsBulkResponse;
+import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.json.YnsDocumentAttachment;
 
 public class UserDbTest {
     private UserDb db;
@@ -47,7 +47,7 @@ public class UserDbTest {
 
         Assertions.assertEquals(3, db.getInfo().getDocCount());
 
-        for (CouchDbBulkResponse res : db.delete(userJohn.getDocIdAndRev())) {
+        for (YnsBulkResponse res : db.delete(userJohn.getDocIdAndRev())) {
             Assertions.assertTrue(res.isOk());
         }
 
@@ -55,7 +55,7 @@ public class UserDbTest {
 
         List<User> otherUsers = db.getBuiltInView().<User>createDocQuery().asDocs().stream().filter(d -> d.getClass() == User.class).collect(Collectors.toList());//filter design docs if exists
 
-        for (CouchDbBulkResponse res : db.delete(otherUsers.stream().map(CouchDbDocument::getDocIdAndRev).collect(Collectors.toList()))) {
+        for (YnsBulkResponse res : db.delete(otherUsers.stream().map(YnsDocument::getDocIdAndRev).collect(Collectors.toList()))) {
             Assertions.assertTrue(res.isOk());
         }
 
@@ -87,7 +87,7 @@ public class UserDbTest {
             FileCopyUtils.copy(in, out);
         }
 
-        userJohn.addAttachment("avatar", new CouchDbDocumentAttachment("image/gif", Base64.getEncoder().encodeToString(out.toByteArray())));
+        userJohn.addAttachment("avatar", new YnsDocumentAttachment("image/gif", Base64.getEncoder().encodeToString(out.toByteArray())));
 
         db.saveOrUpdate(userJohn);
 

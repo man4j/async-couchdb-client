@@ -1,10 +1,10 @@
 package com.equiron.acc.tutorial.lesson2;
 
-import com.equiron.acc.json.CouchDbDocument;
+import com.equiron.acc.json.YnsDocument;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public class City extends CouchDbDocument {
+public class City extends YnsDocument {
     @JsonCreator
     public City(@JsonProperty("name") String name) {
         setDocId(name);

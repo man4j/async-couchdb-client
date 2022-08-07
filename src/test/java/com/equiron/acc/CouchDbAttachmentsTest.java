@@ -10,17 +10,17 @@ import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.json.CouchDbBulkResponse;
-import com.equiron.acc.json.CouchDbDocument;
-import com.equiron.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.json.YnsBulkResponse;
+import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.json.YnsDocumentAttachment;
 import com.equiron.acc.util.StreamResponse;
 
 public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
     @Test
     public void shouldUseBuiltInAttachments() {
-        CouchDbDocument doc = new CouchDbDocument();
+        YnsDocument doc = new YnsDocument();
         
-        doc.getAttachments().put("key", new CouchDbDocumentAttachment("text/plain", "value"));
+        doc.getAttachments().put("key", new YnsDocumentAttachment("text/plain", "value"));
         
         db.saveOrUpdate(doc);
 
@@ -34,7 +34,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
         try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbDocument doc = new CouchDbDocument();
+            YnsDocument doc = new YnsDocument();
 
             db.saveOrUpdate(doc);
 
@@ -51,7 +51,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
         try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+            YnsBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             byte[] attachment = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName);
 
@@ -64,7 +64,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
         try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+            YnsBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             byte[] data = db.getAttachmentAsBytes(putResponse.getDocId(), attachmentName);
 
@@ -79,7 +79,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
         try (InputStream in = getClass().getResourceAsStream("/rabbit.gif")) {
             String attachmentName = "the/rabbit/pic";
 
-            CouchDbBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
+            YnsBulkResponse putResponse = db.attach("the/doc/id", in, attachmentName, "image/gif");
 
             StreamResponse response = db.getAttachmentAsStream(putResponse.getDocId(), attachmentName);
             Assertions.assertEquals(9559, Integer.parseInt(response.getHeader("Content-Length")));
@@ -111,7 +111,7 @@ public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
 
     @Test
     public void tryDeleteNonExistingAttachment() {
-        CouchDbDocument doc = new CouchDbDocument();
+        YnsDocument doc = new YnsDocument();
 
         db.saveOrUpdate(doc);
 

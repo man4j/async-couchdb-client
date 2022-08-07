@@ -10,17 +10,17 @@ import org.junit.jupiter.api.Test;
 import com.equiron.acc.fixture.GenericTestDocWrapper;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.fixture.TestDocDescendant;
-import com.equiron.acc.json.CouchDbBulkResponse;
+import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.CouchDbDesignDocument;
-import com.equiron.acc.json.CouchDbDocument;
-import com.equiron.acc.json.CouchDbDocumentAttachment;
+import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.json.YnsDocumentAttachment;
 
 public class CouchDbCrudTest extends CouchDbAbstractTest {
     @Test
     public void shouldSaveDoc() {
         TestDoc testDoc = new TestDoc();
         
-        testDoc.addAttachment("doc", new CouchDbDocumentAttachment("application/json", "{\"age\":10}"));
+        testDoc.addAttachment("doc", new YnsDocumentAttachment("application/json", "{\"age\":10}"));
 
         db.saveOrUpdate(testDoc);
         
@@ -34,7 +34,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
     public void shouldSaveDocAndGet() {
         TestDoc testDoc = new TestDoc();
         
-        testDoc.addAttachment("doc", new CouchDbDocumentAttachment("application/json", "{\"age\":10}"));
+        testDoc.addAttachment("doc", new YnsDocumentAttachment("application/json", "{\"age\":10}"));
 
         db.saveOrUpdate(testDoc);
         
@@ -78,7 +78,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
 
         TestDoc testDoc = db.get(docId);
         
-        List<CouchDbBulkResponse> deleteResponse = db.delete(testDoc.getDocIdAndRev());
+        List<YnsBulkResponse> deleteResponse = db.delete(testDoc.getDocIdAndRev());
         
         Assertions.assertFalse(deleteResponse.get(0).isInConflict());
         Assertions.assertEquals("", deleteResponse.get(0).getError());
@@ -102,7 +102,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         Map<String, Boolean> purgeResponse = db.purge(testDoc.getDocIdAndRev());
         Assertions.assertTrue(purgeResponse.get(testDoc.getDocId()));
         
-        purgeResponse = db.purge(new CouchDbDocIdAndRev("qwe", "2-1fa02a0db59fe257fa879cc7f69d6672"));
+        purgeResponse = db.purge(new YnsDocIdAndRev("qwe", "2-1fa02a0db59fe257fa879cc7f69d6672"));
         Assertions.assertFalse(purgeResponse.get("qwe"));
         
         Assertions.assertEquals(0, db.getBuiltInView().<TestDoc>createDocQuery().byKey(docId).asDocs().size());
@@ -116,7 +116,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
 
         db.saveOrUpdate(new TestDoc(), new TestDocDescendant());
 
-        for (CouchDbDocument d : db.getBuiltInView().createDocQuery().asDocIterator()) {
+        for (YnsDocument d : db.getBuiltInView().createDocQuery().asDocIterator()) {
             if (d.getClass() == CouchDbDesignDocument.class) {
                 findDesignDoc = true;
             }

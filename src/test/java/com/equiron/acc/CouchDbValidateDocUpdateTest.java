@@ -3,7 +3,7 @@ package com.equiron.acc;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.exception.http.CouchDbForbiddenException;
+import com.equiron.acc.exception.http.YnsForbiddenException;
 import com.equiron.acc.fixture.TestDoc;
 
 public class CouchDbValidateDocUpdateTest extends CouchDbAbstractTest {
@@ -19,6 +19,6 @@ public class CouchDbValidateDocUpdateTest extends CouchDbAbstractTest {
         
         doc.setName("bomb");
         
-        Assertions.assertThrows(CouchDbForbiddenException.class, () -> db.saveOrUpdate(doc));
+        Assertions.assertThrows(YnsForbiddenException.class, () -> db.saveOrUpdate(doc));
     }
 }

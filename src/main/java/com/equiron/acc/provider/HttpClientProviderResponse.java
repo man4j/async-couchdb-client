@@ -9,30 +9,22 @@ public class HttpClientProviderResponse {
 
     private volatile String body;
     
-    private volatile byte[] bodyAsBytes;
-    
     private final String uri;
     
     private volatile InputStream in;
     
     private Map<String, String> headers;
 
-    public HttpClientProviderResponse(int status, String body, String uri) {
+    public HttpClientProviderResponse(String uri, int status, String body) {
+        this.uri = uri;
         this.status = status;
         this.body = body;
-        this.uri = uri;
     }
     
-    public HttpClientProviderResponse(int status, byte[] body, String uri) {
-        this.status = status;
-        this.bodyAsBytes = body;
+    public HttpClientProviderResponse(String uri, int status, InputStream in, Map<String, String> headers) {
         this.uri = uri;
-    }
-    
-    public HttpClientProviderResponse(int status, InputStream in, String uri, Map<String, String> headers) {
         this.status = status;
         this.in = in;
-        this.uri = uri;
         
         Map<String, String> normalized = new HashMap<>();
         
@@ -49,10 +41,6 @@ public class HttpClientProviderResponse {
     
     public String getBody() {
         return body;
-    }
-    
-    public byte[] getBodyAsBytes() {
-        return bodyAsBytes;
     }
     
     public String getUri() {
