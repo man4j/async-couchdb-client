@@ -1,7 +1,6 @@
 package com.equiron.acc.json.resultset;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import com.equiron.acc.json.YnsDocRev;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -45,7 +44,7 @@ public abstract class YnsMapResultSet<K, V> extends YnsAbstractResultSet<K, V, Y
     }
 
     public List<String> ids() {
-        return getRows().stream().map(YnsMapRow::getDocId).collect(Collectors.toList());
+        return getRows().stream().map(YnsMapRow::getDocId).toList();
     }
 
     public String firstId() {

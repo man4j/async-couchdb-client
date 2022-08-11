@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.equiron.acc.YnsDocIdAndRev;
 import com.equiron.acc.YnsDb;
+import com.equiron.acc.YnsDocIdAndRev;
 import com.equiron.acc.util.HasId;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -124,9 +124,13 @@ public class YnsDocument implements HasId<String> {
     }
 
     public boolean isOk() {
-        return !isInConflict() && !isForbidden();
+        return !isInConflict() && !isForbidden() && (bulkError == null || bulkError.isBlank());
     }
-
+    
+    public boolean isUnknownError() {
+        return !isInConflict() && !isForbidden() && (bulkError != null && !bulkError.isBlank());
+    }
+    
     public YnsDb getCurrentDb() {
         return currentDb;
     }

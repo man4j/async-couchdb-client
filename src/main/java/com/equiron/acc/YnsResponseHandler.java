@@ -2,6 +2,7 @@ package com.equiron.acc;
 
 import java.util.function.Function;
 
+import com.equiron.acc.exception.YnsBulkRuntimeException;
 import com.equiron.acc.exception.YnsResponseException;
 import com.equiron.acc.exception.YnsTransformResultException;
 import com.equiron.acc.exception.YnsUnmarshallException;
@@ -38,19 +39,19 @@ public class YnsResponseHandler<F, T> {
     
     private OperationInfo opInfo;
     
-    private YnsOperationStats couchDbOperationStats;
+    private YnsOperationStats ynsOperationStats;
 
-    public YnsResponseHandler(HttpClientProviderResponse response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, YnsOperationStats couchDbOperationStats) {
-        this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo, couchDbOperationStats);
+    public YnsResponseHandler(HttpClientProviderResponse response, TypeReference<F> typeReference, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, YnsOperationStats ynsOperationStats) {
+        this(response, TypeFactory.defaultInstance().constructType(typeReference), transformer, mapper, opInfo, ynsOperationStats);
     }
 
-    public YnsResponseHandler(HttpClientProviderResponse response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, YnsOperationStats couchDbOperationStats) {
+    public YnsResponseHandler(HttpClientProviderResponse response, JavaType javaType, Function<F, T> transformer, ObjectMapper mapper, OperationInfo opInfo, YnsOperationStats ynsOperationStats) {
         this.response = response;
         this.javaType = javaType;
         this.transformer = transformer;
         this.mapper = mapper;
         this.opInfo = opInfo;
-        this.couchDbOperationStats = couchDbOperationStats;
+        this.ynsOperationStats = ynsOperationStats;
     }
     
     public T transform() {
@@ -92,10 +93,9 @@ public class YnsResponseHandler<F, T> {
                 opInfo.setStatus(e.getStatus());
                 throw e;
             }
-            
         } finally {
             if (opInfo != null) {
-                couchDbOperationStats.addOperation(opInfo);
+                ynsOperationStats.addOperation(opInfo);
             }
         }
     }
@@ -112,6 +112,8 @@ public class YnsResponseHandler<F, T> {
         try {
             return transformer.apply(couchDbResult);
         } catch (YnsResponseException e) {
+            throw e;
+        } catch (YnsBulkRuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new YnsTransformResultException(couchDbHttpResponse, e);

@@ -22,6 +22,8 @@ public class YnsDbConfig {
     
     private final boolean selfDiscovering;
     
+    private final boolean removeNotDeclaredReplications;
+    
     private final int clientMaxParallelism;
     
     private final HttpClientProviderType httpClientProviderType;
@@ -40,6 +42,8 @@ public class YnsDbConfig {
         boolean buildViewsOnStart = true;
         
         boolean selfDiscovering = true;
+        
+        boolean removeNotDeclaredReplications = true;
         
         private int clientMaxParallelism = 128;
         
@@ -86,6 +90,12 @@ public class YnsDbConfig {
             
             return this;
         }
+        
+        public Builder setRemoveNotDeclaredReplications(boolean removeNotDeclaredReplications) {
+            this.removeNotDeclaredReplications = removeNotDeclaredReplications;
+            
+            return this;
+        }
 
         public Builder setClientMaxParallelism(int clientMaxParallelism) {
             this.clientMaxParallelism = clientMaxParallelism;
@@ -100,7 +110,7 @@ public class YnsDbConfig {
         }
 
         public YnsDbConfig build() {
-            return new YnsDbConfig(host, port, user, password, dbName, buildViewsOnStart, selfDiscovering, clientMaxParallelism, httpClientProviderType);
+            return new YnsDbConfig(host, port, user, password, dbName, buildViewsOnStart, selfDiscovering, removeNotDeclaredReplications, clientMaxParallelism, httpClientProviderType);
         }
     }
 }

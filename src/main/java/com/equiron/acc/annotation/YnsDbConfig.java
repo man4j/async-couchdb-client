@@ -5,7 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import com.equiron.acc.provider.HttpClientProviderType;
+import com.equiron.acc.annotation.model.AnnotationConfigOption;
 
 @Target({ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
@@ -22,11 +22,9 @@ public @interface YnsDbConfig {
     
     String clientMaxParallelism() default "";
 
-    boolean selfDiscovering() default true;
+    AnnotationConfigOption selfDiscovering() default AnnotationConfigOption.BY_CONFIG;
     
-    boolean buildViewOnStart() default true;
+    AnnotationConfigOption buildViewOnStart() default AnnotationConfigOption.BY_CONFIG;
     
-    boolean removeNotDeclaredReplications() default true;
-    
-    HttpClientProviderType httpClientProviderType() default HttpClientProviderType.JDK;
+    AnnotationConfigOption removeNotDeclaredReplications() default AnnotationConfigOption.BY_CONFIG;
 }

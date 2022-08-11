@@ -11,9 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +28,7 @@ import com.equiron.acc.annotation.YnsReplicated.Direction;
 import com.equiron.acc.annotation.YnsSecurity;
 import com.equiron.acc.annotation.YnsSecurityPattern;
 import com.equiron.acc.annotation.YnsValidateDocUpdate;
+import com.equiron.acc.annotation.model.AnnotationConfigOption;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.json.CouchDbDesignDocument;
 import com.equiron.acc.json.YnsBulkResponse;
@@ -63,7 +62,6 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class YnsDb implements AutoCloseable {
-    @Autowired
     private volatile com.equiron.acc.YnsDbConfig config;
     
     @Autowired
@@ -87,7 +85,9 @@ public class YnsDb implements AutoCloseable {
     
     private volatile YnsBuiltInView builtInView;
 
-    private volatile YnsOperations operations;
+    private volatile YnsDocumentOperations operations;
+    
+    private volatile YnsAdminOperations adminOperations;
     
     private volatile boolean selfDiscovering = true;
     
@@ -95,76 +95,58 @@ public class YnsDb implements AutoCloseable {
     
     private boolean removeNotDeclaredReplications = false;
     
-    private volatile boolean initialized;
-    
     private volatile List<YnsView> viewList = new CopyOnWriteArrayList<>();
     
     private volatile YnsClusterInfo clusterInfo;
     
     private volatile HttpClientProvider httpClientProvider;
-    
-	@PostConstruct
-    public void init() {
-        if (!initialized) {//может быть инициализирована в конструкторе
-            mapper.registerModule(new JavaTimeModule());
-            
-            applyConfig();
-            
-            httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
-            
-            if (user != null && password != null) {
-                httpClientProvider.setCredentials(user, password);
-            }
-                                                                  
-            operations = new YnsOperations(this);
-            
-            builtInView = new YnsBuiltInView(this);
-            
-            viewList.add(builtInView);
-            
-            testConnection();
-    
-            createDbIfNotExist();
-            
-            if (selfDiscovering) {            
-                if (!getDbName().equals("_users")) {//тк данная база содержит встроенный дизайн-документ
-                    synchronizeDesignDocs();
-                }
 
-                injectViews();
-    
-                injectValidators();
+    public YnsDb(com.equiron.acc.YnsDbConfig config) {
+        this.config = config;
 
-                addSecurity();
-    
-                cleanupViews();
-                
-                synchronizeReplicationDocs();
+        mapper.registerModule(new JavaTimeModule());
+        
+        applyConfig();
+        
+        httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
+        
+        if (user != null && password != null) {
+            httpClientProvider.setCredentials(user, password);
+        }
+                                                              
+        operations = new YnsDocumentOperations(this);
+        
+        builtInView = new YnsBuiltInView(this);
+        
+        viewList.add(builtInView);
+        
+        testConnection();
+
+        createDbIfNotExist();
+        
+        if (selfDiscovering) {            
+            if (!getDbName().equals("_users")) {//тк данная база содержит встроенный дизайн-документ
+                synchronizeDesignDocs();
             }
+
+            injectViews();
+
+            injectValidators();
+
+            addSecurity();
+
+            cleanupViews();
             
-            initialized = true;
+            synchronizeReplicationDocs();
         }
     }
     
-    public YnsDb() {
-        //empty
-    }
-    
-    public YnsDb(com.equiron.acc.YnsDbConfig config) {
-        this.config = config;
-        
-        init();
+    public com.equiron.acc.YnsDbConfig getConfig() {
+        return config;
     }
     
     public HttpClientProvider getHttpClientProvider() {
         return httpClientProvider;
-    }
-    
-    @Autowired
-    public void setConfig(com.equiron.acc.YnsDbConfig config) {
-        if (this.config == null) {//может быть уже инициализирован через конструктор
-            this.config = config;
-        }
     }
     
     public ObjectMapper getMapper() {
@@ -195,7 +177,7 @@ public class YnsDb implements AutoCloseable {
         return builtInView;
     }
     
-    public YnsOperations getOperations() {
+    public YnsDocumentOperations getOperations() {
         return operations;
     }
 
@@ -280,26 +262,6 @@ public class YnsDb implements AutoCloseable {
         return operations.delete(docRevs);
     }
     
-    /**
-     * As a result of this purge operation, a document will be completely removed from the database’s 
-     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
-     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
-     * and update_seq will be increased.
-     */
-    public Map<String, Boolean> purge(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) {
-        return operations.purge(docRev, docRevs);
-    }
-    
-    /**
-     * As a result of this purge operation, a document will be completely removed from the database’s 
-     * document b+tree, and sequence b+tree. It will not be available through _all_docs or _changes endpoints, 
-     * as though this document never existed. Also as a result of purge operation, the database’s purge_seq 
-     * and update_seq will be increased.
-     */
-    public Map<String, Boolean> purge(List<YnsDocIdAndRev> docRevs) {
-        return operations.purge(docRevs);
-    }
-
     //------------------ Attach API -------------------------
 
     /**
@@ -340,39 +302,39 @@ public class YnsDb implements AutoCloseable {
     //------------------ Admin API -------------------------
 
     public List<CouchDbDesignDocument> getDesignDocs() {
-        return operations.getDesignDocs();
+        return adminOperations.getDesignDocs();
     }
     
     public List<CouchDbDesignDocument> getDesignDocsWithValidators() {
-        return operations.getDesignDocsWithValidators();
+        return adminOperations.getDesignDocsWithValidators();
     }
     
     /**
      * Returns a list of databases on this server.
      */
     public List<String> getDatabases() {
-        return operations.getDatabases();
+        return adminOperations.getDatabases();
     }
 
     /**
      * Create a new database.
      */
     public boolean createDb() {
-        return operations.createDb();
+        return adminOperations.createDb();
     }
 
     /**
      * Delete an existing database.
      */
     public boolean deleteDb() {
-        return operations.deleteDb();
+        return adminOperations.deleteDb();
     }
 
     /**
      * Returns database information.
      */
     public YnsDbInfo getInfo() {
-        return operations.getInfo();
+        return adminOperations.getInfo();
     }
     
     /**
@@ -381,7 +343,7 @@ public class YnsDb implements AutoCloseable {
      * welcome message and the version of the server.     
      */
     public YnsInstanceInfo getInstanceInfo() {
-        return operations.getInstanceInfo();
+        return adminOperations.getInstanceInfo();
     }
 
     /**
@@ -393,7 +355,7 @@ public class YnsDb implements AutoCloseable {
      * trigger a view cleanup.
      */
     public boolean cleanupViews() {
-        return operations.cleanupViews();
+        return adminOperations.cleanupViews();
     }
 
     //------------------ Discovering methods -------------------------
@@ -429,8 +391,10 @@ public class YnsDb implements AutoCloseable {
         String _user = config.getUser();
         String _password = config.getPassword();
         String _dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
-        selfDiscovering = config.isSelfDiscovering();
         String _clientMaxParallelism = config.getClientMaxParallelism() + "";
+        buildViewOnStart = config.isBuildViewsOnStart();
+        selfDiscovering = config.isSelfDiscovering();
+        removeNotDeclaredReplications = config.isRemoveNotDeclaredReplications();
         httpClientProviderType = config.getHttpClientProviderType();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.YnsDbConfig.class)) {
@@ -442,19 +406,17 @@ public class YnsDb implements AutoCloseable {
             if (!annotationConfig.password().isBlank()) _password = annotationConfig.password();
             if (!annotationConfig.dbName().isBlank()) _dbName = annotationConfig.dbName();
             if (!annotationConfig.clientMaxParallelism().isBlank()) _clientMaxParallelism = annotationConfig.clientMaxParallelism();
-            
-            selfDiscovering = annotationConfig.selfDiscovering();
-            removeNotDeclaredReplications = annotationConfig.removeNotDeclaredReplications();
-            httpClientProviderType = annotationConfig.httpClientProviderType();
-            buildViewOnStart = annotationConfig.buildViewOnStart();
+            if (annotationConfig.buildViewOnStart() != AnnotationConfigOption.BY_CONFIG) buildViewOnStart = annotationConfig.buildViewOnStart() == AnnotationConfigOption.ENABLED ? true : false;
+            if (annotationConfig.selfDiscovering() != AnnotationConfigOption.BY_CONFIG) selfDiscovering = annotationConfig.selfDiscovering() == AnnotationConfigOption.ENABLED ? true : false;
+            if (annotationConfig.removeNotDeclaredReplications() != AnnotationConfigOption.BY_CONFIG) removeNotDeclaredReplications = annotationConfig.removeNotDeclaredReplications() == AnnotationConfigOption.ENABLED ? true : false;
         }
         
         this.host = resolve(_host);
         this.port = Integer.parseInt(resolve(_port));
         this.user = resolve(_user);
         this.password = resolve(_password);
-        this.clientMaxParallelism = Integer.parseInt(resolve(_clientMaxParallelism));
         this.dbName = resolve(_dbName);
+        this.clientMaxParallelism = Integer.parseInt(resolve(_clientMaxParallelism));
     }
 
     private void createDbIfNotExist() {
@@ -656,7 +618,7 @@ public class YnsDb implements AutoCloseable {
                                                                             .asIds()
                                                                             .stream()
                                                                             .filter(id -> !id.startsWith("_design/"))//exclude design docs
-                                                                            .collect(Collectors.toList());
+                                                                            .toList();
             
             List<YnsReplicationDocument> replicationsDocs = new ArrayList<>();
             
