@@ -34,7 +34,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
     //------------------ Fetch API -------------------------
     
     @Override
-    public <T extends YnsDocument> T get(String docId) {
+    public <T extends YnsDocument> T get(String docId, String...allDocs docIds) {
         return get(docId, TypeFactory.defaultInstance().constructType(YnsDocument.class), false);
     }
     
@@ -82,7 +82,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
             }
 
             for (var r : responses) {
-                if (r.getError() != null && !r.getError().isBlank()) {
+                if (!r.getError().isBlank()) {
                     throw new YnsBulkRuntimeException(responses);
                 }
             }
@@ -97,7 +97,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
         semaphore.acquire();
         
         try {
-            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", getReplicas() + "").build(), valueAsString); 
+            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").build(), valueAsString); 
 
             try {
                 new YnsResponseHandler<>(response, new TypeReference<List<YnsBulkResponse>>() {/* empty */}, transformer, ynsDb.mapper, opInfo, ynsOperationStats).transform();
@@ -130,7 +130,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
             }
             
             for (var r : responses) {
-                if (r.getError() != null && !r.getError().isBlank()) {
+                if (!r.getError().isBlank()) {
                     throw new YnsBulkRuntimeException(responses);
                 }
             }
@@ -145,7 +145,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
         semaphore.acquire();
         
         try {
-            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", getReplicas() + "").build(), valueAsString);
+            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").build(), valueAsString);
 
             try {
                 return new YnsResponseHandler<>(response, new TypeReference<List<YnsBulkResponse>>() {/* empty */}, transformer, ynsDb.mapper, opInfo, ynsOperationStats).transform();
@@ -181,7 +181,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
         
         Function<List<YnsBulkResponse>, List<YnsBulkResponse>> transformer = responses -> {
             for (var r : responses) {
-                if (r.getError() != null && !r.getError().isBlank()) {
+                if (!r.getError().isBlank()) {
                     throw new YnsBulkRuntimeException(responses);
                 }
             }
@@ -196,7 +196,7 @@ public class YnsDocumentOperations extends YnsAbstractOperations implements YnsD
         semaphore.acquire();
         
         try {
-            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").addQueryParam("w", getReplicas() + "").build(), valueAsString);
+            HttpClientProviderResponse response = httpClient.post(createUrlBuilder().addPathSegment("_bulk_docs").build(), valueAsString);
             
             try {
                 return new YnsResponseHandler<>(response, new TypeReference<List<YnsBulkResponse>>() {/* empty */}, transformer, ynsDb.mapper, opInfo, ynsOperationStats).transform();

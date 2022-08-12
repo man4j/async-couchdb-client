@@ -28,11 +28,11 @@ public class YnsBulkResponse {
     }
     
     public boolean isOk() {
-        return !isInConflict() && !isForbidden() && (error == null || error.isBlank());
+        return !isInConflict() && !isForbidden() && error.isBlank();
     }
     
     public boolean isUnknownError() {
-        return !isInConflict() && !isForbidden() && (error != null && !error.isBlank());
+        return !isInConflict() && !isForbidden() && !error.isBlank();
     }
 
     public YnsDocIdAndRev getDocIdAndRev() {

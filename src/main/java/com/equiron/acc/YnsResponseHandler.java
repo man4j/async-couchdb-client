@@ -2,6 +2,7 @@ package com.equiron.acc;
 
 import java.util.function.Function;
 
+import com.equiron.acc.exception.YnsBulkGetRuntimeException;
 import com.equiron.acc.exception.YnsBulkRuntimeException;
 import com.equiron.acc.exception.YnsResponseException;
 import com.equiron.acc.exception.YnsTransformResultException;
@@ -19,9 +20,9 @@ import com.equiron.acc.exception.http.YnsPreconditionFailedException;
 import com.equiron.acc.exception.http.YnsRequestedRangeException;
 import com.equiron.acc.exception.http.YnsUnauthorizedException;
 import com.equiron.acc.json.resultset.YnsAbstractResultSet;
-import com.equiron.acc.profiler.YnsOperationStats;
 import com.equiron.acc.profiler.OperationInfo;
 import com.equiron.acc.profiler.OperationType;
+import com.equiron.acc.profiler.YnsOperationStats;
 import com.equiron.acc.provider.HttpClientProviderResponse;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JavaType;
@@ -87,6 +88,16 @@ public class YnsResponseHandler<F, T> {
                 }
             }
             
+            if (opInfo != null && (opInfo.getOperationType() == OperationType.GET || opInfo.getOperationType() == OperationType.GET_WITH_ATTACHMENT)) {
+                opInfo.setSize(body.length());
+            
+                if (couchDbResult instanceof YnsAbstractResultSet) {
+                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) couchDbResult;
+                    
+                    opInfo.setDocsCount(rs.getRows().size());
+                }
+            }
+            
             try {
                 return transformResult(couchDbResult, ynsHttpResponse);
             } catch (YnsResponseException e) {
@@ -114,6 +125,8 @@ public class YnsResponseHandler<F, T> {
         } catch (YnsResponseException e) {
             throw e;
         } catch (YnsBulkRuntimeException e) {
+            throw e;
+        } catch (YnsBulkGetRuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new YnsTransformResultException(couchDbHttpResponse, e);

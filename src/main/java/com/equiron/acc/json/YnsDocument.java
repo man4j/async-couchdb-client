@@ -16,7 +16,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -30,10 +29,10 @@ import lombok.Setter;
                 setterVisibility=Visibility.NONE)
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeInfo(use=Id.CLASS)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class YnsDocument implements HasId<String> {
+public class YnsDocument implements HasId<String>, YnsBulkGetResultItem {
     /**
      * @return the unique identifier of the document.
      */
@@ -49,6 +48,7 @@ public class YnsDocument implements HasId<String> {
     @JsonProperty("_rev")
     @Getter
     @Setter
+    @EqualsAndHashCode.Include
     private String rev;
 
     /**
@@ -73,28 +73,12 @@ public class YnsDocument implements HasId<String> {
     private Boolean deleted;
 
     @JsonIgnore
-    @Getter
-    boolean inConflict;
-
-    @JsonIgnore
-    @Getter
-    boolean forbidden;
-
-    @JsonIgnore
-    @Getter
-    String conflictReason;
-    
-    @JsonIgnore
-    @Getter
-    String bulkError;
-
-    @JsonIgnore
     YnsDb currentDb;
 
     public YnsDocument(String docId) {
         setDocId(docId);
     }
-
+    
     @Override
     public String getUniqueId() {
         return docId;
@@ -123,14 +107,6 @@ public class YnsDocument implements HasId<String> {
         return deleted == null ? false : deleted;
     }
 
-    public boolean isOk() {
-        return !isInConflict() && !isForbidden() && (bulkError == null || bulkError.isBlank());
-    }
-    
-    public boolean isUnknownError() {
-        return !isInConflict() && !isForbidden() && (bulkError != null && !bulkError.isBlank());
-    }
-    
     public YnsDb getCurrentDb() {
         return currentDb;
     }

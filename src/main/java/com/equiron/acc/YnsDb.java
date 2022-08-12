@@ -30,7 +30,7 @@ import com.equiron.acc.annotation.YnsSecurityPattern;
 import com.equiron.acc.annotation.YnsValidateDocUpdate;
 import com.equiron.acc.annotation.model.AnnotationConfigOption;
 import com.equiron.acc.database.ReplicatorDb;
-import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDbInfo;
 import com.equiron.acc.json.YnsDbInfo.YnsClusterInfo;
@@ -301,11 +301,11 @@ public class YnsDb implements AutoCloseable {
 
     //------------------ Admin API -------------------------
 
-    public List<CouchDbDesignDocument> getDesignDocs() {
+    public List<YnsDesignDocument> getDesignDocs() {
         return adminOperations.getDesignDocs();
     }
     
-    public List<CouchDbDesignDocument> getDesignDocsWithValidators() {
+    public List<YnsDesignDocument> getDesignDocsWithValidators() {
         return adminOperations.getDesignDocsWithValidators();
     }
     
@@ -700,11 +700,11 @@ public class YnsDb implements AutoCloseable {
     }
     
     private void synchronizeDesignDocs() {
-        Set<CouchDbDesignDocument> oldDesignDocs = new HashSet<>(getDesignDocsWithValidators());
+        Set<YnsDesignDocument> oldDesignDocs = new HashSet<>(getDesignDocsWithValidators());
 
-        Set<CouchDbDesignDocument> newDesignDocs = generateNewDesignDocs();
+        Set<YnsDesignDocument> newDesignDocs = generateNewDesignDocs();
 
-        for (CouchDbDesignDocument oldDoc : oldDesignDocs) {
+        for (YnsDesignDocument oldDoc : oldDesignDocs) {
             if (!newDesignDocs.contains(oldDoc)) {
                 delete(oldDoc.getDocIdAndRev());
             } else {
@@ -717,8 +717,8 @@ public class YnsDb implements AutoCloseable {
         }
     }
 
-    private Set<CouchDbDesignDocument> generateNewDesignDocs() {
-        Set<CouchDbDesignDocument> designSet = new HashSet<>();
+    private Set<YnsDesignDocument> generateNewDesignDocs() {
+        Set<YnsDesignDocument> designSet = new HashSet<>();
 
         for (Field field : ReflectionUtils.getAllFields(getClass())) {
             if (field.isAnnotationPresent(YnsJsView.class) || field.isAnnotationPresent(YnsErlangView.class)) {
@@ -727,7 +727,7 @@ public class YnsDb implements AutoCloseable {
                 
                 String map = null;
                 String reduce = null;
-                CouchDbDesignDocument designDocument = null;
+                YnsDesignDocument designDocument = null;
 
                 if (field.isAnnotationPresent(YnsJsView.class)) {
                     YnsJsView view = field.getAnnotation(YnsJsView.class);
@@ -742,7 +742,7 @@ public class YnsDb implements AutoCloseable {
                         }
                     }
                     
-                    designDocument = new CouchDbDesignDocument(designName);
+                    designDocument = new YnsDesignDocument(designName);
                 } else {
                     YnsErlangView view = field.getAnnotation(YnsErlangView.class);
 
@@ -756,7 +756,7 @@ public class YnsDb implements AutoCloseable {
                         }
                     }
                     
-                    designDocument = new CouchDbDesignDocument(designName, "erlang");
+                    designDocument = new YnsDesignDocument(designName, "erlang");
                 }
                 
                 designDocument.addView(viewName, map, reduce);
@@ -770,7 +770,7 @@ public class YnsDb implements AutoCloseable {
 
                 String designName = "_design/" + NamedStrategy.addUnderscores(field.getName());
                 
-                CouchDbDesignDocument designDocument = new CouchDbDesignDocument(designName);
+                YnsDesignDocument designDocument = new YnsDesignDocument(designName);
                 designDocument.setValidateDocUpdate("function(newDoc, oldDoc, userCtx, secObj) { " + vdu.value() + ";}");
                 
                 designSet.add(designDocument);

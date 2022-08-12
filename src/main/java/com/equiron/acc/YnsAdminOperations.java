@@ -3,7 +3,7 @@ package com.equiron.acc;
 import java.util.List;
 import java.util.function.Function;
 
-import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsBooleanResponse;
 import com.equiron.acc.json.YnsDbInfo;
 import com.equiron.acc.json.YnsInstanceInfo;
@@ -27,26 +27,26 @@ public class YnsAdminOperations {
         return new UrlBuilder(ynsDb.getDbUrl());
     }
     
-    public List<CouchDbDesignDocument> getDesignDocs() {
+    public List<YnsDesignDocument> getDesignDocs() {
         return ynsDb.getBuiltInView()
                     .createQuery()
                     .startKey("_design/")
                     .endKey("_design0")
                     .asIds()
                     .stream()
-                    .<CouchDbDesignDocument>map(ynsDb::get)
+                    .<YnsDesignDocument>map(ynsDb::get)
                     .filter(d -> d.getValidateDocUpdate() == null || d.getValidateDocUpdate().isBlank())
                     .toList();
     }
     
-    public List<CouchDbDesignDocument> getDesignDocsWithValidators() {
+    public List<YnsDesignDocument> getDesignDocsWithValidators() {
         return ynsDb.getBuiltInView()
                     .createQuery()
                     .startKey("_design/")
                     .endKey("_design0")
                     .asIds()
                     .stream()
-                    .<CouchDbDesignDocument>map(ynsDb::get)
+                    .<YnsDesignDocument>map(ynsDb::get)
                     .toList();
     }
     

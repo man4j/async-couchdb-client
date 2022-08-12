@@ -11,7 +11,7 @@ import com.equiron.acc.fixture.GenericTestDocWrapper;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.fixture.TestDocDescendant;
 import com.equiron.acc.json.YnsBulkResponse;
-import com.equiron.acc.json.CouchDbDesignDocument;
+import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsDocument;
 import com.equiron.acc.json.YnsDocumentAttachment;
 
@@ -117,7 +117,7 @@ public class CouchDbCrudTest extends CouchDbAbstractTest {
         db.saveOrUpdate(new TestDoc(), new TestDocDescendant());
 
         for (YnsDocument d : db.getBuiltInView().createDocQuery().asDocIterator()) {
-            if (d.getClass() == CouchDbDesignDocument.class) {
+            if (d.getClass() == YnsDesignDocument.class) {
                 findDesignDoc = true;
             }
 
