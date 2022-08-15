@@ -1,8 +1,10 @@
 package com.equiron.acc.json;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, defaultImpl = YnsBulkGetErrorResultItem.class)
-public interface YnsBulkGetResultItem {
-    //empty
+@Getter
+public class YnsBulkGetResultItem<T> {
+    private T ok;
+    
+    private YnsBulkGetErrorResult error;
 }

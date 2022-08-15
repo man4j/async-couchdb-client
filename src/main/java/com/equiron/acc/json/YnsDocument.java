@@ -32,7 +32,7 @@ import lombok.Setter;
 @JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class YnsDocument implements HasId<String>, YnsBulkGetResultItem {
+public class YnsDocument implements HasId<String> {
     /**
      * @return the unique identifier of the document.
      */

@@ -1,19 +1,23 @@
 package com.equiron.acc.json;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
-public class YnsBulkGetRawResult {
+@NoArgsConstructor
+@AllArgsConstructor
+public class YnsBulkGetErrorResult {
     @JsonProperty("id")
     private String docId;
 
-    private List<Map<String, Map<String, Object>>> docs = new ArrayList<>();
+    private String rev;
+
+    private String error = "";
+
+    private String reason = "";
 }

@@ -9,6 +9,6 @@ import lombok.Getter;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
-public class YnsBulkGetResponse {
-    private List<YnsBulkGetResult> results = new ArrayList<>();
+public class YnsBulkGetResponse<T> {
+    private List<YnsBulkGetResult<T>> results = new ArrayList<>();
 }

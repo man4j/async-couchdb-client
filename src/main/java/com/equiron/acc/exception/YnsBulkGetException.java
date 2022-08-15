@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.equiron.acc.json.YnsBulkGetErrorResultItem;
-import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.YnsDocIdAndRev;
+import com.equiron.acc.json.YnsBulkGetErrorResult;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -13,7 +13,7 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class YnsBulkGetException extends Exception {
-    Map<String, List<YnsDocument>> conflictingDocumentsMap = new HashMap<>();
+    Map<String, List<YnsDocIdAndRev>> conflictingDocumentsMap = new HashMap<>();
     
-    Map<String, YnsBulkGetErrorResultItem> errorDocumentsMap = new HashMap<>();
+    Map<String, YnsBulkGetErrorResult> errorDocumentsMap = new HashMap<>();
 }

@@ -1,14 +1,14 @@
 package com.equiron.acc.cache;
 
-import com.equiron.acc.json.YnsDocument;
+import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @AllArgsConstructor
 @Getter
-public class CacheRecord {
+public class CacheRecordRaw {
     private final String id;
     
-    private YnsDocument doc;
+    private Map<String, Object> doc;
 }

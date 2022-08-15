@@ -5,22 +5,27 @@ import java.util.List;
 import java.util.Map;
 
 import com.equiron.acc.exception.YnsBulkException;
+import com.equiron.acc.exception.YnsBulkGetException;
 import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDocument;
 import com.equiron.acc.util.StreamResponse;
 
 public interface YnsDocumentOperationsInterface {
     //------------------ Fetch API -------------------------
-    <T extends YnsDocument> T get(String docId);
+    <T extends YnsDocument> List<T> get(String docId, String... docIds) throws YnsBulkGetException;
     
-    <T extends YnsDocument> T get(String docId, boolean attachments);
+    <T extends YnsDocument> List<T> get(List<String> docIds) throws YnsBulkGetException;
+
+    <T extends YnsDocument> List<T> get(List<String> docIds, boolean attachments) throws YnsBulkGetException;
     
     //------------------ Fetch RAW API -------------------------
+
+    List<Map<String, Object>> getRaw(String docId, String... docIds) throws YnsBulkGetException;
     
-    Map<String, Object> getRaw(String docId);
-    
-    Map<String, Object> getRaw(String docId, boolean attachments);
-    
+    List<Map<String, Object>> getRaw(List<String> docIds) throws YnsBulkGetException;
+
+    List<Map<String, Object>> getRaw(List<String> docIds, boolean attachments) throws YnsBulkGetException;
+
     //------------------ Save or update API -------------------------
 
     <T extends YnsDocument> void saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) throws YnsBulkException;
@@ -29,15 +34,15 @@ public interface YnsDocumentOperationsInterface {
     
     //------------------ Save or update RAW API -------------------------
 
-    List<YnsBulkResponse> saveOrUpdateRaw(Map<String, Object> doc, @SuppressWarnings("unchecked") Map<String, Object>... docs) throws YnsBulkException;
+    void saveOrUpdateRaw(Map<String, Object> doc, @SuppressWarnings("unchecked") Map<String, Object>... docs) throws YnsBulkException;
 
-    List<YnsBulkResponse> saveOrUpdateRaw(List<Map<String, Object>> docs) throws YnsBulkException;
+    void saveOrUpdateRaw(List<Map<String, Object>> docs) throws YnsBulkException;
 
     //------------------ Delete API -------------------------
     
-    List<YnsBulkResponse> delete(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) throws YnsBulkException;
+    void delete(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) throws YnsBulkException;
 
-    List<YnsBulkResponse> delete(List<YnsDocIdAndRev> docRevs) throws YnsBulkException;
+    void delete(List<YnsDocIdAndRev> docRevs) throws YnsBulkException;
 
     //------------------ Attach API -------------------------
 
