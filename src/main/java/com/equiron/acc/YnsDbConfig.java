@@ -24,7 +24,13 @@ public class YnsDbConfig {
     
     private final boolean removeNotDeclaredReplications;
     
+    private final boolean enableDocumentCache;
+    
     private final int clientMaxParallelism;
+    
+    private final int cacheMaxDocsCount;
+    
+    private final int cacheMaxTimeoutSec;
     
     private final HttpClientProviderType httpClientProviderType;
 
@@ -45,7 +51,13 @@ public class YnsDbConfig {
         
         boolean removeNotDeclaredReplications = true;
         
+        boolean enableDocumentCache = false;
+        
         private int clientMaxParallelism = 128;
+        
+        private int cacheMaxDocsCount = 10_000;
+        
+        private int cacheMaxTimeoutSec = 3600;
         
         HttpClientProviderType httpClientProviderType = HttpClientProviderType.JDK;
         
@@ -96,9 +108,27 @@ public class YnsDbConfig {
             
             return this;
         }
+        
+        public Builder setEnableDocumentCache(boolean enableDocumentCache) {
+            this.enableDocumentCache = enableDocumentCache;
+            
+            return this;
+        }
 
         public Builder setClientMaxParallelism(int clientMaxParallelism) {
             this.clientMaxParallelism = clientMaxParallelism;
+            
+            return this;
+        }
+        
+        public Builder setCacheMaxDocsCount(int cacheMaxDocsCount) {
+            this.cacheMaxDocsCount = cacheMaxDocsCount;
+            
+            return this;
+        }
+        
+        public Builder setCacheMaxTimeoutSec(int cacheMaxTimeoutSec) {
+            this.cacheMaxTimeoutSec = cacheMaxTimeoutSec;
             
             return this;
         }
@@ -110,7 +140,7 @@ public class YnsDbConfig {
         }
 
         public YnsDbConfig build() {
-            return new YnsDbConfig(host, port, user, password, dbName, buildViewsOnStart, selfDiscovering, removeNotDeclaredReplications, clientMaxParallelism, httpClientProviderType);
+            return new YnsDbConfig(host, port, user, password, dbName, buildViewsOnStart, selfDiscovering, removeNotDeclaredReplications, enableDocumentCache, clientMaxParallelism, cacheMaxDocsCount, cacheMaxTimeoutSec, httpClientProviderType);
         }
     }
 }

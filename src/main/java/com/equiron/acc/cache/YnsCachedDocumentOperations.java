@@ -3,13 +3,18 @@ package com.equiron.acc.cache;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 
+import com.equiron.acc.YnsDocIdAndRev;
 import com.equiron.acc.YnsDocumentOperations;
+import com.equiron.acc.exception.YnsBulkDocumentException;
 import com.equiron.acc.json.YnsBulkGetResponse;
+import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDocument;
+import com.equiron.acc.profiler.OperationType;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.Striped;
@@ -38,11 +43,11 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
     @Override
     @SuppressWarnings("unchecked")
     @SneakyThrows
-    public <T> List<T> get(List<String> docIds, boolean attachments, TypeReference<YnsBulkGetResponse<T>> listOfDocs, boolean raw) {
-        docIds.stream().sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().lock());
+    public <T> List<T> get(List<YnsDocIdAndRev> docIds, TypeReference<YnsBulkGetResponse<T>> listOfDocs, boolean raw) {
+        docIds.stream().map(YnsDocIdAndRev::getDocId).sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().lock());
         
         try {
-            List<String> nonExistingDocs = docIds.stream().filter(id -> !documentCache.containsKey(id)).toList();
+            List<String> nonExistingDocs = docIds.stream().map(YnsDocIdAndRev::getDocId).filter(id -> !documentCache.containsKey(id)).toList();
             
             List<T> resultDocs = new ArrayList<>();
 
@@ -50,10 +55,10 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                 nonExistingDocs.stream().sorted().forEach(id -> initRecordStripedLock.get(id).lock());
                 
                 try {
-                    List<String> nonExistingDocs2 = docIds.stream().filter(id -> !documentCache.containsKey(id)).toList();
+                    List<YnsDocIdAndRev> nonExistingDocs2 = docIds.stream().filter(docAndRev -> !documentCache.containsKey(docAndRev.getDocId())).toList();
                     
                     if (!nonExistingDocs2.isEmpty()) {
-                        for (T doc : delegate.get(nonExistingDocs2, attachments, listOfDocs, raw)) {
+                        for (T doc : delegate.get(nonExistingDocs2, listOfDocs, raw)) {
                             if (!raw) {
                                 String docId = ((YnsDocument)doc).getDocId();
                                 documentCache.put(docId, new CacheRecord(docId, (YnsDocument)doc));
@@ -63,7 +68,7 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                             }
                         }
                         
-                        nonExistingDocs2.stream().filter(id -> !documentCache.containsKey(id)).forEach(id -> {
+                        nonExistingDocs2.stream().map(YnsDocIdAndRev::getDocId).filter(id -> !documentCache.containsKey(id)).forEach(id -> {
                             documentCache.put(id, new CacheRecord(id, null));
                             documentCacheRaw.put(id, new CacheRecordRaw(id, null));
                         });
@@ -73,7 +78,7 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                 }
             }
                 
-            for (String id : docIds) {
+            for (String id : docIds.stream().map(YnsDocIdAndRev::getDocId).toList()) {
                 if (raw) {
                     if (documentCacheRaw.get(id).getDoc() != null) {
                         resultDocs.add((T) documentCacheRaw.get(id).getDoc());
@@ -90,146 +95,78 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
             docIds.stream().sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().unlock());
         }
     }
+    
+    @SuppressWarnings({ "unchecked" })
+    @SneakyThrows
+    @Override
+    public <T> void saveOrUpdate(List<T> docs, OperationType opType, boolean raw) {
+        List<String> ids;
+        
+        if (raw) {
+            ids = docs.stream().map(d -> (String)((Map<String, Object>)d).get("_id")).filter(Objects::nonNull).sorted().toList();
+        } else {
+            ids = docs.stream().map(d -> ((YnsDocument)d).getDocId()).filter(Objects::nonNull).sorted().toList();
+        }
+        
+        ids.forEach(id -> readWriteRecordStripedLock.get(id).writeLock().lock());
+        
+        try {
+            try {
+                delegate.saveOrUpdate(docs, opType, raw);
+                
+                docs.forEach(d -> processDoc(raw, d));
+            } catch (YnsBulkDocumentException e) {
+                for (int i = 0; i < e.getResponses().size(); i++) {
+                    YnsBulkResponse resp = e.getResponses().get(i);
+                    
+                    if (resp.isOk()) {
+                        processDoc(raw, docs.get(i));
+                    }
+                    
+                    if (resp.isUnknownError()) {
+                        documentCache.remove(resp.getDocId());
+                        documentCacheRaw.remove(resp.getDocId());
+                    }
+                }
+    
+                throw e;
+            } catch (Exception e) {
+                ids.forEach(id -> documentCache.remove(id));
+                ids.forEach(id -> documentCacheRaw.remove(id));
+              
+                throw e;
+            }
+        } finally {
+            ids.forEach(id -> readWriteRecordStripedLock.get(id).writeLock().unlock());
+        }
+    }
 
-//    @Override
-//    public <T extends YnsDocument> void saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) throws YnsBulkException {
-//        T[] allDocs = ArrayUtils.insert(0, docs, doc);
-//        
-//        saveOrUpdate(Arrays.asList(allDocs));
-//    }
-//
-//    @Override
-//    public <T extends YnsDocument> void saveOrUpdate(List<T> docs) throws YnsBulkException {
-//        docs.forEach(d -> readWriteRecordStripedLock.get(d.getDocId()).writeLock().lock());
-//
-//        try {
-//            try {
-//                delegate.saveOrUpdate(docs);
-//
-//                docs.forEach(d -> documentCache.put(d.getDocId(), new CacheRecord(d.getDocId(), d)));
-//            } catch (YnsBulkException e) {
-//                docs.forEach(d -> {
-//                    if (d.isOk()) {
-//                        documentCache.put(d.getDocId(), new CacheRecord(d.getDocId(), d));
-//                    }
-//                    
-//                    if (d.isUnknownError()) {
-//                        documentCache.remove(d.getDocId());
-//                    }
-//                });
-//
-//                throw e;
-//            } catch (Exception e) {
-//                docs.forEach(d -> documentCache.remove(d.getDocId()));
-//                
-//                throw e;
-//            }
-//        } finally {
-//            docs.forEach(d -> readWriteRecordStripedLock.get(d.getDocId()).writeLock().unlock());
-//        }
-//    }
-//    
-//    //==========================================================
-//
-//    @Override
-//    public List<YnsBulkResponse> saveOrUpdateRaw(Map<String, Object> doc, @SuppressWarnings("unchecked") Map<String, Object>... docs) throws YnsBulkException {
-//        Map<String, Object>[] allDocs = ArrayUtils.insert(0, docs, doc);
-//        
-//        return saveOrUpdateRaw(Arrays.asList(allDocs));
-//    }
-//
-//    @Override
-//    public List<YnsBulkResponse> saveOrUpdateRaw(List<Map<String, Object>> docs) throws YnsBulkException {
-//        docs.forEach(d -> readWriteRecordStripedLock.get(d.get("_id")).writeLock().lock());
-//
-//        try {
-//            try {
-//                List<YnsBulkResponse> resp = delegate.saveOrUpdateRaw(docs);
-//                
-//                docs.forEach(d -> documentCache.remove(d.get("_id")));
-//                
-//                return resp;
-//            } catch (YnsBulkException e) {
-//                e.getResponses().forEach(r -> {
-//                    if (r.isOk() || r.isUnknownError()) {
-//                        documentCache.remove(r.getDocId());
-//                    }
-//                });
-//
-//                throw e;
-//            } catch (Exception e) {
-//                docs.forEach(d -> documentCache.remove(d.get("_id")));
-//                
-//                throw e;
-//            }
-//        } finally {
-//            docs.forEach(d -> readWriteRecordStripedLock.get(d.get("_id")).writeLock().unlock());
-//        }
-//    }
-//
-//    //==========================================================
-//    
-//    @Override
-//    public List<YnsBulkResponse> delete(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) throws YnsBulkException {
-//        YnsDocIdAndRev[] allDocs = ArrayUtils.insert(0, docRevs, docRev);
-//        
-//        return delete(Arrays.asList(allDocs));
-//    }
-//    
-//    @Override
-//    public List<YnsBulkResponse> delete(List<YnsDocIdAndRev> docRevs) throws YnsBulkException {
-//        docRevs.forEach(d -> readWriteRecordStripedLock.get(d.getDocId()).writeLock().lock());
-//
-//        try {
-//            try {
-//                List<YnsBulkResponse> resp = delegate.delete(docRevs);
-//
-//                docRevs.forEach(d -> documentCache.put(d.getDocId(), new CacheRecord(d.getDocId(), null)));
-//                
-//                return resp;
-//            } catch (YnsBulkException e) {
-//                e.getResponses().forEach(r -> {
-//                    if (r.isOk()) {
-//                        documentCache.put(r.getDocId(), new CacheRecord(r.getDocId(), null));
-//                    }
-//                    
-//                    if (r.isUnknownError()) {
-//                        documentCache.remove(r.getDocId());
-//                    }
-//                });
-//
-//                throw e;
-//            } catch (Exception e) {
-//                docRevs.forEach(d -> documentCache.remove(d.getDocId()));
-//                
-//                throw e;
-//            }
-//        } finally {
-//            docRevs.forEach(d -> readWriteRecordStripedLock.get(d.getDocId()).writeLock().unlock());
-//        }
-//    }
-//
-//    @Override
-//    public YnsBulkResponse attach(YnsDocIdAndRev docIdAndRev, InputStream in, String name, String contentType) {
-//        // TODO Auto-generated method stub
-//        return null;
-//    }
-//
-//    @Override
-//    public StreamResponse getAttachmentAsStream(String docId, String name) {
-//        // TODO Auto-generated method stub
-//        return null;
-//    }
-//
-//    @Override
-//    public StreamResponse getAttachmentAsStream(String docId, String name, Map<String, String> headers) {
-//        // TODO Auto-generated method stub
-//        return null;
-//    }
-//
-//    @Override
-//    public Boolean deleteAttachment(YnsDocIdAndRev docIdAndRev, String name) {
-//        // TODO Auto-generated method stub
-//        return null;
-//    }
+    @SuppressWarnings({ "unchecked" })
+    private <T> void processDoc(boolean raw, T doc) {
+        String docId;
+        
+        if (raw) {
+            docId = (String)((Map<String, Object>)doc).get("_id");
+            Boolean deleted = (Boolean)((Map<String, Object>)doc).get("_deleted");
+            
+            if (deleted != null && deleted) {
+                documentCache.put(docId, new CacheRecord(docId, null));
+                documentCacheRaw.put(docId, new CacheRecordRaw(docId, null));
+            } else {
+                documentCacheRaw.put(docId, new CacheRecordRaw(docId, (Map<String, Object>)doc));
+                documentCache.remove(docId);
+            }
+        } else {
+            docId = ((YnsDocument)doc).getDocId();
+            boolean deleted = ((YnsDocument)doc).isDeleted();
+
+            if (deleted) {
+                documentCache.put(docId, new CacheRecord(docId, null));
+                documentCacheRaw.put(docId, new CacheRecordRaw(docId, null));
+            } else {
+                documentCache.put(docId, new CacheRecord(docId, (YnsDocument)doc));
+                documentCacheRaw.remove(docId);
+            }
+        }
+    }
 }

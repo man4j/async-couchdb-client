@@ -9,6 +9,6 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class YnsBulkException extends Exception {
+public class YnsBulkDocumentException extends RuntimeException {
     private List<YnsBulkResponse> responses;
 }

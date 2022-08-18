@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 
 @JsonAutoDetect(fieldVisibility=Visibility.ANY,
@@ -18,6 +19,7 @@ import lombok.Getter;
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
+@EqualsAndHashCode
 public class YnsDocIdAndRev {
     @JsonProperty("_id")
     private String docId;

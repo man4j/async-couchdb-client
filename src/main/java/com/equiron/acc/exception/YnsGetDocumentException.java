@@ -12,7 +12,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class YnsBulkGetException extends Exception {
+public class YnsGetDocumentException extends RuntimeException {
     Map<String, List<YnsDocIdAndRev>> conflictingDocumentsMap = new HashMap<>();
     
     Map<String, YnsBulkGetErrorResult> errorDocumentsMap = new HashMap<>();

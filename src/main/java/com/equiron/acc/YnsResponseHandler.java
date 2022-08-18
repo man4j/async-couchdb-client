@@ -2,8 +2,8 @@ package com.equiron.acc;
 
 import java.util.function.Function;
 
-import com.equiron.acc.exception.YnsBulkGetRuntimeException;
-import com.equiron.acc.exception.YnsBulkRuntimeException;
+import com.equiron.acc.exception.YnsBulkDocumentException;
+import com.equiron.acc.exception.YnsGetDocumentException;
 import com.equiron.acc.exception.YnsResponseException;
 import com.equiron.acc.exception.YnsTransformResultException;
 import com.equiron.acc.exception.YnsUnmarshallException;
@@ -88,7 +88,7 @@ public class YnsResponseHandler<F, T> {
                 }
             }
             
-            if (opInfo != null && (opInfo.getOperationType() == OperationType.GET || opInfo.getOperationType() == OperationType.GET_WITH_ATTACHMENT)) {
+            if (opInfo != null && opInfo.getOperationType() == OperationType.GET) {
                 opInfo.setSize(body.length());
             
                 if (couchDbResult instanceof YnsAbstractResultSet) {
@@ -122,11 +122,7 @@ public class YnsResponseHandler<F, T> {
     private T transformResult(F couchDbResult, YnsHttpResponse couchDbHttpResponse) {
         try {
             return transformer.apply(couchDbResult);
-        } catch (YnsResponseException e) {
-            throw e;
-        } catch (YnsBulkRuntimeException e) {
-            throw e;
-        } catch (YnsBulkGetRuntimeException e) {
+        } catch (YnsResponseException | YnsBulkDocumentException | YnsGetDocumentException e) {
             throw e;
         } catch (Exception e) {
             throw new YnsTransformResultException(couchDbHttpResponse, e);

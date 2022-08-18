@@ -14,6 +14,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.PreDestroy;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.BeanExpressionContext;
 import org.springframework.beans.factory.config.BeanExpressionResolver;
@@ -29,15 +30,19 @@ import com.equiron.acc.annotation.YnsSecurity;
 import com.equiron.acc.annotation.YnsSecurityPattern;
 import com.equiron.acc.annotation.YnsValidateDocUpdate;
 import com.equiron.acc.annotation.model.AnnotationConfigOption;
+import com.equiron.acc.cache.YnsCachedDocumentOperations;
 import com.equiron.acc.database.ReplicatorDb;
-import com.equiron.acc.json.YnsDesignDocument;
+import com.equiron.acc.exception.YnsBulkDocumentException;
+import com.equiron.acc.json.YnsBulkGetResponse;
 import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDbInfo;
 import com.equiron.acc.json.YnsDbInfo.YnsClusterInfo;
+import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsDocument;
 import com.equiron.acc.json.YnsInstanceInfo;
 import com.equiron.acc.json.YnsReplicationDocument;
 import com.equiron.acc.json.security.YnsSecurityObject;
+import com.equiron.acc.profiler.OperationType;
 import com.equiron.acc.provider.HttpClientProvider;
 import com.equiron.acc.provider.HttpClientProviderType;
 import com.equiron.acc.provider.JdkHttpClientProvider;
@@ -93,7 +98,13 @@ public class YnsDb implements AutoCloseable {
     
     private volatile boolean buildViewOnStart = true;
     
-    private boolean removeNotDeclaredReplications = false;
+    private volatile boolean removeNotDeclaredReplications = false;
+    
+    private volatile boolean enableDocumentCache = false;
+    
+    private volatile int cacheMaxDocsCount;
+    
+    private volatile int cacheMaxTimeoutSec;
     
     private volatile List<YnsView> viewList = new CopyOnWriteArrayList<>();
     
@@ -108,14 +119,18 @@ public class YnsDb implements AutoCloseable {
         
         applyConfig();
         
+        if (enableDocumentCache) {
+            operations = new YnsCachedDocumentOperations(new YnsDocumentOperations(this), cacheMaxDocsCount, cacheMaxTimeoutSec);
+        } else {
+            operations = new YnsDocumentOperations(this);
+        }
+        
         httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
         
         if (user != null && password != null) {
             httpClientProvider.setCredentials(user, password);
         }
                                                               
-        operations = new YnsDocumentOperations(this);
-        
         builtInView = new YnsBuiltInView(this);
         
         viewList.add(builtInView);
@@ -188,78 +203,156 @@ public class YnsDb implements AutoCloseable {
     }
 
     //------------------ Fetch API -------------------------
-    
+
     /**
      * Returns the latest revision of the document.
+     * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> T get(String docId) {
-        return operations.get(docId);
+        List<T> docs = get(docId, new String[] {});
+
+        return docs.isEmpty() ? null : docs.get(0);
     }
+        
+    /**
+     * Returns the latest revision of the documents.
+     * @throws YnsBulkGetException
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends YnsDocument> List<T> get(String docId, String... docIds) {
+        String[] allIds = ArrayUtils.insert(0, docIds, docId);
+        
+        return (List<T>) operations.get(Arrays.asList(allIds).stream().map(id -> new YnsDocIdAndRev(docId, null)).toList(), new TypeReference<YnsBulkGetResponse<YnsDocument>>() {/* empty */}, false);
+    }
+    
+    /**
+     * Returns specified revision of the document.
+     * @throws YnsBulkGetException
+     */
+    public <T extends YnsDocument> T get(YnsDocIdAndRev docId) {
+        List<T> docs = get(docId, new YnsDocIdAndRev[] {});
+
+        return docs.isEmpty() ? null : docs.get(0);
+    }
+        
+    /**
+     * Returns specified revision of the documents.
+     * @throws YnsBulkGetException
+     */
+    @SuppressWarnings("unchecked")
+    public <T extends YnsDocument> List<T> get(YnsDocIdAndRev docId, YnsDocIdAndRev... docIds) {
+        YnsDocIdAndRev[] allIds = ArrayUtils.insert(0, docIds, docId);
+        
+        return (List<T>) operations.get(Arrays.asList(allIds), new TypeReference<YnsBulkGetResponse<YnsDocument>>() {/* empty */}, false);
+    }
+
 
     /**
      * Returns the latest revision of the document.
+     * @throws YnsBulkGetException
      */
     public Map<String, Object> getRaw(String docId) {
-        return operations.getRaw(docId);
-    }
-    
-    /**
-     * Returns the latest revision of the document.
-     */
-    public <T extends YnsDocument> T get(String docId, boolean attachments) {
-        return operations.get(docId, attachments);
+        List<Map<String, Object>> docs = getRaw(docId, new String[] {});
+
+        return docs.isEmpty() ? null : docs.get(0);
     }
 
     /**
-     * Returns the latest revision of the document.
+     * Returns the latest revision of the documents.
+     * @throws YnsBulkGetException
      */
-    public Map<String, Object> getRaw(String docId, boolean attachments) {
-        return operations.getRaw(docId, attachments);
+    public List<Map<String, Object>> getRaw(String docId, String... docIds) {
+        String[] allIds = ArrayUtils.insert(0, docIds, docId);
+        
+        return operations.get(Arrays.asList(allIds).stream().map(id -> new YnsDocIdAndRev(docId, null)).toList(), new TypeReference<YnsBulkGetResponse<Map<String, Object>>>() {/* empty */}, true);
     }
     
+    /**
+     * Returns specified revision of the document.
+     * @throws YnsBulkGetException
+     */
+    public Map<String, Object> getRaw(YnsDocIdAndRev docId) {
+        List<Map<String, Object>> docs = getRaw(docId, new YnsDocIdAndRev[] {});
+
+        return docs.isEmpty() ? null : docs.get(0);
+    }
+
+    /**
+     * Returns specified revision of the documents.
+     * @throws YnsBulkGetException
+     */
+    public List<Map<String, Object>> getRaw(YnsDocIdAndRev docId, YnsDocIdAndRev... docIds) {
+        YnsDocIdAndRev[] allIds = ArrayUtils.insert(0, docIds, docId);
+        
+        return operations.get(Arrays.asList(allIds), new TypeReference<YnsBulkGetResponse<Map<String, Object>>>() {/* empty */}, true);
+    }
+
     //------------------ Bulk API -------------------------
 
     /**
      * Insert or update multiple documents in to the database in a single request.
+     * @throws YnsBulkException 
      */
-    public <T extends YnsDocument> List<T> saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
-        return operations.saveOrUpdate(doc, docs);
+    public <T extends YnsDocument> void saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
+        T[] allDocs = ArrayUtils.insert(0, docs, doc);
+
+        saveOrUpdate(Arrays.asList(allDocs));
     }
 
     /**
      * Insert or update multiple documents in to the database in a single request.
+     * @throws YnsBulkException 
      */
-    public <T extends YnsDocument> List<T> saveOrUpdate(List<T> docs) {
-        return operations.saveOrUpdate(docs);
+    public <T extends YnsDocument> void saveOrUpdate(List<T> docs) {
+        operations.saveOrUpdate(docs, OperationType.INSERT_UPDATE, false);
     }
     
+    //------------------ Save or update RAW API -------------------------
+
     /**
      * Insert or update multiple documents in to the database in a single request.
+     * @throws YnsBulkException 
      */
-    public <T extends YnsDocument> List<T> saveOrUpdate(List<T> docs, boolean ignoreConflicts) {
-        return operations.saveOrUpdate(docs, ignoreConflicts);
+    public void saveOrUpdateRaw(Map<String, Object> doc, @SuppressWarnings("unchecked") Map<String, Object>... docs) {
+        Map<String, Object>[] allDocs = ArrayUtils.insert(0, docs, doc);
+
+        saveOrUpdateRaw(Arrays.asList(allDocs));
     }
 
     /**
      * Insert or update multiple documents in to the database in a single request.
+     * @throws YnsBulkException 
      */
-    @SafeVarargs
-    public final List<YnsBulkResponse> saveOrUpdate(Map<String, Object>... docs) {
-        return operations.saveOrUpdate(docs);
+    public void saveOrUpdateRaw(List<Map<String, Object>> docs) {
+        operations.saveOrUpdate(docs, OperationType.INSERT_UPDATE, true);
     }
     
     /**
      * Delete multiple documents from the database in a single request.
+     * @throws YnsBulkException
      */
-    public List<YnsBulkResponse> delete(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) {
-        return operations.delete(docRev, docRevs);
+    public void delete(YnsDocIdAndRev docRev, YnsDocIdAndRev... docRevs) {
+        YnsDocIdAndRev[] allDocs = ArrayUtils.insert(0, docRevs, docRev);
+        
+        delete(Arrays.asList(allDocs));
     }
     
     /**
      * Delete multiple documents from the database in a single request.
+     * @throws YnsBulkException 
      */
-    public List<YnsBulkResponse> delete(List<YnsDocIdAndRev> docRevs) {
-        return operations.delete(docRevs);
+    public void delete(List<YnsDocIdAndRev> docRevs) {
+        List<YnsDocument> docsWithoutBody = docRevs.stream().map(dr -> {
+            YnsDocument dummyDoc = new YnsDocument();
+            
+            dummyDoc.setDocId(dr.getDocId());
+            dummyDoc.setRev(dr.getRev());
+            dummyDoc.setDeleted(true);
+            
+            return dummyDoc;
+        }).toList();
+        
+        operations.saveOrUpdate(docsWithoutBody, OperationType.DELETE, false);
     }
     
     //------------------ Attach API -------------------------
@@ -282,7 +375,7 @@ public class YnsDb implements AutoCloseable {
      * Gets an attachment of the document as stream.
      */
     public StreamResponse getAttachmentAsStream(String docId, String name) {
-        return operations.getAttachmentAsStream(docId, name);
+        return getAttachmentAsStream(docId, name, null);
     }
     
     /**
@@ -392,9 +485,13 @@ public class YnsDb implements AutoCloseable {
         String _password = config.getPassword();
         String _dbName = config.getDbName() == null ? NamedStrategy.addUnderscores(getClass().getSimpleName()) : config.getDbName();
         String _clientMaxParallelism = config.getClientMaxParallelism() + "";
+        String _cacheMaxDocsCount = config.getCacheMaxDocsCount() + "";
+        String _cacheMaxTimeoutSec = config.getCacheMaxTimeoutSec() + "";
+        
         buildViewOnStart = config.isBuildViewsOnStart();
         selfDiscovering = config.isSelfDiscovering();
         removeNotDeclaredReplications = config.isRemoveNotDeclaredReplications();
+        enableDocumentCache = config.isEnableDocumentCache();
         httpClientProviderType = config.getHttpClientProviderType();
         
         if (getClass().isAnnotationPresent(com.equiron.acc.annotation.YnsDbConfig.class)) {
@@ -406,9 +503,12 @@ public class YnsDb implements AutoCloseable {
             if (!annotationConfig.password().isBlank()) _password = annotationConfig.password();
             if (!annotationConfig.dbName().isBlank()) _dbName = annotationConfig.dbName();
             if (!annotationConfig.clientMaxParallelism().isBlank()) _clientMaxParallelism = annotationConfig.clientMaxParallelism();
+            if (!annotationConfig.cacheMaxDocsCount().isBlank()) _cacheMaxDocsCount = annotationConfig.cacheMaxDocsCount();
+            if (!annotationConfig.cacheMaxTimeoutSec().isBlank()) _cacheMaxTimeoutSec = annotationConfig.cacheMaxTimeoutSec();
             if (annotationConfig.buildViewOnStart() != AnnotationConfigOption.BY_CONFIG) buildViewOnStart = annotationConfig.buildViewOnStart() == AnnotationConfigOption.ENABLED ? true : false;
             if (annotationConfig.selfDiscovering() != AnnotationConfigOption.BY_CONFIG) selfDiscovering = annotationConfig.selfDiscovering() == AnnotationConfigOption.ENABLED ? true : false;
             if (annotationConfig.removeNotDeclaredReplications() != AnnotationConfigOption.BY_CONFIG) removeNotDeclaredReplications = annotationConfig.removeNotDeclaredReplications() == AnnotationConfigOption.ENABLED ? true : false;
+            if (annotationConfig.enableDocumentCache() != AnnotationConfigOption.BY_CONFIG) enableDocumentCache = annotationConfig.enableDocumentCache() == AnnotationConfigOption.ENABLED ? true : false;
         }
         
         this.host = resolve(_host);
@@ -417,6 +517,8 @@ public class YnsDb implements AutoCloseable {
         this.password = resolve(_password);
         this.dbName = resolve(_dbName);
         this.clientMaxParallelism = Integer.parseInt(resolve(_clientMaxParallelism));
+        this.cacheMaxDocsCount = Integer.parseInt(resolve(_cacheMaxDocsCount));
+        this.cacheMaxTimeoutSec = Integer.parseInt(resolve(_cacheMaxTimeoutSec));
     }
 
     private void createDbIfNotExist() {
@@ -638,10 +740,14 @@ public class YnsDb implements AutoCloseable {
                         if (!updatedReplicationDoc.equals(doc)) {
                             updatedReplicationDoc.setRev(doc.getRev());
                         
-                            replicatorDb.saveOrUpdate(updatedReplicationDoc);
-                     
-                            if (!updatedReplicationDoc.isOk()) {
-                                log.warn("Update replication failed: " + updatedReplicationDoc.getConflictReason());
+                            try {
+                                replicatorDb.saveOrUpdate(updatedReplicationDoc);
+                            } catch (YnsBulkDocumentException e) {
+                                YnsBulkResponse resp = e.getResponses().get(0);
+                                
+                                if (!resp.isOk()) {
+                                    log.warn("Update replication failed: " + resp.getConflictReason() + ", " + resp.getError());
+                                }
                             }
                         }
                         
@@ -653,11 +759,13 @@ public class YnsDb implements AutoCloseable {
             }
             
             if (!newReplicationDocs.isEmpty()) {
-                replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
-                
-                for (var d : newReplicationDocs.values()) {
-                    if (!d.isOk()) {
-                        log.warn("Add replication failed: " + d.getConflictReason());
+                try {
+                    replicatorDb.saveOrUpdate(new ArrayList<>(newReplicationDocs.values()));
+                } catch (YnsBulkDocumentException e) {
+                    for (var resp : e.getResponses()) {
+                        if (!resp.isOk()) {
+                            log.warn("Add replication failed: " + resp.getConflictReason() + ", " + resp.getError());
+                        }
                     }
                 }
             }

@@ -21,10 +21,16 @@ public @interface YnsDbConfig {
     String dbName() default "";
     
     String clientMaxParallelism() default "";
+    
+    String cacheMaxDocsCount() default "";
+
+    String cacheMaxTimeoutSec() default "";
 
     AnnotationConfigOption selfDiscovering() default AnnotationConfigOption.BY_CONFIG;
     
     AnnotationConfigOption buildViewOnStart() default AnnotationConfigOption.BY_CONFIG;
     
     AnnotationConfigOption removeNotDeclaredReplications() default AnnotationConfigOption.BY_CONFIG;
+    
+    AnnotationConfigOption enableDocumentCache() default AnnotationConfigOption.BY_CONFIG;
 }
