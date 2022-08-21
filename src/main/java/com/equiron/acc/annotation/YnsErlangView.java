@@ -8,7 +8,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface YnsErlangView {
-    String map();
+    String value() default "";
+    
+    String map() default "";
 
     String reduce() default "";
 

@@ -15,7 +15,7 @@ import com.equiron.acc.json.YnsDocument;
 import com.equiron.acc.json.YnsDocumentAttachment;
 import com.equiron.acc.util.StreamResponse;
 
-public class CouchDbAttachmentsTest extends CouchDbAbstractTest {
+public class CouchDbAttachmentsTest extends YnsAbstractTest {
     @Test
     public void shouldUseBuiltInAttachments() {
         YnsDocument doc = new YnsDocument();

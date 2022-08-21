@@ -11,7 +11,7 @@ import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import com.equiron.acc.CouchDbAbstractTest;
+import com.equiron.acc.YnsAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.YnsDocumentAttachment;
@@ -39,7 +39,7 @@ public class SpringTest {
                                           .setPort(Integer.parseInt(System.getProperty("PORT")))
                                           .setUser(System.getProperty("USER"))
                                           .setPassword(System.getProperty("PASSWORD"))
-                                          .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
+                                          .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
                                           .build();
     }
 

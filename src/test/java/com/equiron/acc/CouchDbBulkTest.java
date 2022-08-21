@@ -9,7 +9,7 @@ import com.equiron.acc.exception.http.YnsConflictException;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.YnsDocument;
 
-public class CouchDbBulkTest extends CouchDbAbstractTest {
+public class CouchDbBulkTest extends YnsAbstractTest {
     @Test
     public void shouldSaveInBulk() {
         TestDoc testDoc1 = new TestDoc("new 1");

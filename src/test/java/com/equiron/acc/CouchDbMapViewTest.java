@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.YnsDesignInfo;
 
-public class CouchDbMapViewTest extends CouchDbAbstractTest {
+public class CouchDbMapViewTest extends YnsAbstractTest {
     @Test
     public void shouldIterateAndRemove() {
         long docCount = db.getInfo().getDocCount();

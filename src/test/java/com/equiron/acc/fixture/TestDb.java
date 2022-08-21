@@ -1,7 +1,9 @@
 package com.equiron.acc.fixture;
 
-import com.equiron.acc.CouchDb;
-import com.equiron.acc.CouchDbConfig;
+import java.math.BigDecimal;
+
+import com.equiron.acc.YnsDb;
+import com.equiron.acc.YnsDbConfig;
 import com.equiron.acc.YnsValidator;
 import com.equiron.acc.annotation.YnsErlangView;
 import com.equiron.acc.annotation.YnsJsView;
@@ -11,8 +13,17 @@ import com.equiron.acc.annotation.YnsValidateDocUpdate;
 import com.equiron.acc.view.YnsMapView;
 import com.equiron.acc.view.YnsReduceView;
 
+import lombok.Getter;
+
 @YnsSecurity(admins = @YnsSecurityPattern(names = "admin"))
-public class TestDb extends CouchDb {
+@Getter
+public class TestDb extends YnsDb {
+    @YnsJsView(map = "emit(doc._id, doc)")
+    private YnsMapView<String, TestDoc> byIdView;
+
+    @YnsJsView(map = "emit(doc._id, doc)")
+    private YnsMapView<String, GenericTestDoc<BigDecimal>> byIdGenericView;
+
     @YnsJsView(map = "if (doc.name) emit(doc._id, doc.name)")
     private YnsMapView<String, String> testView;
     
@@ -25,19 +36,7 @@ public class TestDb extends CouchDb {
     @YnsValidateDocUpdate("if (newDoc.name === 'bomb') throw({forbidden: 'Only admins may plant the bombs.'});")
     private YnsValidator validator;
 
-    public TestDb(CouchDbConfig config) {
+    public TestDb(YnsDbConfig config) {
         super(config);
-    }
-
-    public YnsMapView<String, String> getTestView() {
-        return testView;
-    }
-    
-    public YnsMapView<String, String> getTestErlangView() {
-        return testErlangView;
-    }
-
-    public YnsReduceView<String, Integer> getReducedTestView() {
-        return reducedTestView;
     }
 }

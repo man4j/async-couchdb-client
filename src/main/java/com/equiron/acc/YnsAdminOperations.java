@@ -3,9 +3,9 @@ package com.equiron.acc;
 import java.util.List;
 import java.util.function.Function;
 
-import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsBooleanResponse;
 import com.equiron.acc.json.YnsDbInfo;
+import com.equiron.acc.json.YnsDesignDocument;
 import com.equiron.acc.json.YnsInstanceInfo;
 import com.equiron.acc.provider.HttpClientProvider;
 import com.equiron.acc.provider.HttpClientProviderResponse;
@@ -34,7 +34,7 @@ public class YnsAdminOperations {
                     .endKey("_design0")
                     .asIds()
                     .stream()
-                    .<YnsDesignDocument>map(ynsDb::get)
+                    .map(id -> ynsDb.get(id, YnsDesignDocument.class))
                     .filter(d -> d.getValidateDocUpdate() == null || d.getValidateDocUpdate().isBlank())
                     .toList();
     }
@@ -46,7 +46,7 @@ public class YnsAdminOperations {
                     .endKey("_design0")
                     .asIds()
                     .stream()
-                    .<YnsDesignDocument>map(ynsDb::get)
+                    .map(id -> ynsDb.get(id, YnsDesignDocument.class))
                     .toList();
     }
     

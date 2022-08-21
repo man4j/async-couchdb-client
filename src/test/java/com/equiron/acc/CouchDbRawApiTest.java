@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
 
-public class CouchDbRawApiTest extends CouchDbAbstractTest {
+public class CouchDbRawApiTest extends YnsAbstractTest {
     @Test
     public void shouldQueryRawDoc() {
         TestDoc testDoc = new TestDoc("Name");

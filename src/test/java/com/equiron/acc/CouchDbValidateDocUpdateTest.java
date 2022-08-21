@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import com.equiron.acc.exception.http.YnsForbiddenException;
 import com.equiron.acc.fixture.TestDoc;
 
-public class CouchDbValidateDocUpdateTest extends CouchDbAbstractTest {
+public class CouchDbValidateDocUpdateTest extends YnsAbstractTest {
     @Test
     public void shouldPreventUpdateDoc() {
         TestDoc doc = new TestDoc();

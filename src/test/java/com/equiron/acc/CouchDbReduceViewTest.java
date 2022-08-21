@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
 
-public class CouchDbReduceViewTest extends CouchDbAbstractTest {
+public class CouchDbReduceViewTest extends YnsAbstractTest {
     @Test
     public void shouldWork() {
         for (int i = 0; i < 10; i++) {

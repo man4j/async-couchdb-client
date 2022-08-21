@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.equiron.acc.CouchDbAbstractTest;
+import com.equiron.acc.YnsAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.YnsDocument;
 
@@ -24,7 +24,7 @@ public class BlogDbTest {
                                                    .setPort(Integer.parseInt(System.getProperty("PORT")))
                                                    .setUser(System.getProperty("USER"))
                                                    .setPassword(System.getProperty("PASSWORD"))
-                                                   .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
+                                                   .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
                                                    .build());
     }
     

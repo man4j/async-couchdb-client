@@ -13,7 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.util.FileCopyUtils;
 
-import com.equiron.acc.CouchDbAbstractTest;
+import com.equiron.acc.YnsAbstractTest;
 import com.equiron.acc.CouchDbConfig;
 import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDocument;
@@ -28,7 +28,7 @@ public class UserDbTest {
                                                    .setPort(Integer.parseInt(System.getProperty("PORT")))
                                                    .setUser(System.getProperty("USER"))
                                                    .setPassword(System.getProperty("PASSWORD"))
-                                                   .setHttpClientProviderType(CouchDbAbstractTest.PROVIDER)
+                                                   .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
                                                    .build());
     }
 

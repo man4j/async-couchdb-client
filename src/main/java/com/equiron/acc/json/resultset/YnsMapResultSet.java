@@ -5,7 +5,7 @@ import java.util.List;
 import com.equiron.acc.json.YnsDocRev;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public abstract class YnsMapResultSet<K, V> extends YnsAbstractResultSet<K, V, YnsMapRow<K, V>> {
+public class YnsMapResultSet<K, V> extends YnsAbstractResultSet<K, V, YnsMapRow<K, V>> {
     @JsonProperty("total_rows")
     private int totalRows;
 

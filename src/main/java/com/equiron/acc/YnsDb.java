@@ -119,18 +119,20 @@ public class YnsDb implements AutoCloseable {
         
         applyConfig();
         
-        if (enableDocumentCache) {
-            operations = new YnsCachedDocumentOperations(new YnsDocumentOperations(this), cacheMaxDocsCount, cacheMaxTimeoutSec);
-        } else {
-            operations = new YnsDocumentOperations(this);
-        }
-        
         httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
         
         if (user != null && password != null) {
             httpClientProvider.setCredentials(user, password);
         }
+
+        if (enableDocumentCache) {
+            operations = new YnsCachedDocumentOperations(new YnsDocumentOperations(this), cacheMaxDocsCount, cacheMaxTimeoutSec);
+        } else {
+            operations = new YnsDocumentOperations(this);
+        }
                                                               
+        adminOperations = new YnsAdminOperations(this);
+
         builtInView = new YnsBuiltInView(this);
         
         viewList.add(builtInView);
@@ -208,29 +210,52 @@ public class YnsDb implements AutoCloseable {
      * Returns the latest revision of the document.
      * @throws YnsBulkGetException
      */
-    public <T extends YnsDocument> T get(String docId) {
-        List<T> docs = get(docId, new String[] {});
+    public <T extends YnsDocument> T get(String docId, Class<T> clazz) {
+        List<T> docs = get(List.of(docId), clazz);
 
         return docs.isEmpty() ? null : docs.get(0);
     }
-        
+            
     /**
      * Returns the latest revision of the documents.
      * @throws YnsBulkGetException
      */
-    @SuppressWarnings("unchecked")
-    public <T extends YnsDocument> List<T> get(String docId, String... docIds) {
-        String[] allIds = ArrayUtils.insert(0, docIds, docId);
+    public <T extends YnsDocument> List<T> get(List<String> docIds, Class<T> clazz) {
+        TypeFactory tf = TypeFactory.defaultInstance();
         
-        return (List<T>) operations.get(Arrays.asList(allIds).stream().map(id -> new YnsDocIdAndRev(docId, null)).toList(), new TypeReference<YnsBulkGetResponse<YnsDocument>>() {/* empty */}, false);
+        List<T> result = operations.get(docIds.stream().map(id -> new YnsDocIdAndRev(id, null)).toList(), tf.constructParametricType(YnsBulkGetResponse.class, clazz), false);
+        
+        return result;
+    }
+    
+    /**
+     * Returns the latest revision of the document.
+     * @throws YnsBulkGetException
+     */
+    public <T extends YnsDocument> T get(String docId, TypeReference<T> type) {
+        List<T> docs = get(List.of(docId), type);
+
+        return docs.isEmpty() ? null : docs.get(0);
+    }
+            
+    /**
+     * Returns the latest revision of the documents.
+     * @throws YnsBulkGetException
+     */
+    public <T extends YnsDocument> List<T> get(List<String> docIds, TypeReference<T> type) {
+        TypeFactory tf = TypeFactory.defaultInstance();
+        
+        List<T> result = operations.get(docIds.stream().map(id -> new YnsDocIdAndRev(id, null)).toList(), tf.constructParametricType(YnsBulkGetResponse.class, tf.constructType(type)), false);
+        
+        return result;
     }
     
     /**
      * Returns specified revision of the document.
      * @throws YnsBulkGetException
      */
-    public <T extends YnsDocument> T get(YnsDocIdAndRev docId) {
-        List<T> docs = get(docId, new YnsDocIdAndRev[] {});
+    public <T extends YnsDocument> T getWithRev(YnsDocIdAndRev docId, Class<T> clazz) {
+        List<T> docs = getWithRev(List.of(docId), clazz);
 
         return docs.isEmpty() ? null : docs.get(0);
     }
@@ -239,20 +264,22 @@ public class YnsDb implements AutoCloseable {
      * Returns specified revision of the documents.
      * @throws YnsBulkGetException
      */
-    @SuppressWarnings("unchecked")
-    public <T extends YnsDocument> List<T> get(YnsDocIdAndRev docId, YnsDocIdAndRev... docIds) {
-        YnsDocIdAndRev[] allIds = ArrayUtils.insert(0, docIds, docId);
+    public <T extends YnsDocument> List<T> getWithRev(List<YnsDocIdAndRev> docIds, Class<T> clazz) {
+        TypeFactory tf = TypeFactory.defaultInstance();
+
+        List<T> result = operations.get(docIds, tf.constructParametricType(YnsBulkGetResponse.class, clazz), false);
         
-        return (List<T>) operations.get(Arrays.asList(allIds), new TypeReference<YnsBulkGetResponse<YnsDocument>>() {/* empty */}, false);
+        return result;
     }
-
-
+    
+    //------------------ Fetch RAW API -------------------------
+    
     /**
      * Returns the latest revision of the document.
      * @throws YnsBulkGetException
      */
     public Map<String, Object> getRaw(String docId) {
-        List<Map<String, Object>> docs = getRaw(docId, new String[] {});
+        List<Map<String, Object>> docs = getRaw(List.of(docId));
 
         return docs.isEmpty() ? null : docs.get(0);
     }
@@ -261,18 +288,20 @@ public class YnsDb implements AutoCloseable {
      * Returns the latest revision of the documents.
      * @throws YnsBulkGetException
      */
-    public List<Map<String, Object>> getRaw(String docId, String... docIds) {
-        String[] allIds = ArrayUtils.insert(0, docIds, docId);
+    public List<Map<String, Object>> getRaw(List<String> docIds) {
+        TypeFactory tf = TypeFactory.defaultInstance();
+
+        JavaType javaType = tf.constructParametricType(YnsBulkGetResponse.class, tf.constructMapType(Map.class, String.class, Object.class));
         
-        return operations.get(Arrays.asList(allIds).stream().map(id -> new YnsDocIdAndRev(docId, null)).toList(), new TypeReference<YnsBulkGetResponse<Map<String, Object>>>() {/* empty */}, true);
+        return operations.get(docIds.stream().map(id -> new YnsDocIdAndRev(id, null)).toList(), javaType, true);
     }
     
     /**
      * Returns specified revision of the document.
      * @throws YnsBulkGetException
      */
-    public Map<String, Object> getRaw(YnsDocIdAndRev docId) {
-        List<Map<String, Object>> docs = getRaw(docId, new YnsDocIdAndRev[] {});
+    public Map<String, Object> getRawWithRev(YnsDocIdAndRev docId) {
+        List<Map<String, Object>> docs = getRawWithRev(List.of(docId));
 
         return docs.isEmpty() ? null : docs.get(0);
     }
@@ -281,30 +310,34 @@ public class YnsDb implements AutoCloseable {
      * Returns specified revision of the documents.
      * @throws YnsBulkGetException
      */
-    public List<Map<String, Object>> getRaw(YnsDocIdAndRev docId, YnsDocIdAndRev... docIds) {
-        YnsDocIdAndRev[] allIds = ArrayUtils.insert(0, docIds, docId);
-        
-        return operations.get(Arrays.asList(allIds), new TypeReference<YnsBulkGetResponse<Map<String, Object>>>() {/* empty */}, true);
+    public List<Map<String, Object>> getRawWithRev(List<YnsDocIdAndRev> docIds) {
+        TypeFactory tf = TypeFactory.defaultInstance();
+
+        JavaType javaType = tf.constructParametricType(YnsBulkGetResponse.class, tf.constructMapType(Map.class, String.class, Object.class));
+
+        return operations.get(docIds, javaType, true);
     }
 
     //------------------ Bulk API -------------------------
-
+    
     /**
-     * Insert or update multiple documents in to the database in a single request.
-     * @throws YnsBulkException 
-     */
-    public <T extends YnsDocument> void saveOrUpdate(T doc, @SuppressWarnings("unchecked") T... docs) {
-        T[] allDocs = ArrayUtils.insert(0, docs, doc);
-
-        saveOrUpdate(Arrays.asList(allDocs));
+    * Insert or update multiple documents in to the database in a single request.
+    * @throws YnsBulkException 
+    */
+    final public <T extends YnsDocument> String saveOrUpdate(T doc) {
+        saveOrUpdate(Arrays.asList(doc));
+        
+        return doc.getDocId();
     }
 
     /**
      * Insert or update multiple documents in to the database in a single request.
      * @throws YnsBulkException 
      */
-    public <T extends YnsDocument> void saveOrUpdate(List<T> docs) {
+    public <T extends YnsDocument> List<String> saveOrUpdate(List<T> docs) {
         operations.saveOrUpdate(docs, OperationType.INSERT_UPDATE, false);
+        
+        return docs.stream().map(YnsDocument::getDocId).toList();
     }
     
     //------------------ Save or update RAW API -------------------------
@@ -313,19 +346,23 @@ public class YnsDb implements AutoCloseable {
      * Insert or update multiple documents in to the database in a single request.
      * @throws YnsBulkException 
      */
-    public void saveOrUpdateRaw(Map<String, Object> doc, @SuppressWarnings("unchecked") Map<String, Object>... docs) {
-        Map<String, Object>[] allDocs = ArrayUtils.insert(0, docs, doc);
-
-        saveOrUpdateRaw(Arrays.asList(allDocs));
+    final public String saveOrUpdateRaw(Map<String, Object> doc) {
+        saveOrUpdateRaw(Arrays.asList(doc));
+        
+        return (String) doc.get("_id");
     }
 
     /**
      * Insert or update multiple documents in to the database in a single request.
      * @throws YnsBulkException 
      */
-    public void saveOrUpdateRaw(List<Map<String, Object>> docs) {
+    public List<String> saveOrUpdateRaw(List<Map<String, Object>> docs) {
         operations.saveOrUpdate(docs, OperationType.INSERT_UPDATE, true);
+        
+        return docs.stream().map(d -> (String) d.get("_id")).toList();
     }
+    
+    //------------------ Delete API -------------------------
     
     /**
      * Delete multiple documents from the database in a single request.
@@ -726,7 +763,7 @@ public class YnsDb implements AutoCloseable {
             
             for (String docId : replicationsDocsIds) {
                 try {
-                    replicationsDocs.add(replicatorDb.get(docId));
+                    replicationsDocs.add(replicatorDb.get(docId, YnsReplicationDocument.class));
                 } catch (Exception e) {
                     log.warn("Can't parse replication document: " + e.getMessage());
                 }
@@ -840,7 +877,9 @@ public class YnsDb implements AutoCloseable {
                 if (field.isAnnotationPresent(YnsJsView.class)) {
                     YnsJsView view = field.getAnnotation(YnsJsView.class);
 
-                    map = "function(doc) {" + view.map() + ";}";
+                    String funBody = !view.map().isBlank() ? view.map() : view.value();
+                    
+                    map = "function(doc) {" + funBody + ";}";
     
                     if (!view.reduce().isEmpty()) {
                         if (Arrays.asList(YnsJsView.COUNT, YnsJsView.STATS, YnsJsView.SUM).contains(view.reduce())) {
@@ -853,8 +892,10 @@ public class YnsDb implements AutoCloseable {
                     designDocument = new YnsDesignDocument(designName);
                 } else {
                     YnsErlangView view = field.getAnnotation(YnsErlangView.class);
+                    
+                    String funBody = !view.map().isBlank() ? view.map() : view.value();
 
-                    map = "fun({Doc}) -> " + view.map() + " end.";
+                    map = "fun({Doc}) -> " + funBody + " end.";
     
                     if (!view.reduce().isEmpty()) {
                         if (Arrays.asList(YnsErlangView.COUNT, YnsErlangView.STATS, YnsErlangView.SUM).contains(view.reduce())) {

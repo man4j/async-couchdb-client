@@ -1,5 +1,8 @@
 package com.equiron.acc.json;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.equiron.acc.YnsDocIdAndRev;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -7,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -21,7 +23,6 @@ import lombok.Setter;
                 setterVisibility=Visibility.NONE)
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class YnsDocument {
@@ -46,6 +47,15 @@ public class YnsDocument {
     @JsonProperty("_deleted")
     @Setter
     private Boolean deleted;
+    
+    /**
+     * If the document has attachments, _attachments holds a (meta-)data structure.
+     */
+    @JsonProperty("_attachments")
+    @JsonInclude(Include.NON_EMPTY)
+    @Getter
+    @Setter
+    private Map<String, YnsDocumentAttachment> attachments = new HashMap<>();
 
     public YnsDocument(String docId) {
         setDocId(docId);

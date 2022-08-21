@@ -27,6 +27,8 @@ import com.equiron.acc.transformer.YnsBooleanResponseTransformer;
 import com.equiron.acc.util.StreamResponse;
 import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import lombok.SneakyThrows;
 
@@ -63,7 +65,7 @@ public class YnsDocumentOperations {
     }
     
     @SneakyThrows
-    public <T> List<T> get(List<YnsDocIdAndRev> docIds, TypeReference<YnsBulkGetResponse<T>> listOfDocs, boolean raw) {
+    public <T> List<T> get(List<YnsDocIdAndRev> docIds, JavaType responseType, boolean raw) {
         @SuppressWarnings({ "unchecked", "cast" })
         Function<YnsBulkGetResponse<T>, List<T>> transformer = responses -> {
             Map<String, List<YnsDocIdAndRev>> conflictingDocumentsMap = new HashMap<>();
@@ -85,7 +87,17 @@ public class YnsDocumentOperations {
                     if (result.getDocs().get(0).getOk() != null) {
                         T doc = (T) result.getDocs().get(0).getOk();
                         
-                        docs.add(doc);
+                        Boolean deleted;
+                        
+                        if (raw) {
+                            deleted = (Boolean) ((Map<String, Object>) doc).get("_deleted");
+                        } else {
+                            deleted = ((YnsDocument) doc).isDeleted();
+                        }
+                        
+                        if (deleted == null || !deleted) {
+                            docs.add(doc);
+                        }
                     } else {//error
                         YnsBulkGetErrorResult errorResult = result.getDocs().get(0).getError();
                         
@@ -103,7 +115,7 @@ public class YnsDocumentOperations {
             return docs;
         };
         
-        String valueAsString = ynsDb.mapper.writeValueAsString(Collections.singletonMap("docs", docIds.stream().map(d -> new YnsDocIdRevRequestItem(d.getDocId(), d.getRev()))));
+        String valueAsString = ynsDb.mapper.writeValueAsString(Collections.singletonMap("docs", docIds.stream().map(d -> new YnsDocIdRevRequestItem(d.getDocId(), d.getRev())).toList()));
         
         OperationInfo opInfo = new OperationInfo(OperationType.GET, docIds.size(), 0);
         
@@ -112,10 +124,9 @@ public class YnsDocumentOperations {
         semaphore.acquire();
         
         try {
-            
             HttpClientProviderResponse response = httpClient.post(urlBuilder.build(), valueAsString); 
 
-            return new YnsResponseHandler<>(response, listOfDocs, transformer, ynsDb.mapper, opInfo, ynsOperationStats).transform();
+            return new YnsResponseHandler<>(response, responseType, transformer, ynsDb.mapper, opInfo, ynsOperationStats).transform();
         } finally {
             semaphore.release();
         }
@@ -125,18 +136,17 @@ public class YnsDocumentOperations {
     
     @SneakyThrows
     public <T> void saveOrUpdate(List<T> docs, OperationType opType, boolean raw) {
-        Map<String, Object>[] allDocs = docs.toArray(new Map[] {});
-        
+        @SuppressWarnings("unchecked")
         Function<List<YnsBulkResponse>, List<YnsBulkResponse>> transformer = responses -> {
-            for (int i = 0; i < allDocs.length; i++) {
+            for (int i = 0; i < docs.size(); i++) {
                 YnsBulkResponse response = responses.get(i);
                 
                 if (!raw) {
-                    ((YnsDocument)allDocs[i]).setDocId(response.getDocId());
-                    ((YnsDocument)allDocs[i]).setRev(response.getRev());
+                    ((YnsDocument)docs.get(i)).setDocId(response.getDocId());
+                    ((YnsDocument)docs.get(i)).setRev(response.getRev());
                 } else {
-                    allDocs[i].put("_id", response.getDocId());
-                    allDocs[i].put("_rev", response.getRev());
+                    ((Map<String, Object>)docs.get(i)).put("_id", response.getDocId());
+                    ((Map<String, Object>)docs.get(i)).put("_rev", response.getRev());
                 }
             }
             
@@ -149,9 +159,13 @@ public class YnsDocumentOperations {
             return responses;
         };
         
-        String valueAsString = ynsDb.mapper.writeValueAsString(Collections.singletonMap("docs", docs));
+        ArrayNode arr = ynsDb.mapper.createArrayNode();
         
-        OperationInfo opInfo = new OperationInfo(opType, allDocs.length, valueAsString.length());
+        docs.forEach(d -> arr.addPOJO(d));
+        
+        String valueAsString = ynsDb.mapper.writeValueAsString(ynsDb.mapper.createObjectNode().set("docs", arr));
+        
+        OperationInfo opInfo = new OperationInfo(opType, docs.size(), valueAsString.length());
         
         semaphore.acquire();
         

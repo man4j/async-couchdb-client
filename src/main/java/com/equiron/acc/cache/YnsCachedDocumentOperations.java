@@ -11,11 +11,10 @@ import java.util.concurrent.locks.ReadWriteLock;
 import com.equiron.acc.YnsDocIdAndRev;
 import com.equiron.acc.YnsDocumentOperations;
 import com.equiron.acc.exception.YnsBulkDocumentException;
-import com.equiron.acc.json.YnsBulkGetResponse;
 import com.equiron.acc.json.YnsBulkResponse;
 import com.equiron.acc.json.YnsDocument;
 import com.equiron.acc.profiler.OperationType;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.util.concurrent.Striped;
 
@@ -43,7 +42,7 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
     @Override
     @SuppressWarnings("unchecked")
     @SneakyThrows
-    public <T> List<T> get(List<YnsDocIdAndRev> docIds, TypeReference<YnsBulkGetResponse<T>> listOfDocs, boolean raw) {
+    public <T> List<T> get(List<YnsDocIdAndRev> docIds, JavaType responseType, boolean raw) {
         docIds.stream().map(YnsDocIdAndRev::getDocId).sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().lock());
         
         try {
@@ -58,7 +57,7 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                     List<YnsDocIdAndRev> nonExistingDocs2 = docIds.stream().filter(docAndRev -> !documentCache.containsKey(docAndRev.getDocId())).toList();
                     
                     if (!nonExistingDocs2.isEmpty()) {
-                        for (T doc : delegate.get(nonExistingDocs2, listOfDocs, raw)) {
+                        for (Object doc : delegate.get(nonExistingDocs2, responseType, raw)) {
                             if (!raw) {
                                 String docId = ((YnsDocument)doc).getDocId();
                                 documentCache.put(docId, new CacheRecord(docId, (YnsDocument)doc));

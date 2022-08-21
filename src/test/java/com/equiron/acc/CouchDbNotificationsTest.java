@@ -9,7 +9,7 @@ import com.equiron.acc.changes.CouchDbEventListener;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.YnsEvent;
 
-public class CouchDbNotificationsTest extends CouchDbAbstractTest {
+public class CouchDbNotificationsTest extends YnsAbstractTest {
     @Test
     public void shouldWork() throws Exception {
         TestDoc testDoc = new TestDoc("qwe");

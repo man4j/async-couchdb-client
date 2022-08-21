@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.json.YnsDocument;
 
-public class CouchDbBuiltInViewTest extends CouchDbAbstractTest {
+public class CouchDbBuiltInViewTest extends YnsAbstractTest {
     @Test
     public void shouldIterateDocs() {
         for (int i = 0; i < 11; i++) {
