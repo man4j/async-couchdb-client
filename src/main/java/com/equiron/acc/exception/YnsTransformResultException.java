@@ -2,8 +2,14 @@ package com.equiron.acc.exception;
 
 import com.equiron.acc.YnsHttpResponse;
 
-public class YnsTransformResultException extends YnsResponseException {
-    public YnsTransformResultException(YnsHttpResponse response, Throwable cause) {
-        super(response, cause, -1);
+import lombok.Getter;
+
+@Getter
+public class YnsTransformResultException extends RuntimeException {
+    private YnsHttpResponse response;
+    
+    public YnsTransformResultException(Throwable t, YnsHttpResponse response) {
+        super(t);
+        this.response = response;
     }
 }

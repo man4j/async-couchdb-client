@@ -4,6 +4,9 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.Getter;
+
+@Getter
 public class HttpClientProviderResponse {
     private final int status;
 
@@ -33,25 +36,5 @@ public class HttpClientProviderResponse {
         }
         
         this.headers = normalized;
-    }
-    
-    public int getStatus() {
-        return status;
-    }
-    
-    public String getBody() {
-        return body;
-    }
-    
-    public String getUri() {
-        return uri;
-    }
-    
-    public InputStream getIn() {
-        return in;
-    }
-    
-    public Map<String, String> getHeaders() {
-        return headers;
     }
 }

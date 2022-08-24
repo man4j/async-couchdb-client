@@ -1,4 +1,4 @@
-package com.equiron.acc.exception;
+package com.equiron.acc.exception.http;
 
 import com.equiron.acc.YnsHttpResponse;
 

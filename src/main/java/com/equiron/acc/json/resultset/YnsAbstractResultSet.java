@@ -22,11 +22,11 @@ public abstract class YnsAbstractResultSet<K, V, ROW extends YnsAbstractRow<K, V
     }
 
     public List<K> keys() {
-        return rows.stream().map(ROW::getKey).toList();
+        return rows.stream().map(ROW::getKey).collect(Collectors.toCollection(ArrayList::new));
     }
 
     public List<V> values() {
-        return rows.stream().map(ROW::getValue).toList();
+        return rows.stream().map(ROW::getValue).collect(Collectors.toCollection(ArrayList::new));
     }
 
     public ROW firstRow() {

@@ -67,6 +67,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class YnsDb implements AutoCloseable {
+    @Autowired
     private volatile com.equiron.acc.YnsDbConfig config;
     
     @Autowired
@@ -111,7 +112,11 @@ public class YnsDb implements AutoCloseable {
     private volatile YnsClusterInfo clusterInfo;
     
     private volatile HttpClientProvider httpClientProvider;
-
+    
+    public YnsDb() {
+        //empty
+    }
+    
     public YnsDb(com.equiron.acc.YnsDbConfig config) {
         this.config = config;
 

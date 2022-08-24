@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.json.YnsDocument;
 
-public class CouchDbBuiltInViewTest extends YnsAbstractTest {
+public class YnsBuiltInViewTest extends YnsAbstractTest {
     @Test
     public void shouldIterateDocs() {
         for (int i = 0; i < 11; i++) {
@@ -16,9 +16,7 @@ public class CouchDbBuiltInViewTest extends YnsAbstractTest {
 
         long docsCount = db.getInfo().getDocCount();
 
-        for (YnsDocument d : db.getBuiltInView().createDocQuery().asDocIterator(5)) {
-            Assertions.assertFalse(d.getDocId().isEmpty());
-
+        for (String id : db.getBuiltInView().createQuery().asIdIterator(5)) {
             docsIterated++;
         }
 

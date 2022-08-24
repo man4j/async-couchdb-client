@@ -4,7 +4,6 @@ import java.util.function.Function;
 
 import com.equiron.acc.exception.YnsBulkDocumentException;
 import com.equiron.acc.exception.YnsGetDocumentException;
-import com.equiron.acc.exception.YnsResponseException;
 import com.equiron.acc.exception.YnsTransformResultException;
 import com.equiron.acc.exception.YnsUnmarshallException;
 import com.equiron.acc.exception.http.YnsBadContentTypeException;
@@ -18,6 +17,7 @@ import com.equiron.acc.exception.http.YnsNotAllowedException;
 import com.equiron.acc.exception.http.YnsNotFoundException;
 import com.equiron.acc.exception.http.YnsPreconditionFailedException;
 import com.equiron.acc.exception.http.YnsRequestedRangeException;
+import com.equiron.acc.exception.http.YnsResponseException;
 import com.equiron.acc.exception.http.YnsUnauthorizedException;
 import com.equiron.acc.json.resultset.YnsAbstractResultSet;
 import com.equiron.acc.profiler.OperationInfo;
@@ -115,7 +115,7 @@ public class YnsResponseHandler<F, T> {
         try {
             return mapper.readValue(couchDbHttpResponse.getResponseBody(), javaType);
         } catch (Exception e) {
-            throw new YnsUnmarshallException(couchDbHttpResponse, e);
+            throw new YnsUnmarshallException(e, couchDbHttpResponse);
         }
     }
 
@@ -125,7 +125,7 @@ public class YnsResponseHandler<F, T> {
         } catch (YnsResponseException | YnsBulkDocumentException | YnsGetDocumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new YnsTransformResultException(couchDbHttpResponse, e);
+            throw new YnsTransformResultException(e, couchDbHttpResponse);
         }
     }
 

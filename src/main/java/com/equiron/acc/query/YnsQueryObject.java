@@ -8,39 +8,60 @@ import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class YnsQueryObject<K> {
     private ObjectMapper mapper;
-    
+
+    @Getter
+    @Setter
     private K[] keys;
     
+    @Setter
     private K key;
 
+    @Setter
     private boolean descending;
 
+    @Setter
     private boolean isSetKey;
 
+    @Setter
     private boolean isSetStartKey;
 
+    @Setter
     private boolean isSetEndKey;
 
+    @Setter
     private K endKey;
 
+    @Setter
     private String endKeyDocId;
 
+    @Setter
     private K startKey;
 
+    @Setter
     private String startKeyDocId;
 
+    @Setter
     private boolean group;
 
+    @Setter
     private int groupLevel;
 
+    @Setter
     private boolean inclusiveEnd = true;
 
+    @Getter
+    @Setter
     private int limit;
 
+    @Setter
     private int skip;
 
+    @Setter
     private boolean reduce;
 
     public YnsQueryObject(ObjectMapper mapper) {
@@ -85,77 +106,5 @@ public class YnsQueryObject<K> {
             @JsonProperty("keys")
             K[] keys = YnsQueryObject.this.keys;
         });
-    }
-
-    public void setSetKey(boolean isSetKey) {
-        this.isSetKey = isSetKey;
-    }
-
-    public void setSetStartKey(boolean isSetStartKey) {
-        this.isSetStartKey = isSetStartKey;
-    }
-
-    public void setSetEndKey(boolean isSetEndKey) {
-        this.isSetEndKey = isSetEndKey;
-    }
-
-    public K[] getKeys() {
-        return keys;
-    }
-
-    public void setKeys(K[] keys) {
-        this.keys = keys;
-    }
-
-    public void setKey(K key) {
-        this.key = key;
-    }
-
-    public void setDescending(boolean descending) {
-        this.descending = descending;
-    }
-
-    public void setEndKey(K endKey) {
-        this.endKey = endKey;
-    }
-
-    public void setEndKeyDocId(String endKeyDocId) {
-        this.endKeyDocId = endKeyDocId;
-    }
-
-    public void setStartKey(K startKey) {
-        this.startKey = startKey;
-    }
-
-    public void setStartKeyDocId(String startKeyDocId) {
-        this.startKeyDocId = startKeyDocId;
-    }
-
-    public void setGroup(boolean group) {
-        this.group = group;
-    }
-
-    public void setGroupLevel(int groupLevel) {
-        this.groupLevel = groupLevel;
-    }
-
-    public void setInclusiveEnd(boolean inclusiveEnd) {
-        this.inclusiveEnd = inclusiveEnd;
-    }
-    
-    public int getLimit() {
-        return limit;
-    }
-
-    public void setLimit(int limit) {
-        this.limit = limit;
-    }
-
-    public void setSkip(int skip) {
-        this.skip = skip;
-    }
-
-    public void setReduce(boolean reduce) {
-        this.reduce = reduce;
     }
 }

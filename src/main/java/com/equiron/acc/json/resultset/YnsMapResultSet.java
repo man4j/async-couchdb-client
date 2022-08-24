@@ -1,23 +1,21 @@
 package com.equiron.acc.json.resultset;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import com.equiron.acc.json.YnsDocRev;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.Getter;
+
 public class YnsMapResultSet<K, V> extends YnsAbstractResultSet<K, V, YnsMapRow<K, V>> {
     @JsonProperty("total_rows")
+    @Getter
     private int totalRows;
 
+    @Getter
     private int offset;
-
-    public int getOffset() {
-        return offset;
-    }
-
-    public int getTotalRows() {
-        return totalRows;
-    }
 
     @Override
     @JsonProperty("rows")
@@ -44,7 +42,7 @@ public class YnsMapResultSet<K, V> extends YnsAbstractResultSet<K, V, YnsMapRow<
     }
 
     public List<String> ids() {
-        return getRows().stream().map(YnsMapRow::getDocId).toList();
+        return getRows().stream().map(YnsMapRow::getDocId).collect(Collectors.toCollection(ArrayList::new));
     }
 
     public String firstId() {

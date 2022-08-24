@@ -6,22 +6,14 @@ import org.junit.jupiter.api.Test;
 import com.equiron.acc.fixture.TestDoc;
 import com.equiron.acc.json.YnsDesignInfo;
 
-public class CouchDbMapViewTest extends YnsAbstractTest {
+public class YnsMapViewTest extends YnsAbstractTest {
     @Test
     public void shouldIterateAndRemove() {
-        long docCount = db.getInfo().getDocCount();
-
         for (int i = 0; i < 10; i++) {
             db.saveOrUpdate(new TestDoc("name" +  i));
         }
-
-        for (TestDoc doc : db.getTestView().<TestDoc>createDocQuery().asDocIterator(3)) {
-            db.delete(doc.getDocIdAndRev());
-        }
-
-        Assertions.assertEquals(docCount, db.getInfo().getDocCount());
-
-        Assertions.assertEquals(10, db.getInfo().getDocDelCount());
+        
+        Assertions.assertEquals(10, db.getByIdErlangView().createQuery().asIds().size());
     }
 
     @Test

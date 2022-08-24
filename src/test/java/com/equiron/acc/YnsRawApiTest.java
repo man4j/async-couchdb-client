@@ -1,6 +1,7 @@
 package com.equiron.acc;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Assertions;
@@ -8,7 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.fixture.TestDoc;
 
-public class CouchDbRawApiTest extends YnsAbstractTest {
+public class YnsRawApiTest extends YnsAbstractTest {
     @Test
     public void shouldQueryRawDoc() {
         TestDoc testDoc = new TestDoc("Name");
@@ -28,8 +29,11 @@ public class CouchDbRawApiTest extends YnsAbstractTest {
         doc1.put("name", "name1");
         doc2.put("name", "name2");
 
-        db.saveOrUpdate(doc1, doc2);
+        db.saveOrUpdateRaw(List.of(doc1, doc2));
 
-        Assertions.assertEquals(2, db.getBuiltInView().createRawDocQuery().byKeys((String)doc1.get("_id"), (String)doc2.get("_id")).asDocs().size());
+        Assertions.assertEquals(2, db.getBuiltInView().createQuery()
+                                                      .byKeys((String)doc1.get("_id"), (String)doc2.get("_id"))
+                                                      .asValues()
+                                                      .size());
     }
 }

@@ -17,19 +17,20 @@ import lombok.Getter;
 
 @YnsSecurity(admins = @YnsSecurityPattern(names = "admin"))
 @Getter
+@com.equiron.acc.annotation.YnsDbConfig(dbName = "my_test_db")
 public class TestDb extends YnsDb {
-    @YnsJsView(map = "emit(doc._id, doc)")
+    @YnsJsView("emit(doc._id, doc)")
     private YnsMapView<String, TestDoc> byIdView;
+    
+    @YnsErlangView("Emit(proplists:get_value(<<\"_id\">>, Doc, null), {Doc})")
+    private YnsMapView<String, TestDoc> byIdErlangView;
 
-    @YnsJsView(map = "emit(doc._id, doc)")
+    @YnsJsView("emit(doc._id, doc)")
     private YnsMapView<String, GenericTestDoc<BigDecimal>> byIdGenericView;
 
-    @YnsJsView(map = "if (doc.name) emit(doc._id, doc.name)")
+    @YnsJsView("if (doc.name) emit(doc._id, doc.name)")
     private YnsMapView<String, String> testView;
     
-    @YnsErlangView(map = "Name = proplists:get_value(<<\"name\">>, Doc, null), Id = proplists:get_value(<<\"_id\">>, Doc, null), if Name /= null -> Emit(Id, Name); true -> ok end")
-    private YnsMapView<String, String> testErlangView;
-
     @YnsJsView(map = "emit(doc._id, 1)", reduce = "return sum(values)")
     private YnsReduceView<String, Integer> reducedTestView;
     

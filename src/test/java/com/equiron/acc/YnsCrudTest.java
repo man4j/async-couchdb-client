@@ -27,16 +27,16 @@ public class YnsCrudTest extends YnsAbstractTest {
     
     @Test
     public void shouldWorkGenericDoc() {
-        GenericTestDoc<BigDecimal> d = new GenericTestDoc<>();
+        GenericTestDoc<BigDecimal> d1 = new GenericTestDoc<>();
 
-        d.setValue(new BigDecimal("123"));
+        d1.setValue(new BigDecimal("123"));
 
-        db.saveOrUpdate(d);
+        db.saveOrUpdate(d1);
 
-        d = db.get(d.getDocId(), new TypeReference<GenericTestDoc<BigDecimal>>() {/* empty */});
+        d1 = db.get(d1.getDocId(), new TypeReference<GenericTestDoc<BigDecimal>>() {/* empty */});
 
-        Assertions.assertEquals(BigDecimal.class, d.getValue().getClass());
-        Assertions.assertEquals(new BigDecimal("123"), d.getValue());
+        Assertions.assertEquals(BigDecimal.class, d1.getValue().getClass());
+        Assertions.assertEquals(new BigDecimal("123"), d1.getValue());
     }
     
     @Test
@@ -120,6 +120,17 @@ public class YnsCrudTest extends YnsAbstractTest {
     
     @Test
     public void shouldWorkPolymorphicQuery() {
+        TestDocDescendant testDocDescendant = new TestDocDescendant();
+        
+        db.saveOrUpdate(testDocDescendant);
+        
+        TestDoc doc = db.getByIdView().createQuery().byKey(testDocDescendant.getDocId()).asValue();
+
+        Assertions.assertEquals(TestDocDescendant.class, doc.getClass());
+    }
+    
+    @Test
+    public void shouldWorkPolymorphicQuery2() {
         boolean findTestDocClass = false;
         boolean findTestDocDescendantClass = false;
 

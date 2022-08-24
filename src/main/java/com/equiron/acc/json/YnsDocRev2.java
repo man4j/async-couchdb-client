@@ -6,8 +6,6 @@ import lombok.Getter;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
-public class YnsRevisions {
-    private String status;
-
+public class YnsDocRev2 {
     private String rev;
 }

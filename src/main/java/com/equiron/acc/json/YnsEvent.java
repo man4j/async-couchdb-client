@@ -17,15 +17,21 @@ public class YnsEvent {
 
     private boolean deleted;
     
+    private YnsDocRev2[] changes;
+    
     @JsonIgnore
     private boolean isNew;
     
     @JsonCreator
-    public YnsEvent(@JsonProperty("id") String docId, @JsonProperty("seq") String seq, @JsonProperty("deleted") boolean deleted) {
+    public YnsEvent(@JsonProperty("id") String docId, 
+                    @JsonProperty("seq") String seq, 
+                    @JsonProperty("deleted") boolean deleted,
+                    @JsonProperty("changes") YnsDocRev2[] changes) {
         this.docId = docId;
         this.seq = seq;
         this.deleted = deleted;
-        this.isNew = seq.startsWith("1-");
+        this.changes = changes;
+        this.isNew = changes[0].getRev().startsWith("1-");
     }
 
     @Override
