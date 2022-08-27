@@ -9,8 +9,8 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 
 public class YnsMapView<K, V> extends YnsAbstractView {
-    public YnsMapView(YnsDb couchDb, String designName, String viewName, JavaType[] jts) {
-        super(couchDb, designName, viewName, jts);
+    public YnsMapView(YnsDb ynsDb, String designName, String viewName, JavaType[] jts) {
+        super(ynsDb, designName, viewName, jts);
     }
 
     public YnsMapQuery<K, V> createQuery() {

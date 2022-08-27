@@ -31,7 +31,7 @@ public class OperationInfo {
     private static String generateStackTrace() {
         String stackTrace = "";
         
-        if (!YnsOperationStats.COUCHDB_METRICS_STACK_TRACE) {
+        if (!YnsOperationStats.YNS_METRICS_STACK_TRACE) {
             return stackTrace;
         }
         
@@ -47,7 +47,7 @@ public class OperationInfo {
                 stackTrace += "  " + e.getClassName().substring(e.getClassName().lastIndexOf(".") + 1) + "." + e.getMethodName() + ":" + e.getLineNumber() + "\n";
             }
             
-            if (e.toString().startsWith("com.equiron.acc.CouchDb.init")) {
+            if (e.toString().contains("YnsDb.init")) {
                 return null;
             }
         }

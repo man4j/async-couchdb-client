@@ -420,14 +420,14 @@ public class YnsDb implements AutoCloseable {
     /**
      * Gets an attachment of the document as stream.
      */
-    public StreamResponse getAttachmentAsStream(String docId, String name) {
-        return getAttachmentAsStream(docId, name, null);
+    public StreamResponse getAttachment(String docId, String name) {
+        return getAttachment(docId, name, null);
     }
     
     /**
      * Gets an attachment of the document as stream.
      */
-    public StreamResponse getAttachmentAsStream(String docId, String name, Map<String, String> headers) {
+    public StreamResponse getAttachment(String docId, String name, Map<String, String> headers) {
         return operations.getAttachmentAsStream(docId, name, headers);
     }
 
@@ -477,7 +477,7 @@ public class YnsDb implements AutoCloseable {
     }
     
     /**
-     * Accessing the root of a CouchDB instance returns meta information about the instance. 
+     * Accessing the root of a YnsDB instance returns meta information about the instance. 
      * The response is a JSON structure containing information about the server, including a 
      * welcome message and the version of the server.     
      */

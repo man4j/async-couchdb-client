@@ -76,13 +76,13 @@ public class YnsResponseHandler<F, T> {
                 throw responseCode2Exception(ynsHttpResponse);
             }
     
-            F couchDbResult = parseHttpResponse(ynsHttpResponse);
+            F ynsDbResult = parseHttpResponse(ynsHttpResponse);
             
             if (opInfo != null && opInfo.getOperationType() == OperationType.QUERY) {
                 opInfo.setSize(body.length());
             
-                if (couchDbResult instanceof YnsAbstractResultSet) {
-                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) couchDbResult;
+                if (ynsDbResult instanceof YnsAbstractResultSet) {
+                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) ynsDbResult;
                     
                     opInfo.setDocsCount(rs.getRows().size());
                 }
@@ -91,15 +91,15 @@ public class YnsResponseHandler<F, T> {
             if (opInfo != null && opInfo.getOperationType() == OperationType.GET) {
                 opInfo.setSize(body.length());
             
-                if (couchDbResult instanceof YnsAbstractResultSet) {
-                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) couchDbResult;
+                if (ynsDbResult instanceof YnsAbstractResultSet) {
+                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) ynsDbResult;
                     
                     opInfo.setDocsCount(rs.getRows().size());
                 }
             }
             
             try {
-                return transformResult(couchDbResult, ynsHttpResponse);
+                return transformResult(ynsDbResult, ynsHttpResponse);
             } catch (YnsResponseException e) {
                 opInfo.setStatus(e.getStatus());
                 throw e;
@@ -111,21 +111,21 @@ public class YnsResponseHandler<F, T> {
         }
     }
 
-    private <R> R parseHttpResponse(YnsHttpResponse couchDbHttpResponse) {
+    private <R> R parseHttpResponse(YnsHttpResponse ynsDbHttpResponse) {
         try {
-            return mapper.readValue(couchDbHttpResponse.getResponseBody(), javaType);
+            return mapper.readValue(ynsDbHttpResponse.getResponseBody(), javaType);
         } catch (Exception e) {
-            throw new YnsUnmarshallException(e, couchDbHttpResponse);
+            throw new YnsUnmarshallException(e, ynsDbHttpResponse);
         }
     }
 
-    private T transformResult(F couchDbResult, YnsHttpResponse couchDbHttpResponse) {
+    private T transformResult(F ynsDbResult, YnsHttpResponse ynsDbHttpResponse) {
         try {
-            return transformer.apply(couchDbResult);
+            return transformer.apply(ynsDbResult);
         } catch (YnsResponseException | YnsBulkDocumentException | YnsGetDocumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new YnsTransformResultException(e, couchDbHttpResponse);
+            throw new YnsTransformResultException(e, ynsDbHttpResponse);
         }
     }
 

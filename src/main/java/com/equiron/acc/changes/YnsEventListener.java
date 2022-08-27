@@ -165,7 +165,7 @@ public class YnsEventListener implements AutoCloseable, YnsEventHandler {
                                 }
                             }
                         } catch (@SuppressWarnings("unused") InterruptedException e) {
-                            log.info("CouchDB listener interrupted: " + url);
+                            log.info("Yns listener interrupted: " + url);
                             interrupted = true;
                         } catch (Exception e) {
                             log.error("Error processing event " + url, e);
@@ -181,7 +181,7 @@ public class YnsEventListener implements AutoCloseable, YnsEventHandler {
                             try {
                                 Thread.sleep(5_000);
                             } catch (@SuppressWarnings("unused") InterruptedException ex) {
-                                log.info("CouchDB listener interrupted: " + url);
+                                log.info("Yns listener interrupted: " + url);
                                 interrupted = true;
                             }
                         }
@@ -189,7 +189,7 @@ public class YnsEventListener implements AutoCloseable, YnsEventHandler {
                 }
             };
             
-            listenerThread.setName("CouchDB listener for: " + db.getDbName());
+            listenerThread.setName("Yns listener for: " + db.getDbName());
             listenerThread.start();
         }
     }
@@ -221,7 +221,7 @@ public class YnsEventListener implements AutoCloseable, YnsEventHandler {
                 listenerThread = null;
             }
             
-            log.info("CouchDB listener stopped: " + db.getDbUrl());
+            log.info("Yns listener stopped: " + db.getDbUrl());
         }
     }
 

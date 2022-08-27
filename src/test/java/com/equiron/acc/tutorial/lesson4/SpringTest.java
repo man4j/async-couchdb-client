@@ -38,7 +38,7 @@ public class SpringTest {
     }
     
     @Bean
-    public YnsDbConfig couchDbConfig() {
+    public YnsDbConfig ynsDbConfig() {
         return new YnsDbConfig.Builder().setHost(System.getProperty("HOST"))
                                         .setPort(Integer.parseInt(System.getProperty("PORT")))
                                         .setUser(System.getProperty("USER"))

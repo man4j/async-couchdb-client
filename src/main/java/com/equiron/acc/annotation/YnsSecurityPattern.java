@@ -9,7 +9,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface YnsSecurityPattern {
     /**
-     * List of CouchDB user names.
+     * List user names.
      */
     String[] names() default {};
     

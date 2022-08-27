@@ -45,7 +45,7 @@ public class YnsDbInfo {
     private YnsClusterInfo cluster;
 
     /**
-     * @return timestamp of CouchDBs start time (int in ms).
+     * @return timestamp of start time (int in ms).
      */
     @JsonProperty("instance_start_time")
     private long instanceStartTime;

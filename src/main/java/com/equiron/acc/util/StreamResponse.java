@@ -3,6 +3,10 @@ package com.equiron.acc.util;
 import java.io.InputStream;
 import java.util.Map;
 
+import org.apache.commons.io.IOUtils;
+
+import lombok.SneakyThrows;
+
 public class StreamResponse {
     private InputStream stream;
     
@@ -26,5 +30,10 @@ public class StreamResponse {
     
     public int getStatus() {
         return status;
+    }
+    
+    @SneakyThrows
+    public byte[] asBytes() {
+        return IOUtils.toByteArray(stream);
     }
 }
