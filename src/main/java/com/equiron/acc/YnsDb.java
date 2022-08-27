@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -62,10 +63,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@NoArgsConstructor
 public class YnsDb implements AutoCloseable {
     @Autowired
     private volatile com.equiron.acc.YnsDbConfig config;
@@ -113,13 +116,14 @@ public class YnsDb implements AutoCloseable {
     
     private volatile HttpClientProvider httpClientProvider;
     
-    public YnsDb() {
-        //empty
-    }
-    
     public YnsDb(com.equiron.acc.YnsDbConfig config) {
         this.config = config;
 
+        init();
+    }
+
+    @PostConstruct
+    private void init() {
         mapper.registerModule(new JavaTimeModule());
         
         applyConfig();

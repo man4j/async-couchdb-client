@@ -1,6 +1,4 @@
-package com.equiron.acc.blogdemo.document;
-
-import com.equiron.acc.json.YnsDocument;
+package com.equiron.acc.tutorial.lesson3;
 
 import lombok.Getter;
 import lombok.NonNull;
@@ -10,7 +8,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @RequiredArgsConstructor
-public class BlogContent extends YnsDocument {
+abstract public class BlogContent extends BlogDocument {
     @NonNull
     private String content;
     

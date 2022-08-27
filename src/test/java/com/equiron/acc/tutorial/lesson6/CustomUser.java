@@ -6,6 +6,11 @@ import com.equiron.acc.json.security.YnsUser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
 public class CustomUser extends YnsUser {
     private String firstName;
     
@@ -16,21 +21,5 @@ public class CustomUser extends YnsUser {
                       @JsonProperty("password") String password, 
                       @JsonProperty("roles") Set<String> roles) {
         super(name, password, roles);
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-    
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-    
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
     }
 }

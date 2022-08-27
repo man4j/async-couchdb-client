@@ -15,8 +15,9 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.equiron.acc.YnsAbstractTest;
-import com.equiron.acc.CouchDbConfig;
-import com.equiron.acc.changes.CouchDbEventListener;
+import com.equiron.acc.YnsDbConfig;
+import com.equiron.acc.changes.YnsEventListener;
+import com.equiron.acc.changes.YnsLastDbSequenceStorage;
 import com.equiron.acc.database.ReplicatorDb;
 import com.equiron.acc.database.UsersDb;
 
@@ -37,9 +38,9 @@ public class SyncTest {
     @Autowired
     private ReplicatorDb replicatorDb;
     
-    private CouchDbEventListener<OmsDocument> localListener;
+    private YnsEventListener localListener;
     
-    private CouchDbEventListener<OmsDocument> remoteListener;
+    private YnsEventListener remoteListener;
     
     @AfterEach
     public void after() throws Exception {
@@ -58,13 +59,13 @@ public class SyncTest {
     }
     
     @Bean
-    public CouchDbConfig couchDbConfig() {
-        return new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
-                                          .setPort(Integer.parseInt(System.getProperty("PORT")))
-                                          .setUser(System.getProperty("USER"))
-                                          .setPassword(System.getProperty("PASSWORD"))
-                                          .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
-                                          .build();
+    public YnsDbConfig ynsDbConfig() {
+        return new YnsDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                        .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                        .setUser(System.getProperty("USER"))
+                                        .setPassword(System.getProperty("PASSWORD"))
+                                        .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
+                                        .build();
     }
 
     @Test
@@ -76,44 +77,46 @@ public class SyncTest {
         //Клиентская сторона
         startLocalListener();
         
-        Assertions.assertTrue(localDb.saveOrUpdate(new OmsDocument("doc1", "oms1")).get(0).isOk());
+        localDb.saveOrUpdate(new OmsDocument("doc1", "oms1"));
         
         Thread.sleep(10_000);
         
-        Assertions.assertNull(localDb.get("doc1"));//документы в локальной базе полностью удалены
+        Assertions.assertNull(localDb.get("doc1", OmsDocument.class));//документы в локальной базе полностью удалены
     }
 
+    @SuppressWarnings("resource")
     private void startLocalListener() {
-        localListener = new CouchDbEventListener<>(localDb) {};
+        localListener = new YnsEventListener(localDb, new YnsLastDbSequenceStorage(localDb));
 
         localListener.addEventHandler(e -> {
             if (!e.isDeleted()) {
-                OmsDocument doc = e.getDoc();
+                OmsDocument doc = localDb.get(e.getDocId(), OmsDocument.class);
                 
                 if (doc.getStatus() == OmsDocumentStatus.PROCESSED) {
-                    Assertions.assertTrue(localDb.delete(doc.getDocIdAndRev()).get(0).isOk()); //удаляем обработанные документы
+                    localDb.delete(doc.getDocIdAndRev()); //удаляем обработанные документы
                 }
             }
         });
         
-        localListener.startListening("0");
+        localListener.startListening();
     }
 
+    @SuppressWarnings("resource")
     private void startRemoteListener() {
-        remoteListener = new CouchDbEventListener<>(remoteDb) {};
+        remoteListener = new YnsEventListener(remoteDb, new YnsLastDbSequenceStorage(usersDb));
         
         remoteListener.addEventHandler(e -> {
             if (!e.isDeleted()) {
-                OmsDocument doc = e.getDoc();
+                OmsDocument doc = remoteDb.get(e.getDocId(), OmsDocument.class);
                 
                 if (doc.getStatus() == OmsDocumentStatus.CREATED) {
                     doc.setStatus(OmsDocumentStatus.PROCESSED);
-                    Assertions.assertTrue(remoteDb.saveOrUpdate(doc).get(0).isOk());
+                    remoteDb.saveOrUpdate(doc);
                 }
             }
         });
         
-        remoteListener.startListening("0");
+        remoteListener.startListening();
     }
 
     private void registerNewClient() {
@@ -123,6 +126,5 @@ public class SyncTest {
         client.setLastName("last name");
         
         usersDb.saveOrUpdate(client);//регистрируем нового клиента
-        Assertions.assertTrue(client.isOk());//Проверка, что все ок
     }
 }

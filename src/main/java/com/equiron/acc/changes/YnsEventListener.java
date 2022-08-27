@@ -9,6 +9,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.annotation.PostConstruct;
 
+import org.springframework.beans.factory.annotation.Autowired;
+
 import com.equiron.acc.YnsDb;
 import com.equiron.acc.json.YnsEvent;
 import com.equiron.acc.provider.HttpClientProviderResponse;
@@ -17,13 +19,17 @@ import com.equiron.acc.util.UrlBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rainerhahnekamp.sneakythrow.Sneaky;
 
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public abstract class YnsEventListener implements AutoCloseable, YnsEventHandler {
-    private final YnsDb db;
+@NoArgsConstructor
+public class YnsEventListener implements AutoCloseable, YnsEventHandler {
+    @Autowired
+    private volatile YnsDb db;
     
-    private final YnsSequenceStorage sequenceStorage;
+    @Autowired
+    private volatile YnsSequenceStorage sequenceStorage;
 
     private CopyOnWriteArrayList<YnsEventHandler> handlers = new CopyOnWriteArrayList<>();
 
@@ -190,7 +196,7 @@ public abstract class YnsEventListener implements AutoCloseable, YnsEventHandler
     
     private void processEvent(byte[] eventArray) throws Exception {
         YnsEvent event = db.getMapper().readValue(eventArray, YnsEvent.class);
-            
+        
         for (YnsEventHandler eventHandler : getHandlers()) {
             eventHandler.onEvent(event);
         }

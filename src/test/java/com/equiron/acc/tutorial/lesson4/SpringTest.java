@@ -12,9 +12,10 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import com.equiron.acc.YnsAbstractTest;
-import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.YnsDbConfig;
+import com.equiron.acc.changes.YnsLastDbSequenceStorage;
+import com.equiron.acc.changes.YnsSequenceStorage;
 import com.equiron.acc.fixture.TestDoc;
-import com.equiron.acc.json.YnsDocumentAttachment;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes=SpringTest.class)
@@ -28,26 +29,35 @@ public class SpringTest {
     @Autowired
     private ExampleDb exampleDb;
     
+    @Autowired
+    private ExampleListener exampleListener;
+    
     @AfterEach
     public void after() {
         exampleDb.deleteDb();
     }
     
     @Bean
-    public CouchDbConfig couchDbConfig() {
-        return new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
-                                          .setPort(Integer.parseInt(System.getProperty("PORT")))
-                                          .setUser(System.getProperty("USER"))
-                                          .setPassword(System.getProperty("PASSWORD"))
-                                          .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
-                                          .build();
+    public YnsDbConfig couchDbConfig() {
+        return new YnsDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                        .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                        .setUser(System.getProperty("USER"))
+                                        .setPassword(System.getProperty("PASSWORD"))
+                                        .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
+                                        .build();
+    }
+    
+    @Bean
+    public YnsSequenceStorage ynsSequenceStorage(ExampleDb db) {
+        return new YnsLastDbSequenceStorage(db);
     }
 
     @Test
-    public void shouldWork() {
-        TestDoc document = new TestDoc();
-        document.addAttachment("test", new YnsDocumentAttachment("text/html", new byte[1_000_000]));
-        document.setName(new String(new byte[1_000]));
-        exampleDb.saveOrUpdate(document);
+    public void shouldWork() throws InterruptedException {
+        exampleDb.saveOrUpdate(new TestDoc("qwe"));
+        
+        exampleListener.getLatch().await();
+        
+        exampleListener.stopListening();
     }
 }

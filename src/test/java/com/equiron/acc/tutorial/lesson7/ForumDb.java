@@ -1,10 +1,10 @@
 package com.equiron.acc.tutorial.lesson7;
 
-import com.equiron.acc.CouchDb;
-import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.YnsDb;
+import com.equiron.acc.YnsDbConfig;
 
-public class ForumDb extends CouchDb {
-    public ForumDb(CouchDbConfig config) {
+public class ForumDb extends YnsDb {
+    public ForumDb(YnsDbConfig config) {
         super(config);
     }
 }

@@ -8,19 +8,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.equiron.acc.YnsAbstractTest;
-import com.equiron.acc.CouchDbConfig;
+import com.equiron.acc.YnsDbConfig;
 
 public class AutoSuggestTest {
     private SimpleCityDb db;
 
     @BeforeEach
     public void before() {
-        db = new SimpleCityDb(new CouchDbConfig.Builder().setHost(System.getProperty("HOST"))
-                                                         .setPort(Integer.parseInt(System.getProperty("PORT")))
-                                                         .setUser(System.getProperty("USER"))
-                                                         .setPassword(System.getProperty("PASSWORD"))
-                                                         .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
-                                                         .build());
+        db = new SimpleCityDb(new YnsDbConfig.Builder().setHost(System.getProperty("HOST"))
+                                                       .setPort(Integer.parseInt(System.getProperty("PORT")))
+                                                       .setUser(System.getProperty("USER"))
+                                                       .setPassword(System.getProperty("PASSWORD"))
+                                                       .setHttpClientProviderType(YnsAbstractTest.PROVIDER)
+                                                       .build());
     }
     
     @AfterEach
@@ -30,7 +30,7 @@ public class AutoSuggestTest {
 
     @Test
     public void shouldWork() {
-        db.saveOrUpdate(new City("Moscow"), new City("London"), new City("Minsk"));
+        db.saveOrUpdate(List.of(new City("Moscow"), new City("London"), new City("Minsk")));
 
         List<City> cities = db.suggest("M");
         
