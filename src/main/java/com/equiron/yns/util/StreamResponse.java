@@ -5,8 +5,10 @@ import java.util.Map;
 
 import org.apache.commons.io.IOUtils;
 
+import lombok.Getter;
 import lombok.SneakyThrows;
 
+@Getter
 public class StreamResponse {
     private InputStream stream;
     
@@ -20,18 +22,10 @@ public class StreamResponse {
         this.status = status;
     }
     
-    public InputStream getStream() {
-        return stream;
-    }
-
     public String getHeader(String header) {
         return headers.get(header.toLowerCase());
     }
-    
-    public int getStatus() {
-        return status;
-    }
-    
+        
     @SneakyThrows
     public byte[] asBytes() {
         return IOUtils.toByteArray(stream);
