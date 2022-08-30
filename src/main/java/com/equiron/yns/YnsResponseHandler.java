@@ -78,22 +78,10 @@ public class YnsResponseHandler<F, T> {
     
             F ynsDbResult = parseHttpResponse(ynsHttpResponse);
             
-            if (opInfo != null && opInfo.getOperationType() == OperationType.QUERY) {
+            if (opInfo != null && (opInfo.getOperationType() == OperationType.QUERY || opInfo.getOperationType() == OperationType.GET)) {
                 opInfo.setSize(body.length());
             
-                if (ynsDbResult instanceof YnsAbstractResultSet) {
-                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) ynsDbResult;
-                    
-                    opInfo.setDocsCount(rs.getRows().size());
-                }
-            }
-            
-            if (opInfo != null && opInfo.getOperationType() == OperationType.GET) {
-                opInfo.setSize(body.length());
-            
-                if (ynsDbResult instanceof YnsAbstractResultSet) {
-                    YnsAbstractResultSet<?,?,?> rs = (YnsAbstractResultSet<?,?,?>) ynsDbResult;
-                    
+                if (ynsDbResult instanceof YnsAbstractResultSet<?, ?, ?> rs) {
                     opInfo.setDocsCount(rs.getRows().size());
                 }
             }

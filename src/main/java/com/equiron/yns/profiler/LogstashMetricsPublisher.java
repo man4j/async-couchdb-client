@@ -5,8 +5,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 
-import javax.annotation.Nonnull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,22 +54,22 @@ public class LogstashMetricsPublisher {
 
                             Map<String, Object> metrics = new HashMap<>();
                             
-                            metrics.put("acc.instance", instance);
-                            metrics.put("acc.database", profile.getDatabase());
-                            metrics.put("acc.operationType", profile.getOperationType());
-                            metrics.put("acc.operationInfo", profile.getOperationInfo());
-                            metrics.put("acc.stackTrace", profile.getStackTrace());
-                            metrics.put("acc.fullTrace", key);
+                            metrics.put("yns.instance", instance);
+                            metrics.put("yns.database", profile.getDatabase());
+                            metrics.put("yns.operationType", profile.getOperationType());
+                            metrics.put("yns.operationInfo", profile.getOperationInfo());
+                            metrics.put("yns.stackTrace", profile.getStackTrace());
+                            metrics.put("yns.fullTrace", key);
 
-                            metrics.put("acc.time", profile.getTotalTime());
-                            metrics.put("acc.count", profile.getCount());
-                            metrics.put("acc.size", profile.getSize());                            
-                            metrics.put("acc.success", profile.getSuccessCount());
-                            metrics.put("acc.notFound", profile.getNotFoundCount());
-                            metrics.put("acc.conflicts", profile.getConflictCount());
-                            metrics.put("acc.errors", profile.getErrorsCount());
+                            metrics.put("yns.time", profile.getTotalTime());
+                            metrics.put("yns.count", profile.getCount());
+                            metrics.put("yns.size", profile.getSize());                            
+                            metrics.put("yns.success", profile.getSuccessCount());
+                            metrics.put("yns.notFound", profile.getNotFoundCount());
+                            metrics.put("yns.conflicts", profile.getConflictCount());
+                            metrics.put("yns.errors", profile.getErrorsCount());
                             
-                            info(metrics);
+                            LOGSTASH_JSON_LOGGER.info(Markers.appendEntries(metrics), "");
                         }
                         
                         try {
@@ -88,23 +86,13 @@ public class LogstashMetricsPublisher {
         }
     }
     
-    public void addOperation(OperationInfo opInfo) {
-        if ((logstashHost != null && !logstashHost.isBlank())) {      
-            fill(opInfo);
-        }
-    }
-    
-    private void info(@Nonnull Map<String, Object> fields) {
-        fields.put("acc.metrics", true);//чтобы отличать метрики и логи
-            
-        LOGSTASH_JSON_LOGGER.info(Markers.appendEntries(fields), "");
-    }
-    
     private String extrackKey(OperationInfo opInfo) {
         return instance + "/" + dbName + "/" + opInfo.getOperationType().toString() + (opInfo.getOperationInfo().isBlank() ? "" : ("/" + opInfo.getOperationInfo()) + " {\n" + opInfo.getStackTrace() + "}");
     }
     
-    private void fill(OperationInfo opInfo) {
+    public void addOperation(OperationInfo opInfo) {
+        if ((logstashHost == null || logstashHost.isBlank())) return;
+            
         String key = extrackKey(opInfo);
         
         striped.get(key).lock();

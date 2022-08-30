@@ -1,18 +1,47 @@
 package com.equiron.yns.profiler;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class OperationProfile {
+    @Getter
     private String database;
+    
+    @Getter
     private OperationType operationType;
+    
+    @Getter
     private String operationInfo;
+    
+    @Getter
     private String stackTrace;
     
+    @Getter
+    @Setter
     private long totalTime;
+
+    @Getter
+    @Setter
     private long count;
+
+    @Getter
+    @Setter
     private long size;
-    
+
+    @Getter
+    @Setter
     private int successCount;
+
+    @Getter
+    @Setter
     private int notFoundCount;
+
+    @Getter
+    @Setter
     private int conflictCount;
+
+    @Getter
+    @Setter
     private int errorsCount;
     
     public OperationProfile(String database, OperationType operationType, String operationInfo, String stackTrace) {
@@ -31,77 +60,5 @@ public class OperationProfile {
         setCount(1);
         setTotalTime(time);
         setSize(size);
-    }
-    
-    public long getTotalTime() {
-        return totalTime;
-    }
-    
-    public void setTotalTime(long totalTime) {
-        this.totalTime = totalTime;
-    }
-    
-    public long getCount() {
-        return count;
-    }
-    
-    public void setCount(long count) {
-        this.count = count;
-    }
-
-    public String getDatabase() {
-        return database;
-    }
-
-    public OperationType getOperationType() {
-        return operationType;
-    }
-
-    public String getOperationInfo() {
-        return operationInfo;
-    }
-
-    public String getStackTrace() {
-        return stackTrace;
-    }
-
-    public long getSize() {
-        return size;
-    }
-
-    public void setSize(long size) {
-        this.size = size;
-    }
-
-    public int getSuccessCount() {
-        return successCount;
-    }
-
-    public void setSuccessCount(int successCount) {
-        this.successCount = successCount;
-    }
-
-    public int getErrorsCount() {
-        return errorsCount;
-    }
-
-    public void setErrorsCount(int errorsCount) {
-        this.errorsCount = errorsCount;
-    }
-
-    public int getNotFoundCount() {
-        return notFoundCount;
-    }
-
-    public void setNotFoundCount(int notFoundCount) {
-        this.notFoundCount = notFoundCount;
-    }
-
-    public int getConflictCount() {
-        return conflictCount;
-    }
-
-    public void setConflictCount(int conflictCount) {
-        this.conflictCount = conflictCount;
     }
 }

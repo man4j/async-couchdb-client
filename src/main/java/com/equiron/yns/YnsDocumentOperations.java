@@ -204,7 +204,7 @@ public class YnsDocumentOperations {
     @SuppressWarnings("resource")
     @SneakyThrows
     public StreamResponse getAttachmentAsStream(String docId, String name, Map<String, String> headers) {
-        OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 0, 0);
+        OperationInfo opInfo = new OperationInfo(OperationType.GET_ATTACHMENT, 1, 0);
         
         if (docId == null || docId.trim().isEmpty()) throw new IllegalStateException("The document id cannot be null or empty");
         
@@ -248,14 +248,12 @@ public class YnsDocumentOperations {
                                                   .addPathSegment(name)
                                                   .addQueryParam("rev", docIdAndRev.getRev());
         
-        OperationInfo opInfo = new OperationInfo(OperationType.DELETE_ATTACHMENT, 0, 0);
-        
         semaphore.acquire();
         
         try {
             HttpClientProviderResponse response = httpClient.delete(urlBuilder.build());
             
-            return new YnsResponseHandler<>(response, new TypeReference<YnsBooleanResponse>() {/* empty */}, new YnsBooleanResponseTransformer(), ynsDb.mapper, opInfo, ynsOperationStats).transform();
+            return new YnsResponseHandler<>(response, new TypeReference<YnsBooleanResponse>() {/* empty */}, new YnsBooleanResponseTransformer(), ynsDb.mapper, new OperationInfo(OperationType.DELETE_ATTACHMENT, 1, 0), ynsOperationStats).transform();
         } finally {
             semaphore.release();
         }
