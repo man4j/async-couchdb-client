@@ -3,7 +3,7 @@
   <groupId>com.equiron</groupId>
   <artifactId>yenisei-client</artifactId>
   <version>1.0</version>
-  <name>async-couchdb-client</name>
+  <name>yenisei-client</name>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
