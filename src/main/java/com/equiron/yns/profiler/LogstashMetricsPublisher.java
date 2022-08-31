@@ -63,11 +63,14 @@ public class LogstashMetricsPublisher {
 
                             metrics.put("yns.time", profile.getTotalTime());
                             metrics.put("yns.count", profile.getCount());
-                            metrics.put("yns.size", profile.getSize());                            
-                            metrics.put("yns.success", profile.getSuccessCount());
-                            metrics.put("yns.notFound", profile.getNotFoundCount());
-                            metrics.put("yns.conflicts", profile.getConflictCount());
-                            metrics.put("yns.errors", profile.getErrorsCount());
+                            metrics.put("yns.docsCount", profile.getDocsCount());
+                            metrics.put("yns.size", profile.getSize());         
+                            
+                            metrics.put("yns.status_200",   profile.getStatus_200());
+                            metrics.put("yns.status_201",   profile.getStatus_201());
+                            metrics.put("yns.status_202",   profile.getStatus_202());
+                            metrics.put("yns.status_304",   profile.getStatus_304());
+                            metrics.put("yns.status_other", profile.getStatus_other());
                             
                             LOGSTASH_JSON_LOGGER.info(Markers.appendEntries(metrics), "");
                         }
@@ -87,7 +90,7 @@ public class LogstashMetricsPublisher {
     }
     
     private String extrackKey(OperationInfo opInfo) {
-        return instance + "/" + dbName + "/" + opInfo.getOperationType().toString() + (opInfo.getOperationInfo().isBlank() ? "" : ("/" + opInfo.getOperationInfo()) + " {\n" + opInfo.getStackTrace() + "}");
+        return instance + "/" + dbName + "/" + opInfo.getOperationType().toString() + (opInfo.getOperationInfo().isBlank() ? "" : ("/" + opInfo.getOperationInfo())) + " {\n" + opInfo.getStackTrace() + "}";
     }
     
     public void addOperation(OperationInfo opInfo) {
@@ -105,16 +108,18 @@ public class LogstashMetricsPublisher {
             OperationProfile profile;
             
             if (prevProfile == null) {
-                profile = new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize());
+                profile = new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace(), opTime, opInfo.getSize(), opInfo.getDocsCount());
                 
                 if (opInfo.getStatus() == 200) {
-                    profile.setSuccessCount(1);
-                } else if (opInfo.getStatus() == 404) {
-                    profile.setNotFoundCount(1);
-                } else if (opInfo.getStatus() == 409) {
-                    profile.setConflictCount(1);
+                    profile.setStatus_200(1);
+                } else if (opInfo.getStatus() == 201) {
+                    profile.setStatus_201(1);
+                } else if (opInfo.getStatus() == 202) {
+                    profile.setStatus_202(1);
+                } else if (opInfo.getStatus() == 304) {
+                    profile.setStatus_304(1);
                 } else {
-                    profile.setErrorsCount(1);
+                    profile.setStatus_other(1);
                 }
             } else {
                 profile = new OperationProfile(dbName, opInfo.getOperationType(), opInfo.getOperationInfo(), opInfo.getStackTrace());
@@ -122,16 +127,19 @@ public class LogstashMetricsPublisher {
                 profile.setTotalTime(prevProfile.getTotalTime() + opTime);
                 profile.setCount(prevProfile.getCount() + 1);
                 profile.setSize(prevProfile.getSize() + opInfo.getSize());
+                profile.setDocsCount(prevProfile.getDocsCount() + opInfo.getDocsCount());
 
                 if (opInfo.getStatus() == 200) {
-                    profile.setSuccessCount(prevProfile.getSuccessCount() + 1);
-                } else if (opInfo.getStatus() == 404) {
-                    profile.setNotFoundCount(prevProfile.getNotFoundCount() + 1);
-                } else if (opInfo.getStatus() == 409) {
-                    profile.setConflictCount(prevProfile.getConflictCount() + 1);
+                    profile.setStatus_200(prevProfile.getStatus_200() + 1);
+                } else if (opInfo.getStatus() == 201) {
+                    profile.setStatus_201(prevProfile.getStatus_201() + 1);
+                } else if (opInfo.getStatus() == 202) {
+                    profile.setStatus_202(prevProfile.getStatus_202() + 1);
+                } else if (opInfo.getStatus() == 304) {
+                    profile.setStatus_304(prevProfile.getStatus_304() + 1);
                 } else {
-                    profile.setErrorsCount(prevProfile.getErrorsCount() + 1);
-                }                
+                    profile.setStatus_other(prevProfile.getStatus_other() + 1);
+                }
             }
             
             operationsMap.put(key, profile);

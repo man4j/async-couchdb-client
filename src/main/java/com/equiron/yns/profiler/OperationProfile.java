@@ -26,24 +26,32 @@ public class OperationProfile {
 
     @Getter
     @Setter
+    private long docsCount;
+
+    @Getter
+    @Setter
     private long size;
 
     @Getter
     @Setter
-    private int successCount;
+    private int status_200;
 
     @Getter
     @Setter
-    private int notFoundCount;
-
-    @Getter
-    @Setter
-    private int conflictCount;
-
-    @Getter
-    @Setter
-    private int errorsCount;
+    private int status_201;
     
+    @Getter
+    @Setter
+    private int status_202;
+
+    @Getter
+    @Setter
+    private int status_304;
+
+    @Getter
+    @Setter
+    private int status_other;
+
     public OperationProfile(String database, OperationType operationType, String operationInfo, String stackTrace) {
         this.database = database;
         this.operationType = operationType;
@@ -51,11 +59,12 @@ public class OperationProfile {
         this.stackTrace = stackTrace;
     }
     
-    public OperationProfile(String database, OperationType operationType, String operationInfo, String stackTrace, long time, long size) {
+    public OperationProfile(String database, OperationType operationType, String operationInfo, String stackTrace, long time, long size, long docsCount) {
         this.database = database;
         this.operationType = operationType;
         this.operationInfo = operationInfo;
         this.stackTrace = stackTrace;
+        this.docsCount = docsCount;
         
         setCount(1);
         setTotalTime(time);
