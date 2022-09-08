@@ -43,7 +43,9 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
     @SuppressWarnings("unchecked")
     @SneakyThrows
     public <T> List<T> get(List<YnsDocIdAndRev> docIds, JavaType responseType, boolean raw) {
-        docIds.stream().map(YnsDocIdAndRev::getDocId).sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().lock());
+        List<String> ids = docIds.stream().map(YnsDocIdAndRev::getDocId).sorted().toList();
+          
+        ids.forEach(id -> readWriteRecordStripedLock.get(id).readLock().lock());
         
         try {
             List<String> nonExistingDocs = docIds.stream().map(YnsDocIdAndRev::getDocId).filter(id -> !documentCache.containsKey(id)).toList();
@@ -84,14 +86,14 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                     }
                 } else {
                     if (documentCache.get(id).getDoc() != null) {
-                        resultDocs.add((T) documentCache.get(id));
+                        resultDocs.add((T) documentCache.get(id).getDoc());
                     }
                 }
             }
             
             return resultDocs;
         } finally {
-            docIds.stream().sorted().forEach(id -> readWriteRecordStripedLock.get(id).readLock().unlock());
+            ids.forEach(id -> readWriteRecordStripedLock.get(id).readLock().unlock());
         }
     }
     
@@ -107,7 +109,9 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
             ids = docs.stream().map(d -> ((YnsDocument)d).getDocId()).filter(Objects::nonNull).sorted().toList();
         }
         
-        ids.forEach(id -> readWriteRecordStripedLock.get(id).writeLock().lock());
+        ids.forEach(id -> {
+            readWriteRecordStripedLock.get(id).writeLock().lock();
+        });
         
         try {
             try {
@@ -136,7 +140,9 @@ public class YnsCachedDocumentOperations extends YnsDocumentOperations {
                 throw e;
             }
         } finally {
-            ids.forEach(id -> readWriteRecordStripedLock.get(id).writeLock().unlock());
+            ids.forEach(id -> {
+                readWriteRecordStripedLock.get(id).writeLock().unlock();
+            });
         }
     }
 

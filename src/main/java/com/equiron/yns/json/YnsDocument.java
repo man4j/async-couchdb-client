@@ -2,6 +2,7 @@ package com.equiron.yns.json;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import com.equiron.yns.YnsDocIdAndRev;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
@@ -33,7 +34,7 @@ public class YnsDocument {
     @Getter
     @Setter
     @EqualsAndHashCode.Include
-    private String docId;
+    private String docId = UUID.randomUUID().toString();
 
     /**
      * @return the current MVCC-token/revision of this document.
