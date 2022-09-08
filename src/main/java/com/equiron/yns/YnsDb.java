@@ -26,10 +26,10 @@ import com.equiron.yns.annotation.YnsDbConfig;
 import com.equiron.yns.annotation.YnsErlangView;
 import com.equiron.yns.annotation.YnsJsView;
 import com.equiron.yns.annotation.YnsReplicated;
+import com.equiron.yns.annotation.YnsReplicated.Direction;
 import com.equiron.yns.annotation.YnsSecurity;
 import com.equiron.yns.annotation.YnsSecurityPattern;
 import com.equiron.yns.annotation.YnsValidateDocUpdate;
-import com.equiron.yns.annotation.YnsReplicated.Direction;
 import com.equiron.yns.annotation.model.AnnotationConfigOption;
 import com.equiron.yns.cache.YnsCachedDocumentOperations;
 import com.equiron.yns.database.ReplicatorDb;
@@ -37,11 +37,11 @@ import com.equiron.yns.exception.YnsBulkDocumentException;
 import com.equiron.yns.json.YnsBulkGetResponse;
 import com.equiron.yns.json.YnsBulkResponse;
 import com.equiron.yns.json.YnsDbInfo;
+import com.equiron.yns.json.YnsDbInfo.YnsClusterInfo;
 import com.equiron.yns.json.YnsDesignDocument;
 import com.equiron.yns.json.YnsDocument;
 import com.equiron.yns.json.YnsInstanceInfo;
 import com.equiron.yns.json.YnsReplicationDocument;
-import com.equiron.yns.json.YnsDbInfo.YnsClusterInfo;
 import com.equiron.yns.json.security.YnsSecurityObject;
 import com.equiron.yns.profiler.OperationType;
 import com.equiron.yns.provider.HttpClientProvider;
@@ -220,6 +220,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> T get(String docId, Class<T> clazz) {
+        if (docId == null || docId.isBlank()) return null;
+        
         List<T> docs = get(List.of(docId), clazz);
 
         return docs.isEmpty() ? null : docs.get(0);
@@ -230,6 +232,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> List<T> get(List<String> docIds, Class<T> clazz) {
+        docIds = docIds.stream().filter(id -> id != null && !id.isBlank()).toList();
+
         TypeFactory tf = TypeFactory.defaultInstance();
         
         List<T> result = operations.get(docIds.stream().map(id -> new YnsDocIdAndRev(id, null)).toList(), tf.constructParametricType(YnsBulkGetResponse.class, clazz), false);
@@ -242,6 +246,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> T get(String docId, TypeReference<T> type) {
+        if (docId == null || docId.isBlank()) return null;
+
         List<T> docs = get(List.of(docId), type);
 
         return docs.isEmpty() ? null : docs.get(0);
@@ -252,6 +258,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> List<T> get(List<String> docIds, TypeReference<T> type) {
+        docIds = docIds.stream().filter(id -> id != null && !id.isBlank()).toList();
+
         TypeFactory tf = TypeFactory.defaultInstance();
         
         List<T> result = operations.get(docIds.stream().map(id -> new YnsDocIdAndRev(id, null)).toList(), tf.constructParametricType(YnsBulkGetResponse.class, tf.constructType(type)), false);
@@ -264,6 +272,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> T getWithRev(YnsDocIdAndRev docId, Class<T> clazz) {
+        if (docId == null || docId.getDocId() == null || docId.getDocId().isBlank()) return null;
+            
         List<T> docs = getWithRev(List.of(docId), clazz);
 
         return docs.isEmpty() ? null : docs.get(0);
@@ -274,6 +284,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public <T extends YnsDocument> List<T> getWithRev(List<YnsDocIdAndRev> docIds, Class<T> clazz) {
+        docIds = docIds.stream().filter(id -> id != null && id.getDocId() != null && !id.getDocId().isBlank()).toList();
+        
         TypeFactory tf = TypeFactory.defaultInstance();
 
         List<T> result = operations.get(docIds, tf.constructParametricType(YnsBulkGetResponse.class, clazz), false);
@@ -288,6 +300,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public Map<String, Object> getRaw(String docId) {
+        if (docId == null || docId.isBlank()) return null;
+
         List<Map<String, Object>> docs = getRaw(List.of(docId));
 
         return docs.isEmpty() ? null : docs.get(0);
@@ -298,6 +312,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public List<Map<String, Object>> getRaw(List<String> docIds) {
+        docIds = docIds.stream().filter(id -> id != null && !id.isBlank()).toList();
+
         TypeFactory tf = TypeFactory.defaultInstance();
 
         JavaType javaType = tf.constructParametricType(YnsBulkGetResponse.class, tf.constructMapType(Map.class, String.class, Object.class));
@@ -310,6 +326,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public Map<String, Object> getRawWithRev(YnsDocIdAndRev docId) {
+        if (docId == null || docId.getDocId() == null || docId.getDocId().isBlank()) return null;
+        
         List<Map<String, Object>> docs = getRawWithRev(List.of(docId));
 
         return docs.isEmpty() ? null : docs.get(0);
@@ -320,6 +338,8 @@ public class YnsDb implements AutoCloseable {
      * @throws YnsBulkGetException
      */
     public List<Map<String, Object>> getRawWithRev(List<YnsDocIdAndRev> docIds) {
+        docIds = docIds.stream().filter(id -> id != null && id.getDocId() != null && !id.getDocId().isBlank()).toList();
+        
         TypeFactory tf = TypeFactory.defaultInstance();
 
         JavaType javaType = tf.constructParametricType(YnsBulkGetResponse.class, tf.constructMapType(Map.class, String.class, Object.class));
