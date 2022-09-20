@@ -20,6 +20,7 @@ import com.equiron.yns.changes.YnsEventListener;
 import com.equiron.yns.changes.YnsLastDbSequenceStorage;
 import com.equiron.yns.database.ReplicatorDb;
 import com.equiron.yns.database.UsersDb;
+import com.equiron.yns.json.YnsEvent;
 
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes=SyncTest.class)
@@ -84,37 +85,37 @@ public class SyncTest {
         Assertions.assertNull(localDb.get("doc1", OmsDocument.class));//документы в локальной базе полностью удалены
     }
 
-    @SuppressWarnings("resource")
     private void startLocalListener() {
-        localListener = new YnsEventListener(localDb, new YnsLastDbSequenceStorage(localDb));
-
-        localListener.addEventHandler(e -> {
-            if (!e.isDeleted()) {
-                OmsDocument doc = localDb.get(e.getDocId(), OmsDocument.class);
-                
-                if (doc.getStatus() == OmsDocumentStatus.PROCESSED) {
-                    localDb.delete(doc.getDocIdAndRev()); //удаляем обработанные документы
-                }
+        localListener = new YnsEventListener(localDb, new YnsLastDbSequenceStorage(localDb)) {
+            @Override
+            public void onEvent(YnsEvent e) throws Exception {
+                if (!e.isDeleted()) {
+                    OmsDocument doc = localDb.get(e.getDocId(), OmsDocument.class);
+                    
+                    if (doc.getStatus() == OmsDocumentStatus.PROCESSED) {
+                        localDb.delete(doc.getDocIdAndRev()); //удаляем обработанные документы
+                    }
+                }                
             }
-        });
-        
+        };
+
         localListener.startListening();
     }
 
-    @SuppressWarnings("resource")
     private void startRemoteListener() {
-        remoteListener = new YnsEventListener(remoteDb, new YnsLastDbSequenceStorage(usersDb));
-        
-        remoteListener.addEventHandler(e -> {
-            if (!e.isDeleted()) {
-                OmsDocument doc = remoteDb.get(e.getDocId(), OmsDocument.class);
-                
-                if (doc.getStatus() == OmsDocumentStatus.CREATED) {
-                    doc.setStatus(OmsDocumentStatus.PROCESSED);
-                    remoteDb.saveOrUpdate(doc);
+        remoteListener = new YnsEventListener(remoteDb, new YnsLastDbSequenceStorage(usersDb)) {
+            @Override
+            public void onEvent(YnsEvent e) throws Exception {
+                if (!e.isDeleted()) {
+                    OmsDocument doc = remoteDb.get(e.getDocId(), OmsDocument.class);
+                    
+                    if (doc.getStatus() == OmsDocumentStatus.CREATED) {
+                        doc.setStatus(OmsDocumentStatus.PROCESSED);
+                        remoteDb.saveOrUpdate(doc);
+                    }
                 }
             }
-        });
+        };
         
         remoteListener.startListening();
     }

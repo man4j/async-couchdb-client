@@ -116,6 +116,8 @@ public class YnsDb implements AutoCloseable {
     
     private volatile HttpClientProvider httpClientProvider;
     
+    private volatile boolean initialized;
+    
     public YnsDb(com.equiron.yns.YnsDbConfig config) {
         this.config = config;
 
@@ -124,47 +126,51 @@ public class YnsDb implements AutoCloseable {
 
     @PostConstruct
     private void init() {
-        mapper.registerModule(new JavaTimeModule());
-        
-        applyConfig();
-        
-        httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
-        
-        if (user != null && password != null) {
-            httpClientProvider.setCredentials(user, password);
-        }
-
-        if (enableDocumentCache) {
-            operations = new YnsCachedDocumentOperations(new YnsDocumentOperations(this), cacheMaxDocsCount, cacheMaxTimeoutSec);
-        } else {
-            operations = new YnsDocumentOperations(this);
-        }
-                                                              
-        adminOperations = new YnsAdminOperations(this);
-
-        builtInView = new YnsBuiltInView(this);
-        
-        viewList.add(builtInView);
-        
-        testConnection();
-
-        createDbIfNotExist();
-        
-        if (selfDiscovering) {            
-            if (!getDbName().equals("_users")) {//тк данная база содержит встроенный дизайн-документ
-                synchronizeDesignDocs();
-            }
-
-            injectViews();
-
-            injectValidators();
-
-            addSecurity();
-
-            cleanupViews();
+        if (!initialized) {
+            mapper.registerModule(new JavaTimeModule());
             
-            synchronizeReplicationDocs();
-        }
+            applyConfig();
+            
+            httpClientProvider = httpClientProviderType == HttpClientProviderType.JDK ? new JdkHttpClientProvider() : new OkHttpClientProvider();
+            
+            if (user != null && password != null) {
+                httpClientProvider.setCredentials(user, password);
+            }
+    
+            if (enableDocumentCache) {
+                operations = new YnsCachedDocumentOperations(new YnsDocumentOperations(this), cacheMaxDocsCount, cacheMaxTimeoutSec);
+            } else {
+                operations = new YnsDocumentOperations(this);
+            }
+                                                                  
+            adminOperations = new YnsAdminOperations(this);
+    
+            builtInView = new YnsBuiltInView(this);
+            
+            viewList.add(builtInView);
+            
+            testConnection();
+    
+            if (selfDiscovering) {
+                createDbIfNotExist();
+                
+                if (!getDbName().equals("_users")) {//тк данная база содержит встроенный дизайн-документ
+                    synchronizeDesignDocs();
+                }
+    
+                injectViews();
+    
+                injectValidators();
+    
+                addSecurity();
+    
+                cleanupViews();
+                
+                synchronizeReplicationDocs();
+            }
+        } 
+        
+        initialized = true;
     }
     
     public com.equiron.yns.YnsDbConfig getConfig() {
