@@ -7,13 +7,18 @@ import java.util.Map;
 import com.equiron.yns.YnsDocIdAndRev;
 import com.equiron.yns.json.YnsBulkGetErrorResult;
 
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
-@AllArgsConstructor
 public class YnsGetDocumentException extends RuntimeException {
     Map<String, List<YnsDocIdAndRev>> conflictingDocumentsMap = new HashMap<>();
     
     Map<String, YnsBulkGetErrorResult> errorDocumentsMap = new HashMap<>();
+    
+    public YnsGetDocumentException(Map<String, List<YnsDocIdAndRev>> conflictingDocumentsMap, 
+                                   Map<String, YnsBulkGetErrorResult> errorDocumentsMap) {
+        super("Conflicted documents: %s. Documents in error state: %".formatted(conflictingDocumentsMap.toString(), errorDocumentsMap.toString()));
+        this.conflictingDocumentsMap = conflictingDocumentsMap;
+        this.errorDocumentsMap = errorDocumentsMap;
+    }
 }

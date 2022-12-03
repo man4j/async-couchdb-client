@@ -8,11 +8,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 
 @JsonInclude(Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @EqualsAndHashCode
+@ToString
 public class YnsDocIdAndRev {
     @JsonProperty("_id")
     private String docId;

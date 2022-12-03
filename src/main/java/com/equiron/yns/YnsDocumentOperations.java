@@ -152,7 +152,7 @@ public class YnsDocumentOperations {
             
             for (var r : responses) {
                 if (!r.getError().isBlank()) {
-                    throw new YnsBulkDocumentException(responses);
+                    throw new YnsBulkDocumentException("Errot in docId: %s, message: %s".formatted(r.getDocId(), r.getError()), responses);
                 }
             }
             
