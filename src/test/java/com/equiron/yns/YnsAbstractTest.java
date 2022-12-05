@@ -3,7 +3,6 @@ package com.equiron.yns;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
-import com.equiron.yns.YnsDbConfig;
 import com.equiron.yns.fixture.TestDb;
 import com.equiron.yns.provider.HttpClientProviderType;
 

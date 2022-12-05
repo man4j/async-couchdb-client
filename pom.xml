@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.equiron</groupId>
   <artifactId>yenisei-client</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.4</version>
   <name>yenisei-client</name>
 
   <properties>

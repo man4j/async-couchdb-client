@@ -5,6 +5,7 @@ import java.util.concurrent.CountDownLatch;
 import org.springframework.stereotype.Component;
 
 import com.equiron.yns.changes.YnsEventListener;
+import com.equiron.yns.changes.YnsSequenceStorage;
 import com.equiron.yns.json.YnsEvent;
 
 import lombok.Getter;
@@ -12,7 +13,11 @@ import lombok.Getter;
 @Getter
 @Component
 public class ExampleListener extends YnsEventListener {
-    private final CountDownLatch latch = new CountDownLatch(1);
+    public ExampleListener(ExampleDb db, YnsSequenceStorage sequenceStorage) {
+		super(db, sequenceStorage);
+	}
+
+	private final CountDownLatch latch = new CountDownLatch(1);
     
     @Override
     public void onEvent(YnsEvent event) throws Exception {
